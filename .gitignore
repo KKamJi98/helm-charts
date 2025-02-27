@@ -1,0 +1,10 @@
+*.crt
+*.key
+*.csr
+*csr.yaml
+*secrets*
+*secret*
+logstash.yaml
+ELK
+harbor
+auth
