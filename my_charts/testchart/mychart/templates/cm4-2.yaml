@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: variables-range
+data:
+  # for (int i ; i=list.length ; i++) { printf "i : list[i]" };
+  index:
+  {{- range $index, $value := .Values.data }}
+    {{ $index }}: {{ $value }}
+  {{- end }}
+
+  # for (Map<key, value> map : list) { printf "map.key() : map.value()" };
+  key-value:
+  {{- range $key, $value := .Values.dev }}
+    {{ $key }}: {{ $value | quote }}
+  {{- end }}
+

@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: string-func
+data:
+  print:
+    print:  {{ print "Hard Cording" }}
+    printf: {{ printf "%s-%s" .Values.print.a .Values.print.b }}
+
+  ternary:
+    case1: {{ .Values.ternary.case1 | ternary "1" "2" }}
+    case2: {{ .Values.ternary.case2 | ternary "1" "2" }}
+
+  indent:
+    indent: 
+{{ .Values.data | toYaml | indent 4 }}
+    nindent1: {{ .Values.data | toYaml | nindent 4 }}
+    nindent2:
+    {{- .Values.data | toYaml | nindent 4 }}
+          
+  default: # Number:0, String: "", List: [], Object: {}, Boolean: false, Null
+    nil:     {{ .Values.default.nil     | default "default" }}
+    list:    {{ .Values.default.list    | default (list "default1" "default2") | toYaml | nindent 6}}
+    object:  {{ .Values.default.object  | default "default:1" | toYaml | nindent 6 }}
+    number:  {{ .Values.default.number  | default 1 }}
+    string:  {{ .Values.default.string  | default "default" }}
+    boolean: {{ .Values.default.boolean | default true }}
+
+  trim:
+    trim:       {{ trim "  hello " }}
+    trimPrefix: {{ trimPrefix "-" "-hello" }}
+    trimSuffix: {{ trimSuffix "-" "hello-" }}
+
+  random:
+    randAlphaNum: {{ randAlphaNum 5 }}   # 0-9a-zA-Z
+    randAlpha:    {{ randAlpha 5 }}      # a-zA-Z
+    randNumeric:  {{ randNumeric 5 }}    # 0-9
+    randAscii:    {{ randAscii 5 }}      # ASCII characters
+
+  trunc:    {{ trunc 5 "hello world" }}
+  replace:  {{ "hello world" | replace " " "-" }}
+  contains: {{ contains "cat" "catch" }}
+  b64enc:   {{ b64enc "hello" }}

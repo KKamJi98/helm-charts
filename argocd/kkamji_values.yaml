@@ -1,0 +1,45 @@
+global:
+  domain: argocd.kkamji.net
+
+server:
+  replicas: 1
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hostname: argocd.kkamji.net
+    tls: true
+    annotations:
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      
+
+redis-ha:
+  enabled: false
+
+controller:
+  replicas: 1
+
+repoServer:
+  replicas: 1
+
+applicationSet:
+  replicas: 1
+
+configs:
+  cm:
+    oidc.config: |
+      name: Keycloak
+      issuer: https://keycloak.kkamji.net/realms/master
+      clientID: argocd
+      enablePKCEAuthentication: true
+      requestedScopes: ["openid", "profile", "email", "groups"]
+  rbac:
+    policy.csv: |
+      p, role:admin, *, *, *, allow
+      p, role:admin, repositories, get, *, allow
+      p, role:admin, repositories, create, *, allow
+      p, role:admin, repositories, update, *, allow
+      p, role:admin, repositories, delete, *, allow
+      g, /ArgoCDAdmins, role:admin
+      g, admin, role:admin

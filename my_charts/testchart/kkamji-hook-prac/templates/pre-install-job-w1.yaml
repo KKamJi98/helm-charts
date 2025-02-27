@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pre-install-job-w1
+  annotations:
+    helm.sh/hook: pre-install # pre-install 훅 지정
+    helm.sh/hook-delete-policy: hook-succeeded # Job 성공 시 자동 삭제
+    helm.sh/hook-weight: "1" # 훅 실행 우선순위 (낮을수록 먼저 실행)
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: amazonlinux-pre-install
+        image: public.ecr.aws/amazonlinux/amazonlinux:2023-minimal
+        command: [ "/bin/sh" ]
+        args:
+        - "-c"
+        - |
+          echo "start"
+          sleep 10
+          echo "done"

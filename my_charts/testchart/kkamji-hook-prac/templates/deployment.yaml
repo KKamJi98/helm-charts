@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kkamji-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kkamji
+  template:
+    metadata:
+      labels:
+        app: kkamji
+    spec:
+      containers:
+        - name: kkamji
+          image: nginx
+          ports:
+            - containerPort: 80

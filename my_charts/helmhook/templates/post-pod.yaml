@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: post-pod
+  annotations:
+    helm.sh/hook: post-upgrade
+spec:
+  restartPolicy: Never
+  containers:
+  - name: container
+    image: kubetm/init
+    command: ["sh", "-c", "echo 'start'; sleep 10; echo 'done'"]

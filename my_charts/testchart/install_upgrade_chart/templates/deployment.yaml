@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test
+spec:
+  selector:
+    matchLabels:
+      type: app
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        type: app
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      initContainers:
+      - name: init-myservice
+        image: kubetm/app
+        command: ["sh", "-c", "echo 'start'; sleep 30; echo 'done'"]
+      containers:
+      - name: container
+        image: kubetm/app
+        envFrom:
+        - configMapRef:
+            name: test-cm
+        volumeMounts:
+        - name: volume
+          mountPath: /hostpath
+      volumes:
+      - name : volume
+        persistentVolumeClaim:
+          claimName: test-pvc

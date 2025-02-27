@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flow-with
+data:
+  dev:
+  {{- with .Values.dev }}
+    env: {{ .env }}
+    log: {{ .log }}
+  {{- end }}
+
+  qa:
+  {{- with .Values.qa }}
+    env: {{ .env }}
+    log: {{ .log }}
+  {{- end }}
+  
+  prod:
+  {{- with .Values.prod }}
+    env: {{ .env }}
+    log: {{ .log }}
+  {{- end }}

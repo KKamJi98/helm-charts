@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pre-pod1
+  annotations:
+    helm.sh/hook: pre-upgrade
+#   helm.sh/hook-delete-policy: hook-succeeded
+#   helm.sh/hook-delete-policy: hook-failed
+#   helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  restartPolicy: Never
+  containers:
+  - name: container
+    image: kubetm/init
+    command: ["sh", "-c", "echo 'start'; sleep 10; echo 'done'"]
