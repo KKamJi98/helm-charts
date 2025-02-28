@@ -3,8 +3,5 @@
 *.csr
 *csr.yaml
 *secrets*
-*secret*
-logstash.yaml
-ELK
-harbor
+harbor/*
 auth
