@@ -1,7 +1,7 @@
-*.crt
-*.key
-*.csr
-*csr.yaml
+# *.crt
+# *.key
+# *.csr
+# *csr.yaml
 # *secrets*
 harbor/*
-auth
+# auth
