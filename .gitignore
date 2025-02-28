@@ -2,6 +2,6 @@
 *.key
 *.csr
 *csr.yaml
-*secrets*
+# *secrets*
 harbor/*
 auth
