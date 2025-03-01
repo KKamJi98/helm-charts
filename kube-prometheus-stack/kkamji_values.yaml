@@ -35,4 +35,6 @@ prometheus:
 
 prometheusOperator:
   admissionWebhooks:
-    enabled: false
+    patch:
+      enabled: false
+    
