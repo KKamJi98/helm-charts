@@ -22,7 +22,7 @@ prometheus:
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
       cert-manager.io/cluster-issuer: letsencrypt-prod
       nginx.ingress.kubernetes.io/auth-type: "basic" # 인증 타입
-      nginx.ingress.kubernetes.io/auth-secret: "prometheus-basic-auth" # 인증에 사용할 secret
+      # nginx.ingress.kubernetes.io/auth-secret: "prometheus-basic-auth" # 인증에 사용할 secret
       nginx.ingress.kubernetes.io/auth-realm: "Authentication Required" # 인증 프롬프트에 보내는 메시지
     hosts:
       - prometheus.kkamji.net
