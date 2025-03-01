@@ -32,3 +32,7 @@ prometheus:
       - secretName: prometheus-tls
         hosts:
           - prometheus.kkamji.net
+
+prometheusOperator:
+  admissionWebhooks:
+    enabled: false
