@@ -1,0 +1,17 @@
+ingress:
+  enabled: true                 # Enable Ingress
+  ingressClassName: nginx       # Matches your ingress controller
+  hostname: minio.kkamji.net    # Domain for MinIO
+  path: "/"                   # Path to access the console
+  pathType: ImplementationSpecific
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    kubernetes.io/ingress.class: "nginx"
+  tls: true
+  servicePort: minio-console    # Exposes the MinIO console on HTTPS
+
+auth:
+  rootUser: admin
+  rootPassword: ""  # set your password here or via an external secret
