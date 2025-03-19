@@ -3,5 +3,5 @@
 # *.csr
 # *csr.yaml
 # *secrets*
-harbor/*
+harbor/harbor/*
 # auth
