@@ -13,7 +13,6 @@ server:
       nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
       cert-manager.io/cluster-issuer: letsencrypt-prod
       
-
 redis-ha:
   enabled: false
 
@@ -37,10 +36,10 @@ configs:
   rbac:
     policy.csv: |
       p, role:admin, *, *, *, allow
-      p, role:admin, repositories, get, *, allow
-      p, role:admin, repositories, create, *, allow
-      p, role:admin, repositories, update, *, allow
-      p, role:admin, repositories, delete, *, allow
+      #      p, role:admin, repositories, get, *, allow
+      #      p, role:admin, repositories, create, *, allow
+      #      p, role:admin, repositories, update, *, allow
+      #      p, role:admin, repositories, delete, *, allow
       g, /ArgoCDAdmins, role:admin
       g, admin, role:admin
 
@@ -57,7 +56,7 @@ notifications:
       slack-token: "My Token"
 
   subscriptions:
-    # subscription for on-sync-status-unknown trigger notifications
+    # 1) 전역 구독 - 특정 트리거들에 대해 Slack 채널(argocd-alarm)로 알림 발송
     - recipients:
         - slack:argocd-alarm
       triggers:
@@ -66,12 +65,12 @@ notifications:
         - on-sync-succeeded
         - on-deployed
         - on-health-degraded
-    # 예: 특정 라벨이 붙은 애플리케이션에 대해 on-sync-status-unknown 이벤트 알림을 전송
+    # 2) 라벨 셀렉터 기반 구독 예시 - test=true 라벨이 붙은 앱에서만 Unknown 이벤트 알림
     - recipients:
-      - slack:argocd-alarm
+        - slack:argocd-alarm
       selector: test=true
       triggers:
-      - on-sync-status-unknown
+        - on-sync-status-unknown
   templates:
     template.app-deployed: |
       email:
