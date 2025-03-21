@@ -40,7 +40,7 @@ configs:
       #      p, role:admin, repositories, create, *, allow
       #      p, role:admin, repositories, update, *, allow
       #      p, role:admin, repositories, delete, *, allow
-      g, /ArgoCDAdmins, role:admin
+      g, ArgoCDAdmins, role:admin
       g, admin, role:admin
 
 notifications:
@@ -58,7 +58,7 @@ notifications:
   subscriptions:
     # 1) 전역 구독 - 특정 트리거들에 대해 Slack 채널(argocd-alarm)로 알림 발송
     - recipients:
-        - slack:argocd-alarm
+        - slack:00-argocd-alarm
       triggers:
         - on-sync-status-unknown
         - on-sync-failed
@@ -67,7 +67,7 @@ notifications:
         - on-health-degraded
     # 2) 라벨 셀렉터 기반 구독 예시 - test=true 라벨이 붙은 앱에서만 Unknown 이벤트 알림
     - recipients:
-        - slack:argocd-alarm
+        - slack:00-argocd-alarm
       selector: test=true
       triggers:
         - on-sync-status-unknown
