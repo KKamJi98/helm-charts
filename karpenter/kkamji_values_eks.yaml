@@ -1,0 +1,28 @@
+# Values for Karpenter 1.5.0 chart
+nodeSelector:
+  karpenter.sh/controller: 'true'
+dnsPolicy: Default
+settings:
+  clusterName: kkamji-al2023
+  clusterEndpoint: https://kkamji-al2023.eks.amazonaws.com
+  interruptionQueue: karpenter-interruption-queue
+webhook:
+  enabled: false
+
+# Additional configurations
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/karpenter-controller-role
+
+controller:
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+
+# AWS specific settings
+aws:
+  defaultInstanceProfile: KarpenterNodeInstanceProfile
