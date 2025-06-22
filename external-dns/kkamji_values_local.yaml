@@ -1,0 +1,26 @@
+# values.yaml (주요 항목만 발췌)
+provider:
+  name: aws
+domainFilters:
+  - kkamji.net
+policy: upsert-only
+registry: txt
+txtOwnerId: kkamji-local-cluster
+
+aws:
+  zoneType: public          # public / private
+  region: ap-northeast-2
+
+env:                         # ← extraEnv 대신 env 사용
+  - name: AWS_REGION
+    value: ap-northeast-2
+  - name: AWS_ACCESS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: external-dns-aws
+        key: AWS_ACCESS_KEY_ID
+  - name: AWS_SECRET_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: external-dns-aws
+        key: AWS_SECRET_ACCESS_KEY
