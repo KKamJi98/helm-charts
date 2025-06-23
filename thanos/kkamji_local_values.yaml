@@ -1,0 +1,40 @@
+# objstoreConfig: |-
+#   type: s3
+#   config:
+#     bucket: thanos
+#     endpoint: minio.minio.svc.cluster.local:9000
+#     access_key: xxxxxxxxxxxxx
+#     secret_key: xxxxxxxxxxxxx
+#     insecure: true
+
+existingObjstoreSecret: thanos-objstore
+
+query:
+  dnsDiscovery:
+    sidecarsService: kube-prometheus-prometheus-thanos
+    sidecarsNamespace: monitoring
+
+bucketweb:
+  enabled: true
+
+compactor:
+  enabled: true
+
+storegateway:
+  enabled: true
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+
+# minio:
+#   enabled: true
+#   auth:
+#     rootPassword: minio123
+#     rootUser: minio
+#   monitoringBuckets: thanos
+#   accessKey:
+#     password: minio
+#   secretKey:
+#     password: minio123

@@ -6,15 +6,24 @@ grafana:
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
       cert-manager.io/cluster-issuer: letsencrypt-prod
     hosts:
-      - grafana.kkamji.net
+    - grafana.kkamji.net
     paths:
-      - /
+    - /
     tls:
-      - secretName: grafana-tls
-        hosts:
-          - grafana.kkamji.net
+    - secretName: grafana-tls
+      hosts:
+      - grafana.kkamji.net
 
 prometheus:
+  thanosService:
+    # Thanos Sidecar용 Service 생성
+    enabled: true
+  prometheusSpec:
+    thanos:
+      objectStorageConfig:
+        existingSecret: 
+          name: "thanos-objstore"
+          key: "objstore.yml"
   ingress:
     ingressClassName: nginx
     enabled: true
@@ -25,16 +34,15 @@ prometheus:
       nginx.ingress.kubernetes.io/auth-secret: "prometheus-basic-auth" # 인증에 사용할 secret
       nginx.ingress.kubernetes.io/auth-realm: "Authentication Required" # 인증 프롬프트에 보내는 메시지
     hosts:
-      - prometheus.kkamji.net
+    - prometheus.kkamji.net
     paths:
-      - /
+    - /
     tls:
-      - secretName: prometheus-tls
-        hosts:
-          - prometheus.kkamji.net
+    - secretName: prometheus-tls
+      hosts:
+      - prometheus.kkamji.net
 
 # prometheusOperator:
 #   admissionWebhooks:
 #     patch:
 #       enabled: false
-    
