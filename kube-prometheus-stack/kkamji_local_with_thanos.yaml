@@ -1,4 +1,5 @@
 grafana:
+  defaultDashboardsTimezone: browser
   sidecar:
     datasources:
       url: http://thanos-query-frontend.monitoring.svc.cluster.local:9090/

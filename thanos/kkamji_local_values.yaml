@@ -10,6 +10,11 @@
 existingObjstoreSecret: thanos-objstore
 
 query:
+  resources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 512Mi
   dnsDiscovery:
     # sidecarsService: kube-prometheus-prometheus-thanos
     sidecarsService: kube-prometheus-stack-thanos-discovery # Prometheus Operator가 생성할 Headless Service 이름
@@ -43,6 +48,11 @@ bucketweb:
     tls: true
 
 compactor:
+  resources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 512Mi
   enabled: true
   retentionResolutionRaw: 15d # 원본(1s 해상도) => 15 일까지
   retentionResolution5m: 30d  # 5m down-sampling => 30 일
@@ -50,6 +60,11 @@ compactor:
 
 storegateway:
   enabled: true
+  resources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 512Mi
 
 metrics:
   enabled: true
