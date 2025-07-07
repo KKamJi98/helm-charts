@@ -54,9 +54,9 @@ compactor:
     limits:
       memory: 512Mi
   enabled: true
-  retentionResolutionRaw: 15d # 원본(1s 해상도) => 15 일까지
-  retentionResolution5m: 30d  # 5m down-sampling => 30 일
-  retentionResolution1h: 90d  # 1h down-sampling => 90 일
+  retentionResolutionRaw: 3d # 원본(1s 해상도)
+  retentionResolution5m:  15d  # 5m down-sampling
+  retentionResolution1h: 90d  # 1h down-sampling
 
 storegateway:
   enabled: true
