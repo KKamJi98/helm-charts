@@ -1,0 +1,83 @@
+# objstoreConfig: |-
+#   type: s3
+#   config:
+#     bucket: thanos
+#     endpoint: minio.minio.svc.cluster.local:9000
+#     access_key: xxxxxxxxxxxxx
+#     secret_key: xxxxxxxxxxxxx
+#     insecure: true
+
+existingObjstoreSecret: thanos-objstore
+
+query:
+  resources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  dnsDiscovery:
+    # sidecarsService: kube-prometheus-prometheus-thanos
+    sidecarsService: kube-prometheus-stack-thanos-discovery # Prometheus Operator가 생성할 Headless Service 이름
+    sidecarsNamespace: monitoring
+  ingress:
+    enabled: true
+    hostname: thanos-query.kkamji.net
+    ingressClassName: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"            # HTTP -> HTTPS 리다이렉트
+      cert-manager.io/cluster-issuer: letsencrypt-prod                  # TLS 인증서 발급용 ClusterIssuer
+      nginx.ingress.kubernetes.io/auth-type: "basic"                    # Nginx-ingress 전용 id/password 인증 방식 적용
+      nginx.ingress.kubernetes.io/auth-secret: "prometheus-basic-auth"  # basic-auth 자격증명 Secret
+      nginx.ingress.kubernetes.io/auth-realm: "Authentication Required" # 브라우저 프롬프트 메시지
+      external-dns.alpha.kubernetes.io/target: 121.130.214.237          # External-DNS가 가리킬 A 레코드 값
+    tls: true                                                           # cert-manager 로 TLS Secret 자동 생성
+
+bucketweb:
+  enabled: true
+  ingress:
+    enabled: true
+    hostname: thanos-bucket.kkamji.net
+    ingressClassName: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/auth-type: "basic" # 인증 타입
+      nginx.ingress.kubernetes.io/auth-secret: "prometheus-basic-auth" # 인증에 사용할 secret
+      nginx.ingress.kubernetes.io/auth-realm: "Authentication Required" # 인증 프롬프트에 보내는 메시지
+      external-dns.alpha.kubernetes.io/target: 121.130.214.237
+    tls: true
+
+compactor:
+  resources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  enabled: true
+  retentionResolutionRaw: 15d # 원본(1s 해상도) => 15 일까지
+  retentionResolution5m: 30d  # 5m down-sampling => 30 일
+  retentionResolution1h: 90d  # 1h down-sampling => 90 일
+
+storegateway:
+  enabled: true
+  resources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+
+# minio:
+#   enabled: true
+#   auth:
+#     rootPassword: minio123
+#     rootUser: minio
+#   monitoringBuckets: thanos
+#   accessKey:
+#     password: minio
+#   secretKey:
+#     password: minio123
