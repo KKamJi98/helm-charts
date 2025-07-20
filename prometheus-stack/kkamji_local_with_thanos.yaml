@@ -1,4 +1,8 @@
 grafana:
+  admin:
+    existingSecret: grafana-auth
+    userKey: admin-user
+    passwordKey: admin-password
   defaultDashboardsTimezone: browser # TimeZone 설정 (default: UTC)
   sidecar:
     datasources:
