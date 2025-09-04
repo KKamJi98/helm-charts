@@ -1,38 +1,54 @@
 #TODO 미완 - ALB Controller를 사용하도록 수정
-grafana:
-  ingress:
-    ingressClassName: alb
-    enabled: true
-    annotations:
-      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-      cert-manager.io/cluster-issuer: letsencrypt-prod
-    hosts:
-      - grafana.kkamji.net
-    paths:
-      - /
-    tls:
-      - secretName: grafana-tls
-        hosts:
-          - grafana.kkamji.net
+# grafana:
+#   ingress:
+#     ingressClassName: alb
+#     enabled: true
+#     annotations:
+#       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+#       cert-manager.io/cluster-issuer: letsencrypt-prod
+#     hosts:
+#       - grafana.kkamji.net
+#     paths:
+#       - /
+#     tls:
+#       - secretName: grafana-tls
+#         hosts:
+#           - grafana.kkamji.net
 
 prometheus:
-  ingress:
-    ingressClassName: alb
-    enabled: true
-    annotations:
-      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-      cert-manager.io/cluster-issuer: letsencrypt-prod
-      nginx.ingress.kubernetes.io/auth-type: "basic" # 인증 타입
-      nginx.ingress.kubernetes.io/auth-secret: "prometheus-basic-auth" # 인증에 사용할 secret
-      nginx.ingress.kubernetes.io/auth-realm: "Authentication Required" # 인증 프롬프트에 보내는 메시지
-    hosts:
-      - prometheus.kkamji.net
-    paths:
-      - /
-    tls:
-      - secretName: prometheus-tls
-        hosts:
-          - prometheus.kkamji.net
+  enabled: true
+  # ingress:
+  #   ingressClassName: alb
+  #   enabled: true
+  #   annotations:
+  #     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  #     cert-manager.io/cluster-issuer: letsencrypt-prod
+  #     nginx.ingress.kubernetes.io/auth-type: "basic" # 인증 타입
+  #     nginx.ingress.kubernetes.io/auth-secret: "prometheus-basic-auth" # 인증에 사용할 secret
+  #     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required" # 인증 프롬프트에 보내는 메시지
+  #   hosts:
+  #     - prometheus.kkamji.net
+  #   paths:
+  #     - /
+  #   tls:
+  #     - secretName: prometheus-tls
+  #       hosts:
+  #         - prometheus.kkamji.net
+
+  # Prometheus 서버 파드가 특정 노드로 스케줄링되도록 설정
+  prometheusSpec:
+    nodeSelector:
+      node.kubernetes.io/app: operation2
+
+    # EBS gp3 스토리지 클래스를 사용하는 PV 설정
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
 
 # prometheusOperator:
 #   admissionWebhooks:
@@ -40,5 +56,5 @@ prometheus:
 #       enabled: false
     
 
-thanosService:
-  enabled: false
+# thanosService:
+#   enabled: false
