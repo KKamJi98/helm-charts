@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kcd-2025-nginx.fullname" . }}-nginx-confd
+  labels:
+    {{- include "kcd-2025-nginx.labels" . | nindent 4 }}
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      listen [::]:8080;
+      server_tokens off;
+      access_log /dev/stdout;
+      error_log /dev/stderr;
+      root /usr/share/nginx/html;
+      index index.html;
+      location / {
+        try_files $uri $uri/ /index.html;
+      }
+    }

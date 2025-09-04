@@ -1,0 +1,136 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kcd-2025-nginx.fullname" . }}
+  labels:
+    {{- include "kcd-2025-nginx.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "kcd-2025-nginx.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "kcd-2025-nginx.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/confd: {{ include (print $.Template.BasePath "/nginx-confd-configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- /* Ensure writable volumes via fsGroup for non-root */}}
+      securityContext:
+        {{- with .Values.podSecurityContext }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        fsGroup: 101
+        fsGroupChangePolicy: OnRootMismatch
+      initContainers:
+        - name: init-nginx-confd
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              mkdir -p /confd
+              # ConfigMap 볼륨의 파일은 ..data 하위로 연결된 심볼릭 링크입니다.
+              # nginx가 실제 파일을 읽도록 링크를 해제(-L)하여 복사합니다.
+              cp -rLv /confd-src/* /confd/
+              ls -al /confd
+          volumeMounts:
+            - name: nginx-confd
+              mountPath: /confd
+            - name: nginx-confd-src
+              mountPath: /confd-src
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsUser: 0
+            runAsGroup: 0
+      containers:
+        - name: nginx
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: REGION
+              value: "{{ .Values.region }}"
+            - name: PREFIX
+              value: "{{ .Values.prefix }}"
+            - name: NGINX_ENVSUBST_TEMPLATE_DIR
+              value: "/etc/nginx/templates"
+            - name: NGINX_ENVSUBST_OUTPUT_DIR
+              value: "/usr/share/nginx/html"
+            - name: NGINX_ENVSUBST_TEMPLATE_SUFFIX
+              value: ".template"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: html-templates
+              mountPath: /etc/nginx/templates
+              readOnly: true
+            - name: nginx-confd
+              mountPath: /etc/nginx/conf.d
+            - name: html-out
+              mountPath: /usr/share/nginx/html
+            - name: cache
+              mountPath: /var/cache/nginx
+            - name: run
+              mountPath: /var/run
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+      volumes:
+        - name: html-templates
+          configMap:
+            name: {{ include "kcd-2025-nginx.fullname" . }}-html
+            items:
+              - key: index.html.template
+                path: index.html.template
+        - name: nginx-confd
+          emptyDir: {}
+        - name: nginx-confd-src
+          configMap:
+            name: {{ include "kcd-2025-nginx.fullname" . }}-nginx-confd
+            items:
+              - key: default.conf
+                path: default.conf
+        - name: html-out
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}

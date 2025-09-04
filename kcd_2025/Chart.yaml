@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kcd-2025-nginx
+description: KCD 2025 Demo Helm Chart using Nginx with ConfigMap-driven index.html
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

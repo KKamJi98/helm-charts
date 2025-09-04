@@ -1,0 +1,17 @@
+# Common VCS dirs
+.git/
+.gitignore
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Mac / OS
+.DS_Store
+
+# Node / build
+node_modules/
+dist/
+build/

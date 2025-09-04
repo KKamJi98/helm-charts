@@ -1,0 +1,13 @@
+1. Get the application URL by running these commands:
+
+  Namespace: {{ .Release.Namespace }}
+
+{{- if .Values.ingress.enabled }}
+  - Ingress host(s):
+{{- range .Values.ingress.hosts }}
+    - http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+  - Run: kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "kcd-2025-nginx.fullname" . }} 8080:80
+    Then access: http://127.0.0.1:8080
+{{- end }}
