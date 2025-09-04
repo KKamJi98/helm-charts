@@ -7,3 +7,4 @@ harbor/harbor/*
 # auth
 secret-values.yaml
 thanos-objstore-secret.yaml
+AGENTS.md
