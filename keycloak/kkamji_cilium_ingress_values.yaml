@@ -1,0 +1,26 @@
+replicaCount: 1
+
+ingress:
+  enabled: true
+  ingressClassName: cilium
+  hostname: keycloak.kkamji.net
+  path: /
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod" 
+    ingress.cilium.io/force-https: "true"
+  tls: true
+  servicePort: https
+
+auth:
+  adminUser: admin
+
+tls:
+  enabled: true
+  existingSecret: keycloak.kkamji.net-tls
+  usePem: true
+
+# extraEnvVars:
+#   - name: KC_PROXY
+#     value: "edge"
+
+production: true

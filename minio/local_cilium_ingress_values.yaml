@@ -1,0 +1,22 @@
+ingress:
+  enabled: true                 # Enable Ingress
+  ingressClassName: cilium       # Matches your ingress controller
+  hostname: minio.kkamji.net    # Domain for MinIO
+  path: "/"                   # Path to access the console
+  pathType: Prefix
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    ingress.cilium.io/force-https: "true"
+  tls: true
+  servicePort: minio-console    # Exposes the MinIO console on HTTPS
+
+auth:
+  rootUser: admin
+  rootPassword: ""  # set your password here or via an external secret
+
+resourcesPreset: "small"
+
+# small:
+# "requests" (dict "cpu" "500m" "memory" "512Mi" "ephemeral-storage" "50Mi")
+# "limits" (dict "cpu" "750m" "memory" "768Mi" "ephemeral-storage" "2Gi")
+# 

@@ -1,0 +1,111 @@
+# Enable automatic direct routes for pods when native routing is active.
+autoDirectNodeRoutes: true
+
+bgpControlPlane:
+  # Keep the BGP control plane active for advertising service routes.
+  enabled: true
+
+# Skip unreachable nodes when programming native direct routes.
+directRoutingSkipUnreachable: true
+
+endpointRoutes:
+  # Prefer per-endpoint routes instead of hairpinning via cilium_host.
+  enabled: true
+
+endpointHealthChecking:
+  # Disable endpoint health probes to reduce datapath noise.
+  enabled: false
+
+# Disable legacy agent connectivity checks.
+healthChecking: false
+
+# Run the kube-proxy replacement datapath.
+kubeProxyReplacement: true
+
+bpf:
+  # Enable BPF-based native masquerading.
+  masquerade: true
+
+# Install conntrack bypass rules for kube-proxy-free routing.
+installNoConntrackIptablesRules: true
+
+# Advertise the workload pod CIDR through native routing.
+ipv4NativeRoutingCIDR: 10.233.64.0/18
+
+# Operate in native routing mode rather than tunneling.
+routingMode: native
+
+k8sServiceHost: auto
+k8sServicePort: auto
+
+ipam:
+  # Use cluster-pool IPAM managed by the operator.
+  mode: cluster-pool
+  operator:
+    # Restrict IPv4 allocations to the desired pod CIDR.
+    clusterPoolIPv4PodCIDRList:
+      - 10.233.64.0/18
+
+l2announcements:
+  # Enable L2 announcements so services can advertise on bare metal.
+  enabled: true
+
+# Allow node-local redirect policies for fast-path services.
+localRedirectPolicy: true
+
+ingressController:
+  # Enable the Cilium ingress controller.
+  enabled: true
+  # Share the load balancer across multiple ingress resources.
+  loadbalancerMode: shared
+
+loadBalancer:
+  l7:
+    # Back L7 load balancing with Envoy.
+    backend: envoy
+
+debug:
+  # Enable debug logging for targeted troubleshooting.
+  enabled: true
+
+hubble:
+  # Keep Hubble datapath visibility enabled.
+  enabled: true
+  relay:
+    # Run Hubble relay for aggregated flow export.
+    enabled: true
+  ui:
+    # Deploy the Hubble UI.
+    enabled: true
+    service:
+      # Expose the UI via NodePort for cluster-edge access.
+      type: NodePort
+      # Use a fixed NodePort for firewall allowlisting.
+      nodePort: 30003
+  metrics:
+    # Publish metrics using the OpenMetrics endpoint.
+    enableOpenMetrics: true
+    # Enable flow-level metrics including HTTP exemplars.
+    enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - port-distribution
+      - icmp
+      - 'httpV2:exemplars=true;labelsContext=source_ip,source_namespace,source_workload,destination_ip,destination_namespace,destination_workload,traffic_direction'
+
+prometheus:
+  # Expose core agent Prometheus metrics.
+  enabled: true
+
+operator:
+  # Run a single operator replica to reduce control-plane footprint.
+  replicas: 1
+  prometheus:
+    # Expose operator metrics for scraping.
+    enabled: true
+
+ciliumEndpointSlice:
+  # Enable EndpointSlice exports for scalable service discovery.
+  enabled: true
