@@ -22,7 +22,8 @@ tls:
   usePem: true
 
 postgresql:
-  repository: bitnamilagacy/postgresql
+  registroy: docker.io
+  repository: bitnamilegacy/postgresql
 # extraEnvVars:
 #   - name: KC_PROXY
 #     value: "edge"
