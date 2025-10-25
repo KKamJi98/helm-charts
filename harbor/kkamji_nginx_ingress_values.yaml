@@ -800,13 +800,13 @@ trivy:
   automountServiceAccountToken: false
   # replicas the number of Pod replicas
   replicas: 1
-  resources: {}
-    # requests:
-    #   cpu: 200m
-    #   memory: 512Mi
-    # limits:
-    #   cpu: 1
-    #   memory: 1Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
   extraEnvVars: []
   nodeSelector: {}
   tolerations: []
