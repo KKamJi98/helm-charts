@@ -44,25 +44,21 @@ ipam:
   operator:
     # Restrict IPv4 allocations to the desired pod CIDR.
     clusterPoolIPv4PodCIDRList:
-      - 10.233.64.0/18
+    - 10.233.64.0/18
 
-l2announcements:
-  # Enable L2 announcements so services can advertise on bare metal.
-  enabled: true
+# l2announcements:
+#   enabled: true
 
 # Allow node-local redirect policies for fast-path services.
 localRedirectPolicy: true
 
-ingressController:
-  # Enable the Cilium ingress controller.
-  enabled: true
-  # Share the load balancer across multiple ingress resources.
-  loadbalancerMode: shared
+# ingressController:
+#   enabled: true
+#   loadbalancerMode: shared
 
-loadBalancer:
-  l7:
-    # Back L7 load balancing with Envoy.
-    backend: envoy
+# loadBalancer:
+#   l7:
+#     backend: envoy
 
 debug:
   # Enable debug logging for targeted troubleshooting.
@@ -87,25 +83,10 @@ hubble:
     enableOpenMetrics: true
     # Enable flow-level metrics including HTTP exemplars.
     enabled:
-      - dns
-      - drop
-      - tcp
-      - flow
-      - port-distribution
-      - icmp
-      - 'httpV2:exemplars=true;labelsContext=source_ip,source_namespace,source_workload,destination_ip,destination_namespace,destination_workload,traffic_direction'
-
-prometheus:
-  # Expose core agent Prometheus metrics.
-  enabled: true
-
-operator:
-  # Run a single operator replica to reduce control-plane footprint.
-  replicas: 1
-  prometheus:
-    # Expose operator metrics for scraping.
-    enabled: true
-
-ciliumEndpointSlice:
-  # Enable EndpointSlice exports for scalable service discovery.
-  enabled: true
+    - dns
+    - drop
+    - tcp
+    - flow
+    - port-distribution
+    - icmp
+    - 'httpV2:exemplars=true;labelsContext=source_ip,source_namespace,source_workload,destination_ip,destination_namespace,destination_workload,traffic_direction'
