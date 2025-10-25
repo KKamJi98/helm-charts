@@ -6,7 +6,7 @@ ingress:
   hostname: keycloak.kkamji.net
   path: /
   annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod" 
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
     kubernetes.io/ingress.class: nginx
@@ -21,6 +21,8 @@ tls:
   existingSecret: keycloak.kkamji.net-tls
   usePem: true
 
+postgresql:
+  repository: bitnamilagacy/postgresql
 # extraEnvVars:
 #   - name: KC_PROXY
 #     value: "edge"
