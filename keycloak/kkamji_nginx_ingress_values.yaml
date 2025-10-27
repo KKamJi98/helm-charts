@@ -1,5 +1,10 @@
 replicaCount: 1
 
+resourcesPreset: "none"
+
+keycloakConfigCli:
+  resourcesPreset: "none"
+
 ingress:
   enabled: true
   ingressClassName: nginx
