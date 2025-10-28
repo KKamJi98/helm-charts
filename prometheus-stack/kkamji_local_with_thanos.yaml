@@ -22,6 +22,11 @@ grafana:
     - secretName: grafana-tls
       hosts:
       - grafana.kkamji.net
+  additionalDataSources:
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki-gateway
 
 prometheus:
   thanosService:
