@@ -26,8 +26,13 @@ grafana:
   - name: Loki
     type: loki
     access: proxy
-    url: http://loki-gateway
-
+    url: http://loki-gateway:80
+    jsonData:
+      timeout: 60
+      maxLines: 1000
+      httpHeaderName1: "X-Scope-OrgID"
+    secureJsonData:
+      httpHeaderValue1: "kkamji"
 prometheus:
   thanosService:
     # Thanos Sidecar용 Service 생성
