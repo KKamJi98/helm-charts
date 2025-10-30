@@ -33,6 +33,7 @@ grafana:
       httpHeaderName1: "X-Scope-OrgID"
     secureJsonData:
       httpHeaderValue1: "kkamji"
+
 prometheus:
   thanosService:
     # Thanos Sidecar용 Service 생성
