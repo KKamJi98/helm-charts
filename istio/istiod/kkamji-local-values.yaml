@@ -1,0 +1,12 @@
+global:
+  istioNamespace: istio-system
+
+  # 프록시 설정
+  proxy:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 512Mi

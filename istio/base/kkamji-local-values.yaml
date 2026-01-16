@@ -1,0 +1,11 @@
+# Istio Base - kkamji local values
+# Istio CRDs 및 클러스터 리소스 설정
+
+defaultRevision: default
+
+global:
+  istioNamespace: istio-system
+
+base:
+  enableCRDTemplates: true
+  enableIstioConfigCRDs: true
