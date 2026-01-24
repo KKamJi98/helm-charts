@@ -5,34 +5,31 @@ defaults:
   source:
     repoURL: https://github.com/KKamJi98/helm-charts.git
     targetRevision: main
+    helm:
+      valueFiles:
+        - kkamji-values.yaml
 
 applications:
   # ArgoCD 자체 관리
   argocd:
-    destination:
-      namespace: argocd
-    source:
-      path: eks-1.34/argo-cd
-      helm:
-        valueFiles:
-          - kkamji-values.yaml
+    namespace: argocd
+    path: eks-1.34/argo-cd
 
   # App of Apps (자기 자신)
   argo-applications:
-    destination:
-      namespace: argocd
+    namespace: argocd
+    path: eks-1.34/argo-applications
     source:
-      path: eks-1.34/argo-applications
       helm:
         valueFiles:
           - kube-rca-values.yaml
 
   # AWS Load Balancer Controller
   aws-load-balancer-controller:
-    destination:
-      namespace: kube-system
-    source:
-      path: eks-1.34/aws-load-balancer-controller
-      helm:
-        valueFiles:
-          - kkamji-values.yaml
+    namespace: kube-system
+    path: eks-1.34/aws-load-balancer-controller
+
+  # External DNS
+  external-dns:
+    namespace: kube-system
+    path: eks-1.34/external-dns

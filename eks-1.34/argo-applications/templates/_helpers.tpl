@@ -30,23 +30,33 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 {{/*
 Merge source with defaults.
 Usage: {{ include "argo-applications.mergeSource" (dict "defaults" .Values.defaults "app" $app) }}
+Supports shorthand: app.path -> app.source.path
 */}}
 {{- define "argo-applications.mergeSource" -}}
 {{- $defaultSource := default dict .defaults.source -}}
 {{- $appSource := default dict .app.source -}}
 {{- $merged := deepCopy $defaultSource | merge $appSource -}}
+{{- /* 단축 속성 지원: app.path -> source.path */ -}}
+{{- if and .app.path (not (index $merged "path")) -}}
+{{- $_ := set $merged "path" .app.path -}}
+{{- end -}}
 {{- toYaml $merged -}}
 {{- end -}}
 
 {{/*
 Merge destination with defaults.
 Usage: {{ include "argo-applications.mergeDestination" (dict "defaults" .Values.defaults "app" $app "appName" $appName) }}
+Supports shorthand: app.namespace -> app.destination.namespace
 */}}
 {{- define "argo-applications.mergeDestination" -}}
 {{- $defaultDest := default dict .defaults.destination -}}
 {{- $appDest := default dict .app.destination -}}
 {{- $merged := deepCopy $defaultDest | merge $appDest -}}
-{{- /* namespace 기본값: app.destination.namespace > defaults.destination.namespace > appName */ -}}
+{{- /* 단축 속성 지원: app.namespace -> destination.namespace */ -}}
+{{- if and .app.namespace (not (index $merged "namespace")) -}}
+{{- $_ := set $merged "namespace" .app.namespace -}}
+{{- end -}}
+{{- /* namespace 기본값: app.destination.namespace > app.namespace > defaults.destination.namespace > appName */ -}}
 {{- if not (index $merged "namespace") -}}
 {{- $_ := set $merged "namespace" .appName -}}
 {{- end -}}
