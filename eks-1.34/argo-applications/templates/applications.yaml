@@ -1,0 +1,54 @@
+{{- $root := . -}}
+{{- $defaults := .Values.defaults -}}
+{{- range $appKey, $app := .Values.applications }}
+{{- if include "argo-applications.isEnabled" $app | trim | eq "true" }}
+{{- $appName := default $appKey $app.name }}
+{{- $appNamespace := default $defaults.namespace $app.namespace }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ $appName }}
+  namespace: {{ $appNamespace }}
+  labels:
+    {{- include "argo-applications.labels" $root | nindent 4 }}
+    {{- with $app.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- $finalizers := include "argo-applications.finalizers" (dict "defaults" $defaults "app" $app) | trim }}
+  {{- if $finalizers }}
+  finalizers:
+    {{- $finalizers | nindent 4 }}
+  {{- end }}
+  {{- with $app.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  project: {{ default $defaults.project $app.project }}
+  destination:
+    {{- include "argo-applications.mergeDestination" (dict "defaults" $defaults "app" $app "appName" $appName) | nindent 4 }}
+  source:
+    {{- $source := include "argo-applications.mergeSource" (dict "defaults" $defaults "app" $app) | fromYaml }}
+    {{- if not $source.path }}
+    {{- fail (printf "applications.%s.source.path is required" $appKey) }}
+    {{- end }}
+    {{- toYaml $source | nindent 4 }}
+  {{- $syncPolicy := include "argo-applications.mergeSyncPolicy" (dict "defaults" $defaults "app" $app) | trim }}
+  {{- if $syncPolicy }}
+  syncPolicy:
+    {{- $syncPolicy | nindent 4 }}
+  {{- end }}
+  {{- with $app.ignoreDifferences }}
+  ignoreDifferences:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $app.info }}
+  info:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $app.revisionHistoryLimit }}
+  revisionHistoryLimit: {{ . }}
+  {{- end }}
+{{- end }}
+{{- end }}

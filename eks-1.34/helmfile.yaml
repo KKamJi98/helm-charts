@@ -1,0 +1,23 @@
+releases:
+  # CRDs must be installed first
+  - name: aws-load-balancer-controller-crds
+    namespace: kube-system
+    chart: ./aws-load-balancer-controller-crds
+
+  - name: argocd
+    namespace: argocd
+    createNamespace: true
+    chart: ./argo-cd
+    values:
+      - ./argo-cd/kkamji-values.yaml
+
+  - name: aws-load-balancer-controller
+    namespace: kube-system
+    createNamespace: true
+    chart: ./aws-load-balancer-controller
+    needs:
+      - kube-system/aws-load-balancer-controller-crds
+    disableValidationOnInstall: true
+    disableOpenAPIValidation: true
+    values:
+      - ./aws-load-balancer-controller/kkamji-values.yaml

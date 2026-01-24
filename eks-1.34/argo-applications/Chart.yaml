@@ -1,0 +1,6 @@
+apiVersion: v2
+name: argo-applications
+description: Argo CD App of Apps chart for kuberca
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

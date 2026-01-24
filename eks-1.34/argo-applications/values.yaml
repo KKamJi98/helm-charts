@@ -1,0 +1,51 @@
+# Argo Applications Chart - Default Values
+# 글로벌 기본값 (모든 application에 적용)
+
+defaults:
+  # ArgoCD Application 리소스가 생성될 namespace
+  namespace: argocd
+
+  # ArgoCD project
+  project: default
+
+  # destination 기본값 (앱이 배포될 대상)
+  destination:
+    server: https://kubernetes.default.svc
+    # namespace: 지정하지 않으면 앱 이름 사용
+
+  # source 기본값
+  source:
+    repoURL: ""
+    targetRevision: HEAD
+    # path: 앱별로 필수 지정
+
+  # syncPolicy 기본값
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true
+
+  # finalizers 기본값
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+
+# 애플리케이션 정의
+# 각 앱은 defaults를 상속받으며, 필요한 값만 override
+#
+# 예시:
+# applications:
+#   my-app:
+#     # enabled: true (기본값, 생략 가능)
+#     # name: my-app (기본값 = key, 생략 가능)
+#     destination:
+#       namespace: my-namespace  # 앱 배포 대상 namespace
+#     source:
+#       path: charts/my-app
+#       helm:
+#         valueFiles:
+#           - values.yaml
+applications: {}
