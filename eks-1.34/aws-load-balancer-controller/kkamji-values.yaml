@@ -1,0 +1,4 @@
+clusterName: kkamji-eks-34
+serviceAccount:
+  create: true
+  name: aws-load-balancer-controller-sa
