@@ -19,10 +19,6 @@ applications:
   argo-applications:
     namespace: argocd
     path: eks-1.34/argo-applications
-    source:
-      helm:
-        valueFiles:
-          - kube-rca-values.yaml
 
   # AWS Load Balancer Controller
   aws-load-balancer-controller:
