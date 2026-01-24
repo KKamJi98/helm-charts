@@ -3,13 +3,14 @@
 {{- range $appKey, $app := .Values.applications }}
 {{- if include "argo-applications.isEnabled" $app | trim | eq "true" }}
 {{- $appName := default $appKey $app.name }}
-{{- $appNamespace := default $defaults.namespace $app.namespace }}
+{{- /* Application CR은 항상 argocd namespace에 생성 (appNamespace로 override 가능) */ -}}
+{{- $crNamespace := default "argocd" $defaults.appNamespace -}}
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: {{ $appName }}
-  namespace: {{ $appNamespace }}
+  namespace: {{ $crNamespace }}
   labels:
     {{- include "argo-applications.labels" $root | nindent 4 }}
     {{- with $app.labels }}

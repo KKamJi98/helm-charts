@@ -16,6 +16,7 @@ server:
       alb.ingress.kubernetes.io/backend-protocol: HTTP
       alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}, {"HTTPS":443}]'
       alb.ingress.kubernetes.io/ssl-redirect: "443"
+      alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:376129852049:certificate/df267f48-3e42-4eb5-b705-9948fe538b6e
     aws:
       serviceType: ClusterIP
       backendProtocolVersion: GRPC
