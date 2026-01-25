@@ -8,6 +8,9 @@ defaults:
     helm:
       valueFiles:
         - kkamji-values.yaml
+  ignoreDifferences:
+    - jqPathExpressions:
+        - '.metadata.annotations["argocd.argoproj.io/tracking-id"]'
 
 applications:
   # ArgoCD 자체 관리

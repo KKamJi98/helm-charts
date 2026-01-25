@@ -33,6 +33,12 @@ defaults:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 
+  # ignoreDifferences 기본값 (앱별로 override 가능)
+  # 예시: ArgoCD tracking-id annotation 무시
+  # ignoreDifferences:
+  #   - jqPathExpressions:
+  #       - '.metadata.annotations["argocd.argoproj.io/tracking-id"]'
+
 # 애플리케이션 정의
 # 각 앱은 defaults를 상속받으며, 필요한 값만 override
 #

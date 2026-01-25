@@ -98,6 +98,21 @@ Usage: {{ include "argo-applications.finalizers" (dict "defaults" .Values.defaul
 {{- end -}}
 
 {{/*
+Get ignoreDifferences.
+Usage: {{ include "argo-applications.ignoreDifferences" (dict "defaults" .Values.defaults "app" $app) }}
+If app.ignoreDifferences is set (even empty), it overrides defaults.
+*/}}
+{{- define "argo-applications.ignoreDifferences" -}}
+{{- if hasKey .app "ignoreDifferences" -}}
+  {{- if .app.ignoreDifferences -}}
+    {{- toYaml .app.ignoreDifferences -}}
+  {{- end -}}
+{{- else if .defaults.ignoreDifferences -}}
+  {{- toYaml .defaults.ignoreDifferences -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Check if application is enabled.
 Default: true
 */}}

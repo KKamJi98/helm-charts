@@ -20,3 +20,34 @@ server:
     aws:
       serviceType: ClusterIP
       backendProtocolVersion: GRPC
+
+# App of Apps bootstrap (root Application)
+extraObjects:
+  - apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: app-of-apps
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/KKamJi98/helm-charts.git
+        targetRevision: main
+        path: eks-1.34/argo-applications
+        helm:
+          valueFiles:
+            - kkamji-values.yaml
+          parameters:
+            - name: applications.argo-applications.enabled
+              value: "false"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: argocd
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ApplyOutOfSyncOnly=true
+          - ServerSideApply=true

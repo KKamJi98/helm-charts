@@ -11,16 +11,6 @@ releases:
     values:
       - ./argo-cd/kkamji-values.yaml
 
-  - name: argo-applications
-    namespace: argocd
-    createNamespace: true
-    chart: ./argo-applications
-    needs:
-      - argocd
-    disableValidation: true
-    values:
-      - ./argo-applications/kkamji-values.yaml
-
   # - name: aws-load-balancer-controller
   #   namespace: kube-system
   #   createNamespace: true

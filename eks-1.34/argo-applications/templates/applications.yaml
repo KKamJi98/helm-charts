@@ -40,9 +40,10 @@ spec:
   syncPolicy:
     {{- $syncPolicy | nindent 4 }}
   {{- end }}
-  {{- with $app.ignoreDifferences }}
+  {{- $ignore := include "argo-applications.ignoreDifferences" (dict "defaults" $defaults "app" $app) | trim }}
+  {{- if $ignore }}
   ignoreDifferences:
-    {{- toYaml . | nindent 4 }}
+    {{- $ignore | nindent 4 }}
   {{- end }}
   {{- with $app.info }}
   info:
