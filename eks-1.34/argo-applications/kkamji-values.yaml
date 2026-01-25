@@ -9,7 +9,9 @@ defaults:
       valueFiles:
         - kkamji-values.yaml
   ignoreDifferences:
-    - jqPathExpressions:
+    - group: "*"
+      kind: "*"
+      jqPathExpressions:
         - '.metadata.annotations["argocd.argoproj.io/tracking-id"]'
 
 applications:
@@ -32,3 +34,8 @@ applications:
   external-dns:
     namespace: kube-system
     path: eks-1.34/external-dns
+
+  # Metrics Server
+  metrics-server:
+    namespace: kube-system
+    path: eks-1.34/metrics-server
