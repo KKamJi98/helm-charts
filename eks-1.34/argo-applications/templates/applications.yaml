@@ -4,7 +4,7 @@
 {{- if include "argo-applications.isEnabled" $app | trim | eq "true" }}
 {{- $appName := default $appKey $app.name }}
 {{- /* Application CR은 항상 argocd namespace에 생성 (appNamespace로 override 가능) */ -}}
-{{- $crNamespace := default "argocd" $defaults.appNamespace -}}
+{{- $crNamespace := default "argocd" $defaults.appNamespace }}
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
