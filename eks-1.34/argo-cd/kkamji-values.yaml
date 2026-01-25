@@ -28,6 +28,9 @@ extraObjects:
     metadata:
       name: app-of-apps
       namespace: argocd
+      annotations:
+        helm.sh/hook: post-install,post-upgrade
+        helm.sh/hook-weight: "10"
     spec:
       project: default
       source:
