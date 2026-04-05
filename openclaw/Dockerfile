@@ -1,32 +1,21 @@
-FROM ubuntu:24.04
+FROM node:24-bookworm-slim
 
-ENV DEBIAN_FRONTEND=noninteractive
+ARG OPENCLAW_VERSION=2026.4.2
 
-# System dependencies
-RUN apt-get update && apt-get install -y \
-    curl wget git build-essential ca-certificates gnupg \
-    python3 python3-pip python3-venv \
-    && rm -rf /var/lib/apt/lists/*
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-factor 2 \
+    && npm config set fetch-retry-mintimeout 10000 \
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && npm install -g "openclaw@${OPENCLAW_VERSION}" \
+    && npm cache clean --force \
+    && install -d -m 0755 -o 1000 -g 1000 \
+      /home/node/.openclaw \
+      /home/node/.openclaw/workspace
 
-# Node.js 24
-RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
+USER 1000:1000
+WORKDIR /home/node
 
-# Go
-ARG GO_VERSION=1.24.2
-RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" | tar -C /usr/local -xz
-
-# OpenClaw
-RUN npm install -g openclaw@latest
-
-# Non-root user
-RUN useradd -m -u 1000 -s /bin/bash openclaw
-USER openclaw
-WORKDIR /home/openclaw
-
-ENV GOPATH="/home/openclaw/go"
-ENV PATH="${GOPATH}/bin:/usr/local/go/bin:${PATH}"
+ENV HOME="/home/node"
 
 EXPOSE 18789
 
