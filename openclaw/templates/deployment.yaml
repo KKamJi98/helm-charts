@@ -79,6 +79,7 @@ spec:
                 secretKeyRef:
                   name: {{ .secretName | default $.Values.envFromSecretName | default $.Values.secret.name }}
                   key: {{ .secretKey }}
+                  optional: true
             {{- end }}
           {{- end }}
           {{- with .Values.startupProbe }}
