@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "pullPolicy": { "type": "string" },
+        "tag": { "type": "string" }
+      }
+    },
+    "imagePullSecrets": {
+      "type": "array"
+    },
+    "nameOverride": { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "automount": { "type": "boolean" },
+        "annotations": { "type": "object" },
+        "name": { "type": "string" }
+      }
+    },
+    "podAnnotations": { "type": "object" },
+    "podLabels": { "type": "object" },
+    "podSecurityContext": { "type": "object" },
+    "securityContext": { "type": "object" },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["ClusterIP", "NodePort", "LoadBalancer"]
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "nodePort": {
+          "anyOf": [
+            { "type": "string", "maxLength": 0 },
+            { "type": "integer", "minimum": 30000, "maximum": 32767 }
+          ]
+        }
+      }
+    },
+    "gateway": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["local", "remote"]
+        },
+        "bind": {
+          "type": "string",
+          "enum": ["loopback", "lan", "tailnet", "auto", "custom"]
+        },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["none", "token", "password", "trusted-proxy"]
+            },
+            "allowTailscale": { "type": "boolean" },
+            "existingSecretName": { "type": "string" },
+            "existingSecretKey": { "type": "string" },
+            "generateSecret": { "type": "boolean" },
+            "rateLimit": {
+              "type": "object",
+              "properties": {
+                "maxAttempts": { "type": "integer", "minimum": 1 },
+                "windowMs": { "type": "integer", "minimum": 1 },
+                "lockoutMs": { "type": "integer", "minimum": 1 },
+                "exemptLoopback": { "type": "boolean" }
+              }
+            }
+          }
+        },
+        "controlUi": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "basePath": { "type": "string" },
+            "allowedOrigins": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "dangerouslyAllowHostHeaderOriginFallback": { "type": "boolean" }
+          }
+        },
+        "tailscale": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["off", "serve", "funnel"]
+            },
+            "resetOnExit": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "webSearch": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "provider": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "searxng": {
+          "type": "object",
+          "properties": {
+            "baseUrl": { "type": "string" },
+            "categories": { "type": "string" },
+            "language": { "type": "string" }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "enabled": { "const": true },
+              "provider": { "const": "searxng" }
+            }
+          },
+          "then": {
+            "properties": {
+              "searxng": {
+                "required": ["baseUrl"]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "config": {
+      "type": "object"
+    },
+    "secret": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "name": { "type": "string" },
+        "data": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "externalSecret": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "apiVersion": { "type": "string" },
+        "refreshInterval": { "type": "string" },
+        "secretStoreName": { "type": "string" },
+        "secretStoreKind": { "type": "string" },
+        "remoteKey": { "type": "string" },
+        "targetSecretName": { "type": "string" },
+        "creationPolicy": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "enabled": { "const": true }
+            }
+          },
+          "then": {
+            "required": ["secretStoreName", "secretStoreKind", "remoteKey"]
+          }
+        }
+      ]
+    },
+    "envFromSecretName": { "type": "string" },
+    "envFromSecret": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "secretKey": { "type": "string", "minLength": 1 },
+          "secretName": { "type": "string" }
+        },
+        "required": ["name", "secretKey"],
+        "additionalProperties": false
+      }
+    },
+    "dataDir": { "type": "string", "minLength": 1 },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "storageClassName": { "type": "string" },
+        "accessModes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "size": { "type": "string", "minLength": 1 }
+      }
+    },
+    "strategy": { "type": "object" },
+    "resources": { "type": "object" },
+    "startupProbe": { "type": "object" },
+    "livenessProbe": { "type": "object" },
+    "readinessProbe": { "type": "object" },
+    "defaultAgentId": {
+      "anyOf": [
+        { "type": "string", "maxLength": 0 },
+        {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        }
+      ]
+    },
+    "agents": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9][a-z0-9-]*$"
+      },
+      "patternProperties": {
+        "^[a-z0-9][a-z0-9-]*$": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "model": {
+              "type": "string",
+              "pattern": "^[^/]+/.+$"
+            },
+            "soul": { "type": "string", "minLength": 1 }
+          },
+          "required": ["model", "soul"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "nodeSelector": { "type": "object" },
+    "tolerations": { "type": "array" },
+    "affinity": { "type": "object" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "agents": {
+            "type": "object",
+            "minProperties": 2
+          }
+        }
+      },
+      "then": {
+        "required": ["defaultAgentId"]
+      }
+    }
+  ]
+}

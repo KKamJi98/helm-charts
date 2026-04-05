@@ -4,25 +4,60 @@ metadata:
   name: {{ include "openclaw.fullname" . }}-config
   labels:
     {{- include "openclaw.labels" . | nindent 4 }}
+{{- $dataDir := include "openclaw.dataDir" . -}}
+{{- $config := dict -}}
+{{- $gateway := dict "mode" (.Values.gateway.mode | default "local") "port" .Values.service.port "bind" (.Values.gateway.bind | default "lan") -}}
+{{- $auth := dict "mode" (.Values.gateway.auth.mode | default "token") "allowTailscale" (.Values.gateway.auth.allowTailscale | default false) "rateLimit" .Values.gateway.auth.rateLimit -}}
+{{- $_ := set $gateway "auth" $auth -}}
+{{- $tailscale := dict "mode" (.Values.gateway.tailscale.mode | default "off") "resetOnExit" (.Values.gateway.tailscale.resetOnExit | default false) -}}
+{{- $_ := set $gateway "tailscale" $tailscale -}}
+{{- $controlUi := dict "enabled" (.Values.gateway.controlUi.enabled | default true) -}}
+{{- if .Values.gateway.controlUi.basePath }}
+{{- $_ := set $controlUi "basePath" .Values.gateway.controlUi.basePath -}}
+{{- end }}
+{{- if .Values.gateway.controlUi.allowedOrigins }}
+{{- $_ := set $controlUi "allowedOrigins" .Values.gateway.controlUi.allowedOrigins -}}
+{{- end }}
+{{- if .Values.gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback }}
+{{- $_ := set $controlUi "dangerouslyAllowHostHeaderOriginFallback" true -}}
+{{- end }}
+{{- $_ := set $gateway "controlUi" $controlUi -}}
+{{- $_ := set $config "gateway" $gateway -}}
+{{- if .Values.agents }}
+{{- $defaultAgentId := include "openclaw.defaultAgentId" . -}}
+{{- $agents := dict "defaults" (dict "workspace" (printf "%s/workspace" $dataDir)) -}}
+{{- $agentList := list -}}
+{{- range $agentId := keys .Values.agents | sortAlpha }}
+{{- $agent := index $.Values.agents $agentId -}}
+{{- $entry := dict "id" $agentId "workspace" (printf "%s/workspaces/%s" $dataDir $agentId) "agentDir" (printf "%s/agents/%s/agent" $dataDir $agentId) "model" $agent.model -}}
+{{- if $agent.name }}
+{{- $_ := set $entry "name" $agent.name -}}
+{{- end }}
+{{- if eq $agentId $defaultAgentId }}
+{{- $_ := set $entry "default" true -}}
+{{- end }}
+{{- $agentList = append $agentList $entry -}}
+{{- end }}
+{{- $_ := set $agents "list" $agentList -}}
+{{- $_ := set $config "agents" $agents -}}
+{{- end }}
+{{- if .Values.webSearch.enabled }}
+{{- $tools := dict "web" (dict "search" (dict "provider" .Values.webSearch.provider)) -}}
+{{- $_ := set $config "tools" $tools -}}
+{{- if eq .Values.webSearch.provider "searxng" }}
+{{- $searxngWebSearch := dict "baseUrl" .Values.webSearch.searxng.baseUrl -}}
+{{- if .Values.webSearch.searxng.categories }}
+{{- $_ := set $searxngWebSearch "categories" .Values.webSearch.searxng.categories -}}
+{{- end }}
+{{- if .Values.webSearch.searxng.language }}
+{{- $_ := set $searxngWebSearch "language" .Values.webSearch.searxng.language -}}
+{{- end }}
+{{- $_ := set $config "plugins" (dict "entries" (dict "searxng" (dict "config" (dict "webSearch" $searxngWebSearch)))) -}}
+{{- end }}
+{{- end }}
+{{- if .Values.config }}
+{{- $config = mergeOverwrite $config .Values.config -}}
+{{- end }}
 data:
-  openclaw.json5: |
-    {
-      {{- if .Values.gateway }}
-      "gateway": {
-        "bind": "{{ .Values.gateway.bind | default "lan" }}"
-      },
-      {{- end }}
-      {{- if .Values.agents }}
-      "agents": {
-        {{- $agentList := list }}
-        {{- range $name, $agent := .Values.agents }}
-        {{- $agentList = append $agentList (printf "\"%s\": { \"model\": \"%s\" }" $name $agent.model) }}
-        {{- end }}
-        {{ join ",\n        " $agentList }}
-      }
-      {{- end }}
-    }
-  {{- range $key, $value := .Values.config }}
-  {{ $key }}: |
-{{ $value | indent 4 }}
-  {{- end }}
+  openclaw.json: |
+{{ $config | toPrettyJson | indent 4 }}

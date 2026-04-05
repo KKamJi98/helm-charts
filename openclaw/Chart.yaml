@@ -2,5 +2,5 @@ apiVersion: v2
 name: openclaw
 description: A Helm chart for deploying OpenClaw autonomous AI agent
 type: application
-version: 0.1.0
-appVersion: "latest"
+version: 0.2.0
+appVersion: "2026.4.2"

@@ -50,9 +50,9 @@ spec:
             - sh
             - -c
             - |
-              {{- range $name, $agent := .Values.agents }}
-              mkdir -p /data/agents/{{ $name }}
-              cp /agents-config/{{ $name }}-soul.md /data/agents/{{ $name }}/SOUL.md
+              {{- range $name := keys .Values.agents | sortAlpha }}
+              mkdir -p /data/workspaces/{{ $name }}
+              cp /agents-config/{{ $name }}-soul.md /data/workspaces/{{ $name }}/SOUL.md
               {{- end }}
           volumeMounts:
             - name: data
@@ -72,9 +72,24 @@ spec:
               containerPort: {{ .Values.service.port }}
               protocol: TCP
           env:
-            {{- if .Values.gateway }}
             - name: OPENCLAW_GATEWAY_BIND
               value: "{{ .Values.gateway.bind | default "lan" }}"
+            - name: OPENCLAW_STATE_DIR
+              value: "{{ include "openclaw.dataDir" . }}"
+            - name: OPENCLAW_CONFIG_PATH
+              value: "{{ include "openclaw.dataDir" . }}/openclaw.json"
+            {{- if eq (.Values.gateway.auth.mode | default "token") "token" }}
+            - name: OPENCLAW_GATEWAY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openclaw.gatewayAuthSecretName" . }}
+                  key: {{ include "openclaw.gatewayAuthSecretKey" . }}
+            {{- else if eq .Values.gateway.auth.mode "password" }}
+            - name: OPENCLAW_GATEWAY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openclaw.gatewayAuthSecretName" . }}
+                  key: {{ include "openclaw.gatewayAuthSecretKey" . }}
             {{- end }}
             {{- range .Values.envFromSecret }}
             - name: {{ .name }}
@@ -95,14 +110,12 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
-            {{- if .Values.persistence.enabled }}
             - name: data
-              mountPath: {{ .Values.dataDir | default "/home/node/.openclaw" }}
-            {{- end }}
+              mountPath: {{ include "openclaw.dataDir" . }}
             {{/* subPath mount does not auto-update on ConfigMap change; checksum annotation triggers rollout instead */}}
             - name: config
-              mountPath: {{ .Values.dataDir | default "/home/node/.openclaw" }}/openclaw.json5
-              subPath: openclaw.json5
+              mountPath: {{ include "openclaw.dataDir" . }}/openclaw.json
+              subPath: openclaw.json
               readOnly: true
       volumes:
         - name: config
@@ -113,10 +126,12 @@ spec:
           configMap:
             name: {{ include "openclaw.fullname" . }}-agents
         {{- end }}
-        {{- if .Values.persistence.enabled }}
         - name: data
+        {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "openclaw.fullname" . }}-data
+        {{- else }}
+          emptyDir: {}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

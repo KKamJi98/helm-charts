@@ -61,3 +61,57 @@ Create the name of the service account to use
 {{- end }}
 {{- end }}
 
+{{/*
+Return the configured OpenClaw data directory.
+*/}}
+{{- define "openclaw.dataDir" -}}
+{{- default "/home/node/.openclaw" .Values.dataDir -}}
+{{- end }}
+
+{{/*
+Resolve the default agent id. Require explicit selection when multiple agents exist.
+*/}}
+{{- define "openclaw.defaultAgentId" -}}
+{{- $agents := .Values.agents | default dict -}}
+{{- $agentIds := keys $agents | sortAlpha -}}
+{{- $configured := .Values.defaultAgentId | default "" -}}
+{{- if $configured -}}
+  {{- if not (hasKey $agents $configured) -}}
+    {{- fail (printf "defaultAgentId %q is not defined in values.agents" $configured) -}}
+  {{- end -}}
+  {{- $configured -}}
+{{- else if gt (len $agentIds) 1 -}}
+  {{- fail "defaultAgentId is required when more than one agent is defined" -}}
+{{- else if eq (len $agentIds) 1 -}}
+  {{- index $agentIds 0 -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Resolve the gateway auth secret name when shared-secret auth is enabled.
+*/}}
+{{- define "openclaw.gatewayAuthSecretName" -}}
+{{- $mode := .Values.gateway.auth.mode | default "token" -}}
+{{- if or (eq $mode "token") (eq $mode "password") -}}
+  {{- if .Values.gateway.auth.existingSecretName -}}
+    {{- .Values.gateway.auth.existingSecretName -}}
+  {{- else if .Values.gateway.auth.generateSecret -}}
+    {{- printf "%s-gateway-auth" (include "openclaw.fullname" .) -}}
+  {{- else -}}
+    {{- fail (printf "gateway.auth.mode=%q requires gateway.auth.existingSecretName or gateway.auth.generateSecret=true" $mode) -}}
+  {{- end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Resolve the gateway auth secret key.
+*/}}
+{{- define "openclaw.gatewayAuthSecretKey" -}}
+{{- if .Values.gateway.auth.existingSecretKey -}}
+{{- .Values.gateway.auth.existingSecretKey -}}
+{{- else if eq (.Values.gateway.auth.mode | default "token") "password" -}}
+password
+{{- else -}}
+token
+{{- end -}}
+{{- end }}

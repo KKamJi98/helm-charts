@@ -6,7 +6,8 @@ metadata:
   labels:
     {{- include "openclaw.labels" . | nindent 4 }}
 data:
-  {{- range $name, $agent := .Values.agents }}
+  {{- range $name := keys .Values.agents | sortAlpha }}
+  {{- $agent := index $.Values.agents $name }}
   {{ $name }}-soul.md: |
 {{ $agent.soul | indent 4 }}
   {{- end }}

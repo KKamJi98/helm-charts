@@ -36,9 +36,37 @@ service:
   nodePort: ""
 
 gateway:
-  bind: "lan"   # Options: "loopback", "lan" (0.0.0.0), "tailnet", "auto"
+  mode: "local"
+  bind: "lan"   # Options: "loopback", "lan", "tailnet", "auto", "custom"
+  auth:
+    mode: "token"
+    allowTailscale: false
+    existingSecretName: ""
+    existingSecretKey: ""
+    generateSecret: true
+    rateLimit:
+      maxAttempts: 10
+      windowMs: 60000
+      lockoutMs: 300000
+      exemptLoopback: true
+  controlUi:
+    enabled: true
+    basePath: ""
+    allowedOrigins: []
+    dangerouslyAllowHostHeaderOriginFallback: false
+  tailscale:
+    mode: "off"
+    resetOnExit: false
 
-# Additional config files to mount (openclaw.json5 is auto-generated from agents values)
+webSearch:
+  enabled: false
+  provider: "duckduckgo"
+  searxng:
+    baseUrl: ""
+    categories: ""
+    language: ""
+
+# Additional top-level OpenClaw config overrides merged into openclaw.json
 config: {}
 
 secret:
@@ -47,6 +75,16 @@ secret:
   data: {}
     # claude-api-key: "your-api-key"
     # gemini-api-key: "your-api-key"
+
+externalSecret:
+  enabled: false
+  apiVersion: external-secrets.io/v1
+  refreshInterval: 1h
+  secretStoreName: ""
+  secretStoreKind: ClusterSecretStore
+  remoteKey: ""
+  targetSecretName: ""
+  creationPolicy: Owner
 
 envFromSecretName: "openclaw-api-keys"
 
@@ -108,9 +146,11 @@ readinessProbe:
   timeoutSeconds: 3
   failureThreshold: 3
 
+defaultAgentId: ""
+
 agents: {}
   # devops:
-  #   model: "anthropic:claude-sonnet-4-6"
+  #   model: "anthropic/claude-sonnet-4-6"
   #   soul: |
   #     You are a DevOps engineer.
 
