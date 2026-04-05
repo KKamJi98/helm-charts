@@ -17,5 +17,5 @@ spec:
         capabilities:
           drop: ["ALL"]
       command: ['wget']
-      args: ['--spider', '--timeout=5', '{{ include "openclaw.fullname" . }}:{{ .Values.service.port }}']
+      args: ['--spider', '--timeout=5', 'http://{{ include "openclaw.fullname" . }}:{{ .Values.service.port }}/readyz']
   restartPolicy: Never
