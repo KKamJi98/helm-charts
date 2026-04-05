@@ -97,11 +97,11 @@ spec:
           volumeMounts:
             {{- if .Values.persistence.enabled }}
             - name: data
-              mountPath: /home/node/.openclaw
+              mountPath: {{ .Values.dataDir | default "/home/node/.openclaw" }}
             {{- end }}
             {{/* subPath mount does not auto-update on ConfigMap change; checksum annotation triggers rollout instead */}}
             - name: config
-              mountPath: /home/node/.openclaw/openclaw.json5
+              mountPath: {{ .Values.dataDir | default "/home/node/.openclaw" }}/openclaw.json5
               subPath: openclaw.json5
               readOnly: true
       volumes:

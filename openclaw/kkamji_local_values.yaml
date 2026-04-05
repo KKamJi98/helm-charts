@@ -2,9 +2,11 @@
 # Usage: helm install openclaw ./openclaw -n openclaw --create-namespace -f openclaw/kkamji_local_values.yaml
 
 image:
-  repository: ghcr.io/openclaw/openclaw
+  repository: ghcr.io/kkamji98/openclaw-dev
   pullPolicy: Always
   tag: "latest"
+
+dataDir: "/home/openclaw/.openclaw"
 
 service:
   type: NodePort

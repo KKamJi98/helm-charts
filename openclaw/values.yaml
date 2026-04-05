@@ -57,6 +57,8 @@ envFromSecret: []
   # - name: GEMINI_API_KEY
   #   secretKey: gemini-api-key
 
+dataDir: "/home/node/.openclaw"   # mount path for PVC + config (adjust for custom image)
+
 persistence:
   enabled: true
   storageClassName: ""
