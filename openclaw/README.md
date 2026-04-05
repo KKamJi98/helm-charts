@@ -1,170 +1,182 @@
 # OpenClaw Helm Chart
 
-KubeADM 홈랩에 OpenClaw 자율 AI 에이전트를 배포하는 커스텀 Helm chart.
+Kubernetes에서 OpenClaw Gateway를 홈랩용으로 빠르게 올리기 위한 Helm chart입니다. 기본 chart는 `gateway.auth.mode: token`을 전제로 동작하고, `kkamji_local_values.yaml`은 NodePort + LAN access + `web_search`까지 포함한 homelab preset입니다.
 
 ## 주요 구성
 
 | 항목 | 설명 |
 |------|------|
-| Image | `ghcr.io/openclaw/openclaw` |
-| Port | 18789 (gateway WebSocket) |
-| Strategy | Recreate (단일 인스턴스) |
-| Storage | PVC (`resource-policy: keep`) |
-| Secrets | `envFromSecret` + `optional: true` (Secret 없어도 기동 가능) |
-| Agents | values에서 SOUL.md + 모델 라우팅 자동 생성 |
-| Gateway Bind | `gateway.bind: "lan"` (0.0.0.0, env `OPENCLAW_GATEWAY_BIND`) |
+| Runtime | `ghcr.io/openclaw/openclaw` / `appVersion: 2026.4.2` |
+| Port | `18789` (WS + HTTP multiplex) |
+| Auth | Gateway token Secret 자동 생성 또는 existing Secret 참조 |
+| Storage | PVC 또는 `emptyDir` (`resource-policy: keep`) |
+| Agents | `agents.defaults` + `agents.list[]` 자동 생성 |
+| SOUL.md | agent별 workspace에 자동 배치 |
+| Web Search | `duckduckgo` 또는 `searxng` provider values 지원 |
 
 ## 설치
 
+chart 루트에서 실행:
+
 ```bash
-helm install openclaw ./openclaw \
+helm install openclaw . \
   -n openclaw --create-namespace \
-  -f openclaw/kkamji_local_values.yaml
+  -f kkamji_local_values.yaml
 ```
 
-## 업그레이드
+업그레이드:
 
 ```bash
-helm upgrade openclaw ./openclaw \
+helm upgrade openclaw . \
   -n openclaw \
-  -f openclaw/kkamji_local_values.yaml
+  -f kkamji_local_values.yaml
 ```
 
-## 삭제
+삭제:
 
 ```bash
 helm uninstall openclaw -n openclaw
 ```
 
-> PVC는 `resource-policy: keep`으로 보존됩니다. 수동 삭제 필요:
-> `kubectl delete pvc openclaw-data -n openclaw`
+PVC는 `resource-policy: keep`으로 보존됩니다. 완전히 지우려면 별도로 삭제해야 합니다.
+
+```bash
+kubectl delete pvc openclaw-data -n openclaw
+```
+
+## 접속
+
+`kkamji_local_values.yaml` 기준으로는 NodePort를 사용합니다.
+
+```bash
+export NODE_PORT=$(kubectl get svc -n openclaw openclaw -o jsonpath='{.spec.ports[0].nodePort}')
+export NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}')
+export OPENCLAW_URL="http://$NODE_IP:$NODE_PORT/"
+export OPENCLAW_TOKEN=$(kubectl get secret -n openclaw openclaw-gateway-auth -o jsonpath='{.data.token}' | openssl base64 -d -A)
+echo "$OPENCLAW_URL?token=$OPENCLAW_TOKEN"
+```
+
+Control UI는 첫 접속 후 token을 저장하므로, 이후에는 query string 없이도 계속 사용할 수 있습니다.
 
 ## 설정
 
-### Gateway
+### Gateway Auth
 
-Gateway bind address는 `gateway.bind`로 설정합니다. Kubernetes 환경에서는 `"lan"` (0.0.0.0)이 필수입니다.
+non-loopback bind에서는 auth가 필수입니다. 이 chart는 기본적으로 token auth를 켭니다.
 
 ```yaml
 gateway:
-  bind: "lan"   # Options: "loopback", "lan", "tailnet", "auto"
+  bind: "lan"
+  auth:
+    mode: "token"
+    existingSecretName: ""
+    existingSecretKey: ""
+    generateSecret: true
 ```
 
-ConfigMap(`openclaw.json5`)과 환경변수(`OPENCLAW_GATEWAY_BIND`) 양쪽으로 적용됩니다.
+- `existingSecretName`을 주면 기존 Secret을 사용합니다.
+- 비워두면 chart가 `RELEASE-gateway-auth` Secret을 생성합니다.
+- `OPENCLAW_GATEWAY_TOKEN`은 Secret에서 env로 주입됩니다.
 
-### Health Probes
+### API Keys
 
-Gateway가 loopback에 바인딩될 수 있으므로 probe는 exec 방식으로 컨테이너 내부에서 `127.0.0.1`을 직접 호출합니다.
-
-| Probe | Endpoint | 용도 |
-|-------|----------|------|
-| startupProbe | `/healthz` | 초기화 완료 대기 (최대 ~155초) |
-| livenessProbe | `/healthz` | 프로세스 생존 확인 |
-| readinessProbe | `/readyz` | 트래픽 수신 가능 확인 |
-
-### API Keys (envFromSecret)
-
-`envFromSecret`로 Secret에서 환경변수를 주입합니다. `optional: true`로 설정되어 **Secret이 없어도 Pod는 정상 기동**됩니다.
+모델 API key는 `envFromSecret`으로 주입합니다.
 
 ```yaml
-envFromSecretName: "openclaw-api-keys"   # 기본 Secret 이름
+envFromSecretName: "openclaw-api-keys"
 
 envFromSecret:
   - name: ANTHROPIC_API_KEY
     secretKey: claude-api-key
   - name: GEMINI_API_KEY
     secretKey: gemini-api-key
-    # secretName: my-other-secret  # per-entry override 가능
 ```
 
-Secret 생성 방법 (선택):
+수동 Secret 예시:
 
 ```bash
-# 수동 생성
 kubectl create secret generic openclaw-api-keys \
   -n openclaw \
   --from-literal=claude-api-key='sk-...' \
   --from-literal=gemini-api-key='AI...'
 ```
 
-ExternalSecrets operator 사용 시 별도 ExternalSecret 리소스를 생성하면 됩니다.
+External Secrets Operator를 쓰면 chart가 `ExternalSecret`도 생성할 수 있습니다.
+
+```yaml
+externalSecret:
+  enabled: true
+  secretStoreName: parameter-store
+  secretStoreKind: ClusterSecretStore
+  remoteKey: /openclaw
+  targetSecretName: openclaw-api-keys
+```
+
+이 경우 `remoteKey`의 key/value들을 `targetSecretName`으로 extract 합니다.
 
 ### Agents
 
-`values.agents`에 에이전트를 정의하면 SOUL.md와 `openclaw.json5` 모델 라우팅이 자동 생성됩니다.
+`values.agents`는 최신 OpenClaw config 형식인 `agents.defaults` + `agents.list[]`로 렌더됩니다.
 
 ```yaml
+defaultAgentId: devops
+
 agents:
   devops:
-    model: "anthropic:claude-sonnet-4-6"
+    model: "anthropic/claude-sonnet-4-6"
     soul: |
       You are a DevOps engineer specializing in Kubernetes and AWS.
 ```
 
-> SOUL.md는 매 Pod 재시작 시 chart values로 덮어씌워집니다.
-> Pod 내 수정은 일시적이며, 영구 변경은 values 파일에서 관리하세요.
+- model은 `provider/model` 형식이어야 합니다.
+- agent가 2개 이상이면 `defaultAgentId`가 필수입니다.
+- 각 agent의 `SOUL.md`는 `<dataDir>/workspaces/<agentId>/SOUL.md`에 배치됩니다.
+- Pod 재시작 시 values 기준으로 다시 덮어씌워집니다.
 
-### OpenAI OAuth
+### Web Search
 
-OpenAI는 OAuth 방식으로 인증합니다. Pod에 직접 접속하여 로그인:
+DuckDuckGo를 기본 fallback으로 바로 켤 수 있습니다.
 
-```bash
-kubectl exec -it -n openclaw deploy/openclaw -- openclaw models auth login --provider openai
+```yaml
+webSearch:
+  enabled: true
+  provider: "duckduckgo"
 ```
 
-## 초기 세팅
+SearXNG를 쓰려면 provider와 base URL을 함께 지정합니다.
 
-### 1. 설치 후 Pod 상태 확인
-
-```bash
-kubectl get pods -n openclaw
-# STATUS: Running, READY: 1/1 확인
+```yaml
+webSearch:
+  enabled: true
+  provider: "searxng"
+  searxng:
+    baseUrl: "http://searxng.search.svc.cluster.local:8080"
+    categories: "general,news"
+    language: "en"
 ```
 
-### 2. OpenClaw 설정 (openclaw config)
+추가 provider credential은 `openclaw configure --section web` 또는 관련 env var로 설정하면 됩니다.
 
-Pod에 접속하여 모델/프로바이더 설정:
+## OpenAI OAuth
 
-```bash
-kubectl exec -it -n openclaw deploy/openclaw -- openclaw config
-```
+OpenAI처럼 OAuth 기반 provider는 callback이 필요하므로 `port-forward`가 필요합니다.
 
-### 3. 모델 프로바이더 인증
-
-#### API Key 방식
-
-Secret으로 API key를 주입하는 방식. [API Keys (envFromSecret)](#api-keys-envfromsecret) 섹션 참고.
-
-#### OAuth 방식 (OpenAI 등)
-
-OAuth 인증은 브라우저 콜백이 필요하므로 **port-forward**가 필수입니다.
-
-**터미널 1** — callback 포트 포워딩:
+터미널 1:
 
 ```bash
 kubectl port-forward -n openclaw deploy/openclaw 1455:1455
 ```
 
-**터미널 2** — 인증 시작:
+터미널 2:
 
 ```bash
 kubectl exec -it -n openclaw deploy/openclaw -- openclaw models auth login --provider openai
 ```
 
-OAuth 로그인 URL이 출력되면 맥북 브라우저에서 열어 인증을 완료합니다.
-콜백이 `localhost:1455`로 돌아오며, port-forward를 통해 Pod로 전달됩니다.
-
-> **주의**: port-forward 없이 진행하면 콜백이 Pod 내부 localhost로 향하므로 브라우저에서 접근할 수 없습니다.
-
-### 4. 인증 확인
-
-```bash
-kubectl exec -n openclaw deploy/openclaw -- openclaw models list
-```
-
 ## 검증
 
 ```bash
-helm lint ./openclaw -f openclaw/kkamji_local_values.yaml
-helm template openclaw ./openclaw -n openclaw -f openclaw/kkamji_local_values.yaml
+helm lint . -f kkamji_local_values.yaml
+helm template openclaw . -n openclaw -f kkamji_local_values.yaml
+helm test openclaw -n openclaw
 ```
