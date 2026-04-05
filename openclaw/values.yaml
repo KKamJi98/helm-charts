@@ -1,0 +1,113 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/openclaw/openclaw
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+
+service:
+  type: ClusterIP
+  port: 18789
+  nodePort: ""
+
+gateway:
+  bind: "lan"   # Options: "loopback", "lan" (0.0.0.0), "tailnet", "auto"
+
+# Additional config files to mount (openclaw.json5 is auto-generated from agents values)
+config: {}
+
+secret:
+  enabled: false
+  name: openclaw-api-keys
+  data: {}
+    # claude-api-key: "your-api-key"
+    # gemini-api-key: "your-api-key"
+
+envFromSecretName: "openclaw-api-keys"
+
+envFromSecret: []
+  # - name: ANTHROPIC_API_KEY
+  #   secretKey: claude-api-key
+  #   # secretName: my-other-secret  # optional per-entry override
+  # - name: GEMINI_API_KEY
+  #   secretKey: gemini-api-key
+
+persistence:
+  enabled: true
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+
+strategy:
+  type: Recreate
+
+resources: {}
+  # requests:
+  #   cpu: 500m
+  #   memory: 1Gi
+  # limits:
+  #   cpu: "2"
+  #   memory: 4Gi
+
+startupProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 30
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+agents: {}
+  # devops:
+  #   model: "anthropic:claude-sonnet-4-6"
+  #   soul: |
+  #     You are a DevOps engineer.
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

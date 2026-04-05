@@ -1,0 +1,13 @@
+{{- if .Values.agents }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openclaw.fullname" . }}-agents
+  labels:
+    {{- include "openclaw.labels" . | nindent 4 }}
+data:
+  {{- range $name, $agent := .Values.agents }}
+  {{ $name }}-soul.md: |
+{{ $agent.soul | indent 4 }}
+  {{- end }}
+{{- end }}

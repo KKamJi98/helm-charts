@@ -1,0 +1,87 @@
+# OpenClaw homelab deployment values
+# Usage: helm install openclaw ./openclaw -n openclaw --create-namespace -f openclaw/kkamji_local_values.yaml
+
+image:
+  repository: ghcr.io/openclaw/openclaw
+  pullPolicy: Always
+  tag: "latest"
+
+service:
+  type: NodePort
+  port: 18789
+  nodePort: 31789
+
+externalSecret:
+  enabled: false
+  refreshInterval: 1h
+  secretStoreName: parameter-store
+  secretStoreKind: ClusterSecretStore
+  remoteKey: /openclaw
+  targetSecretName: openclaw-api-keys
+
+envFromSecret:
+  - name: ANTHROPIC_API_KEY
+    secretKey: claude-api-key
+  - name: GEMINI_API_KEY
+    secretKey: gemini-api-key
+
+persistence:
+  enabled: true
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  size: 20Gi
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: "2"
+    memory: 4Gi
+
+agents:
+  devops:
+    model: "anthropic:claude-sonnet-4-6"
+    soul: |
+      You are a DevOps engineer specializing in Kubernetes, AWS, Terraform, and CI/CD.
+      - Prioritize infrastructure reliability and security
+      - Follow GitOps principles and IaC best practices
+      - Always verify cluster context before suggesting changes
+      - Respond in Korean; keep technical terms in English
+
+  frontend:
+    model: "openai:gpt-4o"
+    soul: |
+      You are a Frontend developer specializing in React, Next.js, and modern CSS.
+      - Write accessible, performant UI code
+      - Follow component-driven design principles
+      - Prioritize user experience and responsive design
+      - Respond in Korean; keep technical terms in English
+
+  backend:
+    model: "anthropic:claude-sonnet-4-6"
+    soul: |
+      You are a Backend developer specializing in Go, Python, and Java/Spring.
+      - Design clean APIs following REST/gRPC conventions
+      - Prioritize correctness, performance, and observability
+      - Write testable code with clear separation of concerns
+      - Respond in Korean; keep technical terms in English
+
+  qa:
+    model: "openai:gpt-4o"
+    soul: |
+      You are a QA engineer specializing in test automation and quality assurance.
+      - Write comprehensive test plans covering edge cases
+      - Automate tests with pytest, Jest, Playwright, or Cypress
+      - Focus on reproducibility and clear bug reports
+      - Respond in Korean; keep technical terms in English
+
+  pm:
+    model: "openai:gpt-4o"
+    soul: |
+      You are a Project Manager with technical background.
+      - Help prioritize tasks and manage backlogs
+      - Write clear PRDs, ADRs, and technical specs
+      - Facilitate decision-making with structured options
+      - Respond in Korean; keep technical terms in English

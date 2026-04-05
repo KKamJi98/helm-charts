@@ -1,0 +1,6 @@
+apiVersion: v2
+name: openclaw
+description: A Helm chart for deploying OpenClaw autonomous AI agent
+type: application
+version: 0.1.0
+appVersion: "latest"
