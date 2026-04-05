@@ -6,12 +6,21 @@ image:
   pullPolicy: Always
   tag: "latest"
 
-dataDir: "/home/openclaw/.openclaw"
-
 service:
   type: NodePort
   port: 18789
   nodePort: 31789
+
+gateway:
+  bind: "lan"
+  auth:
+    mode: "token"
+  controlUi:
+    dangerouslyAllowHostHeaderOriginFallback: true
+
+webSearch:
+  enabled: true
+  provider: "duckduckgo"
 
 externalSecret:
   enabled: false
@@ -42,9 +51,11 @@ resources:
     cpu: "2"
     memory: 4Gi
 
+defaultAgentId: devops
+
 agents:
   devops:
-    model: "anthropic:claude-sonnet-4-6"
+    model: "anthropic/claude-sonnet-4-6"
     soul: |
       You are a DevOps engineer specializing in Kubernetes, AWS, Terraform, and CI/CD.
       - Prioritize infrastructure reliability and security
@@ -53,7 +64,7 @@ agents:
       - Respond in Korean; keep technical terms in English
 
   frontend:
-    model: "openai:gpt-4o"
+    model: "openai/gpt-4o"
     soul: |
       You are a Frontend developer specializing in React, Next.js, and modern CSS.
       - Write accessible, performant UI code
@@ -62,7 +73,7 @@ agents:
       - Respond in Korean; keep technical terms in English
 
   backend:
-    model: "anthropic:claude-sonnet-4-6"
+    model: "anthropic/claude-sonnet-4-6"
     soul: |
       You are a Backend developer specializing in Go, Python, and Java/Spring.
       - Design clean APIs following REST/gRPC conventions
@@ -71,7 +82,7 @@ agents:
       - Respond in Korean; keep technical terms in English
 
   qa:
-    model: "openai:gpt-4o"
+    model: "openai/gpt-4o"
     soul: |
       You are a QA engineer specializing in test automation and quality assurance.
       - Write comprehensive test plans covering edge cases
@@ -80,7 +91,7 @@ agents:
       - Respond in Korean; keep technical terms in English
 
   pm:
-    model: "openai:gpt-4o"
+    model: "openai/gpt-4o"
     soul: |
       You are a Project Manager with technical background.
       - Help prioritize tasks and manage backlogs
