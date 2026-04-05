@@ -71,8 +71,11 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
-          {{- if .Values.envFromSecret }}
           env:
+            {{- if .Values.gateway }}
+            - name: OPENCLAW_GATEWAY_BIND
+              value: "{{ .Values.gateway.bind | default "lan" }}"
+            {{- end }}
             {{- range .Values.envFromSecret }}
             - name: {{ .name }}
               valueFrom:
@@ -81,7 +84,6 @@ spec:
                   key: {{ .secretKey }}
                   optional: true
             {{- end }}
-          {{- end }}
           {{- with .Values.startupProbe }}
           startupProbe:
             {{- toYaml . | nindent 12 }}
