@@ -24,6 +24,7 @@ applications:
       targetRevision: main
       path: charts/argo-cd
       helm:
+        releaseName: argocd
         valueFiles:
           - kkamji_local_values.yaml
 
