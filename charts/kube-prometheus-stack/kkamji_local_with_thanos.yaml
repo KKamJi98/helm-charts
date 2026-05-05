@@ -95,3 +95,14 @@ kube-prometheus-stack:
 #   admissionWebhooks:
 #     patch:
 #       enabled: false
+
+basicAuth:
+  ssmKey: /kkamji/monitoring/ingress/basic-auth
+  namespaces:
+    - monitoring
+    - kube-rca
+    - bookinfo
+
+grafanaAuth:
+  adminUserSsmKey: /kkamji/monitoring/grafana/admin-user
+  adminPasswordSsmKey: /kkamji/monitoring/grafana/admin-password
