@@ -1,0 +1,27 @@
+destinationNamespace: argocd
+destinationServer: https://kubernetes.default.svc
+project: automation
+
+syncPolicy:
+  automated:
+    prune: true
+    selfHeal: true
+  syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true
+    - ServerSideApply=true
+
+applications:
+  openclaw:
+    enabled: true
+    name: openclaw
+    project: automation
+    destination:
+      namespace: openclaw
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/openclaw
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml

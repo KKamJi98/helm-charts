@@ -100,3 +100,18 @@ applications:
       helm:
         valueFiles:
           - kuberca_local_values.yaml
+
+  k8s-resources:
+    enabled: true
+    name: k8s-resources
+    project: kuberca
+    annotations:
+      argocd.argoproj.io/sync-wave: "-1"
+    destination:
+      namespace: kube-rca
+    source:
+      repoURL: https://github.com/kube-rca/k8s-resources.git
+      targetRevision: main
+      path: external-secrets
+      directory:
+        recurse: true

@@ -409,3 +409,17 @@ rootApplications:
       - CreateNamespace=true
       - ApplyOutOfSyncOnly=true
       - ServerSideApply=true
+
+  roots:
+    management-root:
+      valueFiles:
+        - management_local_values.yaml
+    automation-root:
+      valueFiles:
+        - automation_local_values.yaml
+    personal-root:
+      valueFiles:
+        - personal_local_values.yaml
+    kuberca-root:
+      valueFiles:
+        - kuberca_local_values.yaml

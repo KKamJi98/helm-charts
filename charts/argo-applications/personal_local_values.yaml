@@ -1,0 +1,42 @@
+destinationNamespace: argocd
+destinationServer: https://kubernetes.default.svc
+project: personal
+
+syncPolicy:
+  automated:
+    prune: true
+    selfHeal: true
+  syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true
+    - ServerSideApply=true
+
+applications:
+  play-hub:
+    enabled: true
+    name: play-hub
+    project: personal
+    destination:
+      namespace: play-hub
+    source:
+      repoURL: https://github.com/KKamJi98/play-hub.git
+      targetRevision: main
+      path: helm/play-hub
+      helm:
+        valueFiles:
+          - values.yaml
+          - values-prod.yaml
+
+  lf-oss-na-2026:
+    enabled: true
+    name: lf-oss-na-2026
+    project: personal
+    destination:
+      namespace: lf-oss-na-2026
+    source:
+      repoURL: https://github.com/KKamJi98/lf-oss-2026.git
+      targetRevision: main
+      path: .
+      helm:
+        valueFiles:
+          - values.yaml

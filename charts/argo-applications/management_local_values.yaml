@@ -271,33 +271,4 @@ applications:
         valueFiles:
           - kkamji_local_values.yaml
 
-  # ---------- automation project ----------
-  openclaw:
-    enabled: true
-    name: openclaw
-    project: automation
-    destination:
-      namespace: openclaw
-    source:
-      repoURL: https://github.com/KKamJi98/helm-charts.git
-      targetRevision: main
-      path: charts/openclaw
-      helm:
-        valueFiles:
-          - kkamji_local_values.yaml
-
-  # ---------- play-hub project (external repo) ----------
-  play-hub:
-    enabled: true
-    name: play-hub
-    project: play-hub
-    destination:
-      namespace: play-hub
-    source:
-      repoURL: https://github.com/KKamJi98/play-hub.git
-      targetRevision: main
-      path: helm/play-hub
-      helm:
-        valueFiles:
-          - values.yaml
-          - values-prod.yaml
+  # NOTE: openclaw → automation-root, play-hub & lf-oss-na-2026 → personal-root.
