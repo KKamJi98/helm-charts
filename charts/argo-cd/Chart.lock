@@ -5,8 +5,5 @@ dependencies:
 - name: argo-projects
   repository: file://../argo-projects
   version: 0.1.0
-- name: argo-applications
-  repository: file://../argo-applications
-  version: 0.1.0
-digest: sha256:58dc68e37b6836b8a6bfc98cbf158436a8eeee1a2c2bc91ba389fde403311ff0
-generated: "2026-05-05T19:05:14.245579+09:00"
+digest: sha256:0f8097c96a991e165fd22bb8a33dac4872d0df4d7fa501799bc820c420e67244
+generated: "2026-05-05T19:09:45.516794+09:00"

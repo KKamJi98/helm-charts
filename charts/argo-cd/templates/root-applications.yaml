@@ -1,0 +1,54 @@
+{{- if .Values.rootApplications.enabled -}}
+{{- $repoURL := required "rootApplications.repoURL is required" .Values.rootApplications.repoURL -}}
+{{- $targetRevision := default "main" .Values.rootApplications.targetRevision -}}
+{{- $namespace := default "argocd" .Values.rootApplications.namespace -}}
+{{- $project := default "argocd" .Values.rootApplications.project -}}
+{{- $defaultSyncPolicy := .Values.rootApplications.syncPolicy -}}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: local-root
+  namespace: {{ $namespace }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: {{ $project }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ $namespace }}
+  source:
+    repoURL: {{ $repoURL }}
+    targetRevision: {{ $targetRevision }}
+    path: charts/argo-applications
+    helm:
+      valueFiles:
+        - kkamji_local_values.yaml
+{{- with $defaultSyncPolicy }}
+  syncPolicy:
+{{ toYaml . | indent 4 }}
+{{- end }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kuberca-root
+  namespace: {{ $namespace }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: {{ $project }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ $namespace }}
+  source:
+    repoURL: {{ $repoURL }}
+    targetRevision: {{ $targetRevision }}
+    path: charts/argo-applications
+    helm:
+      valueFiles:
+        - kuberca_local_values.yaml
+{{- with $defaultSyncPolicy }}
+  syncPolicy:
+{{ toYaml . | indent 4 }}
+{{- end }}
+{{- end }}

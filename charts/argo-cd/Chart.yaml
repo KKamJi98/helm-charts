@@ -14,8 +14,3 @@ dependencies:
     repository: file://../argo-projects
     version: 0.1.0
     condition: argo-projects.enabled
-  - name: argo-applications
-    alias: root-applications
-    repository: file://../argo-applications
-    version: 0.1.0
-    condition: root-applications.enabled
