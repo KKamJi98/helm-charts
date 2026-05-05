@@ -1,0 +1,34 @@
+{{- $root := . -}}
+{{- $defaultNamespace := default "argocd" .Values.namespace -}}
+{{- range $name, $proj := .Values.projects }}
+{{- if or (not (hasKey $proj "enabled")) $proj.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ $name }}
+  namespace: {{ default $defaultNamespace $proj.namespace }}
+  labels:
+{{ include "argocd-projects.labels" $root | nindent 4 }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: {{ $proj.description | default $name | quote }}
+  sourceRepos:
+{{ toYaml ($proj.sourceRepos | default (list "*")) | indent 4 }}
+  destinations:
+{{ toYaml ($proj.destinations | default (list (dict "server" "*" "namespace" "*"))) | indent 4 }}
+  clusterResourceWhitelist:
+{{ toYaml ($proj.clusterResourceWhitelist | default (list (dict "group" "*" "kind" "*"))) | indent 4 }}
+  namespaceResourceWhitelist:
+{{ toYaml ($proj.namespaceResourceWhitelist | default (list (dict "group" "*" "kind" "*"))) | indent 4 }}
+{{- with $proj.roles }}
+  roles:
+{{ toYaml . | indent 4 }}
+{{- end }}
+{{- with $proj.orphanedResources }}
+  orphanedResources:
+{{ toYaml . | indent 4 }}
+{{- end }}
+---
+{{- end }}
+{{- end }}

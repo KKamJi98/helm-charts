@@ -1,0 +1,72 @@
+namespace: argocd
+
+projects:
+  argocd:
+    description: "ArgoCD self-management (argo-cd, argocd-projects, root-applications)"
+    sourceRepos:
+      - "*"
+    destinations:
+      - server: https://kubernetes.default.svc
+        namespace: "*"
+    clusterResourceWhitelist:
+      - group: "*"
+        kind: "*"
+    namespaceResourceWhitelist:
+      - group: "*"
+        kind: "*"
+
+  kuberca:
+    description: "kube-rca demo workloads (bookinfo, load-generator, chaos-mesh, kuberca-monitoring)"
+    sourceRepos:
+      - "*"
+    destinations:
+      - server: https://kubernetes.default.svc
+        namespace: "*"
+    clusterResourceWhitelist:
+      - group: "*"
+        kind: "*"
+    namespaceResourceWhitelist:
+      - group: "*"
+        kind: "*"
+
+  management:
+    description: "Cluster management addons (CNI, ingress, observability, security)"
+    sourceRepos:
+      - "*"
+    destinations:
+      - server: https://kubernetes.default.svc
+        namespace: "*"
+    clusterResourceWhitelist:
+      - group: "*"
+        kind: "*"
+    namespaceResourceWhitelist:
+      - group: "*"
+        kind: "*"
+
+  automation:
+    description: "Automation tooling (openclaw, etc.)"
+    sourceRepos:
+      - "*"
+    destinations:
+      - server: https://kubernetes.default.svc
+        namespace: "*"
+    clusterResourceWhitelist:
+      - group: "*"
+        kind: "*"
+    namespaceResourceWhitelist:
+      - group: "*"
+        kind: "*"
+
+  play-hub:
+    description: "Toy projects (play-hub)"
+    sourceRepos:
+      - "*"
+    destinations:
+      - server: https://kubernetes.default.svc
+        namespace: "*"
+    clusterResourceWhitelist:
+      - group: "*"
+        kind: "*"
+    namespaceResourceWhitelist:
+      - group: "*"
+        kind: "*"

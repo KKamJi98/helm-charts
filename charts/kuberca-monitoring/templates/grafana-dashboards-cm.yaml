@@ -1,0 +1,23 @@
+{{- if .Values.dashboards.enabled }}
+{{- $namespace := .Values.dashboards.namespace | default .Values.namespace }}
+{{- $labels := .Values.dashboards.labels | default dict }}
+{{- range $path, $_ := .Files.Glob "dashboards/**/*.json" }}
+{{- $parts := splitList "/" $path }}
+{{- $folder := index $parts 1 }}
+{{- $filename := base $path }}
+{{- $name := trimSuffix ".json" $filename | lower | replace "_" "-" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-{{ $name }}
+  namespace: {{ $namespace }}
+  labels:
+{{ toYaml $labels | indent 4 }}
+  annotations:
+    grafana_folder: {{ $folder | quote }}
+data:
+  {{ $filename }}: |
+{{ $.Files.Get $path | indent 4 }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,14 @@
+namespace: monitoring
+
+dashboards:
+  enabled: true
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+
+prometheusRules:
+  enabled: true
+  namespace: monitoring
+  labels:
+    release: prometheus-stack
+  rules: {}
