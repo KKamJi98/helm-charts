@@ -4,7 +4,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "external-dns.fullname" . }}
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ include "external-dns.namespace" . }}
   labels:
     {{- include "external-dns.labels" . | nindent 4 }}
   {{- with .Values.deploymentAnnotations }}
@@ -109,7 +109,13 @@ spec:
             - --txt-suffix={{ .Values.txtSuffix }}
             {{- end }}
             {{- if .Values.namespaced }}
-            - --namespace={{ .Release.Namespace }}
+            - --namespace={{ default (include "external-dns.namespace" .) .Values.sourceNamespace }}
+            {{- end }}
+            {{- if .Values.gatewayNamespace }}
+            - --gateway-namespace={{ .Values.gatewayNamespace }}
+            {{- end }}
+            {{- if .Values.enableGatewayListenerSets }}
+            - --gateway-listener-sets
             {{- end }}
             {{- range .Values.domainFilters }}
             - --domain-filter={{ . }}
@@ -120,13 +126,42 @@ spec:
             {{- if .Values.labelFilter }}
             - --label-filter={{ .Values.labelFilter }}
             {{- end }}
+            {{- if .Values.annotationFilter }}
+            - --annotation-filter={{ .Values.annotationFilter }}
+            {{- end }}
+            {{- if .Values.annotationPrefix }}
+            - --annotation-prefix={{ .Values.annotationPrefix }}
+            {{- end }}
             {{- range .Values.managedRecordTypes }}
             - --managed-record-types={{ . }}
             {{- end }}
             - --provider={{ $providerName }}
-          {{- range .Values.extraArgs }}
-            - {{ tpl . $ }}
-          {{- end }}
+            {{- if kindIs "map" .Values.extraArgs }}
+            {{- range $key, $value := .Values.extraArgs }}
+            {{- if not (kindIs "invalid" $value) }}
+            {{- if kindIs "slice" $value }}
+            {{- range $value }}
+            - {{ print "--" $key "=" (tpl (. | toString) $) | quote }}
+            {{- end }}
+            {{- else if kindIs "bool" $value }}
+            {{- if $value }}
+            - --{{ $key }}
+            {{- else }}
+            - --no-{{ $key }}
+            {{- end }}
+            {{- else }}
+            - {{ print "--" $key "=" (tpl ($value | toString) $) | quote }}
+            {{- end }}
+            {{- else }}
+            - {{ print "--" $key | quote }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- if kindIs "slice" .Values.extraArgs }}
+            {{- range .Values.extraArgs }}
+            - {{ tpl . $ | quote }}
+            {{- end }}
+            {{- end }}
           ports:
             - name: http
               protocol: TCP
@@ -268,7 +303,7 @@ spec:
           {{- if not (hasKey . "labelSelector") }}
           labelSelector:
             matchLabels:
-              {{- include "external-dns.selectorLabels" $ | nindent 12 }}
+              {{- include "external-dns.selectorLabels" $ | nindent 14 }}
           {{- end }}
         {{- end }}
       {{- end }}
