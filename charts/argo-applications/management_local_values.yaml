@@ -13,18 +13,17 @@ syncPolicy:
 
 applications:
   # ---------- argocd project (self-management) ----------
-  argo-cd:
+  argocd:
     enabled: true
-    name: argo-cd
+    name: argocd
     project: argocd
     destination:
       namespace: argocd
     source:
       repoURL: https://github.com/KKamJi98/helm-charts.git
       targetRevision: main
-      path: charts/argo-cd
+      path: charts/argocd
       helm:
-        releaseName: argocd
         valueFiles:
           - kkamji_local_values.yaml
 
