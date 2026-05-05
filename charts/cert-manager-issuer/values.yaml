@@ -1,0 +1,8 @@
+issuer:
+  name: letsencrypt-prod
+  email: rlaxowl5460@gmail.com
+  server: https://acme-v02.api.letsencrypt.org/directory
+  privateKeySecretName: letsencrypt-prod
+  ingressClassName: nginx
+  solverPodAnnotations:
+    sidecar.istio.io/inject: "false"

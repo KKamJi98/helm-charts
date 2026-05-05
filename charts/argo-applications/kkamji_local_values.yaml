@@ -1,0 +1,315 @@
+destinationNamespace: argocd
+destinationServer: https://kubernetes.default.svc
+project: management
+
+syncPolicy:
+  automated:
+    prune: true
+    selfHeal: true
+  syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true
+    - ServerSideApply=true
+
+applications:
+  # ---------- argocd project (self-management) ----------
+  argo-cd:
+    enabled: true
+    name: argo-cd
+    project: argocd
+    destination:
+      namespace: argocd
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/argo-cd
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  argocd-projects:
+    enabled: true
+    name: argocd-projects
+    project: argocd
+    annotations:
+      argocd.argoproj.io/sync-wave: "-10"
+    destination:
+      namespace: argocd
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/argocd-projects
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  # ---------- management project ----------
+  cilium:
+    enabled: true
+    name: cilium
+    project: management
+    destination:
+      namespace: kube-system
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/cilium
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  metallb:
+    enabled: true
+    name: metallb
+    project: management
+    destination:
+      namespace: metallb-system
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/metallb
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  metrics-server:
+    enabled: true
+    name: metrics-server
+    project: management
+    destination:
+      namespace: kube-system
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/metrics-server
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  ingress-nginx:
+    enabled: true
+    name: ingress-nginx
+    project: management
+    destination:
+      namespace: ingress-nginx
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/ingress-nginx
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  external-dns:
+    enabled: true
+    name: external-dns
+    project: management
+    destination:
+      namespace: external-dns
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/external-dns
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  external-secrets:
+    enabled: true
+    name: external-secrets
+    project: management
+    annotations:
+      argocd.argoproj.io/sync-wave: "-2"
+    destination:
+      namespace: external-secrets
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/external-secrets
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  cert-manager:
+    enabled: true
+    name: cert-manager
+    project: management
+    annotations:
+      argocd.argoproj.io/sync-wave: "-4"
+    destination:
+      namespace: cert-manager
+    source:
+      repoURL: https://charts.jetstack.io
+      chart: cert-manager
+      targetRevision: v1.20.1
+      helm:
+        values: |
+          installCRDs: true
+
+  cert-manager-issuer:
+    enabled: true
+    name: cert-manager-issuer
+    project: management
+    annotations:
+      argocd.argoproj.io/sync-wave: "-3"
+    destination:
+      namespace: cert-manager
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/cert-manager-issuer
+
+  istio-base:
+    enabled: true
+    name: istio-base
+    project: management
+    destination:
+      namespace: istio-system
+    syncPolicy:
+      syncOptions:
+        - ServerSideApply=true
+    ignoreDifferences:
+      - group: admissionregistration.k8s.io
+        kind: ValidatingWebhookConfiguration
+        name: istiod-default-validator
+        jqPathExpressions:
+          - .webhooks[].clientConfig.caBundle
+          - .webhooks[].failurePolicy
+      - group: admissionregistration.k8s.io
+        kind: ValidatingWebhookConfiguration
+        name: istio-validator-istio-system
+        jqPathExpressions:
+          - .webhooks[].clientConfig.caBundle
+          - .webhooks[].failurePolicy
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/istio-base
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  istio-istiod:
+    enabled: true
+    name: istio-istiod
+    project: management
+    destination:
+      namespace: istio-system
+    syncPolicy:
+      syncOptions:
+        - ServerSideApply=true
+    ignoreDifferences:
+      - group: admissionregistration.k8s.io
+        kind: ValidatingWebhookConfiguration
+        name: istio-validator-istio-system
+        jqPathExpressions:
+          - .webhooks[].clientConfig.caBundle
+          - .webhooks[].failurePolicy
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/istio-istiod
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  kiali-operator:
+    enabled: true
+    name: kiali-operator
+    project: management
+    destination:
+      namespace: kiali-operator
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/kiali-operator
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  prometheus-stack:
+    enabled: true
+    name: prometheus-stack
+    project: management
+    destination:
+      namespace: monitoring
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/prometheus-stack
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  alloy:
+    enabled: true
+    name: alloy
+    project: management
+    destination:
+      namespace: monitoring
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/alloy
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  loki:
+    enabled: true
+    name: loki
+    project: management
+    destination:
+      namespace: monitoring
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/loki
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  tempo:
+    enabled: true
+    name: tempo
+    project: management
+    destination:
+      namespace: monitoring
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/tempo
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  # ---------- automation project ----------
+  openclaw:
+    enabled: true
+    name: openclaw
+    project: automation
+    destination:
+      namespace: openclaw
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/openclaw
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  # ---------- play-hub project (external repo) ----------
+  play-hub:
+    enabled: true
+    name: play-hub
+    project: play-hub
+    destination:
+      namespace: play-hub
+    source:
+      repoURL: https://github.com/KKamJi98/play-hub.git
+      targetRevision: main
+      path: helm/play-hub
+      helm:
+        valueFiles:
+          - values.yaml
+          - values-prod.yaml

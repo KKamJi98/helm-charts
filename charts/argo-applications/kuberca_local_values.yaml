@@ -1,0 +1,102 @@
+destinationNamespace: argocd
+destinationServer: https://kubernetes.default.svc
+project: kuberca
+
+syncPolicy:
+  automated:
+    prune: true
+    selfHeal: true
+  syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true
+    - ServerSideApply=true
+
+applications:
+  bookinfo:
+    enabled: true
+    name: bookinfo
+    project: kuberca
+    destination:
+      namespace: bookinfo
+    syncPolicy:
+      managedNamespaceMetadata:
+        labels:
+          istio-injection: enabled
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/bookinfo
+      helm:
+        valueFiles:
+          - kuberca_local_values.yaml
+
+  load-generator:
+    enabled: true
+    name: load-generator
+    project: kuberca
+    destination:
+      namespace: bookinfo
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/load-generator
+
+  chaos-mesh:
+    enabled: true
+    name: chaos-mesh
+    project: kuberca
+    destination:
+      namespace: chaos-mesh
+    ignoreDifferences:
+      - group: admissionregistration.k8s.io
+        kind: MutatingWebhookConfiguration
+        name: chaos-mesh-mutation
+        jqPathExpressions:
+          - .webhooks[].clientConfig.caBundle
+      - group: admissionregistration.k8s.io
+        kind: ValidatingWebhookConfiguration
+        name: chaos-mesh-validation
+        jqPathExpressions:
+          - .webhooks[].clientConfig.caBundle
+      - group: admissionregistration.k8s.io
+        kind: ValidatingWebhookConfiguration
+        name: chaos-mesh-validation-auth
+        jqPathExpressions:
+          - .webhooks[].clientConfig.caBundle
+      - kind: Secret
+        name: chaos-mesh-webhook-certs
+        jsonPointers:
+          - /data
+      - kind: Secret
+        name: chaos-mesh-daemon-certs
+        jsonPointers:
+          - /data
+      - kind: Secret
+        name: chaos-mesh-daemon-client-certs
+        jsonPointers:
+          - /data
+      - kind: Secret
+        name: chaos-mesh-chaosd-client-certs
+        jsonPointers:
+          - /data
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/chaos-mesh
+      helm:
+        valueFiles:
+          - kuberca_local_values.yaml
+
+  kuberca-monitoring:
+    enabled: true
+    name: kuberca-monitoring
+    project: kuberca
+    destination:
+      namespace: monitoring
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/kuberca-monitoring
+      helm:
+        valueFiles:
+          - kuberca_local_values.yaml

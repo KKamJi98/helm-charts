@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "load-generator.fullname" . }}-script
+  labels:
+    {{- include "load-generator.labels" . | nindent 4 }}
+data:
+  script.js: |
+    import http from 'k6/http';
+    import { check } from 'k6';
+
+    const PRODUCTPAGE_URL = __ENV.BASE_URL || 'http://productpage:9080';
+    const DETAILS_URL = __ENV.DETAILS_BASE_URL || 'http://details:9080';
+    const RATINGS_URL = __ENV.RATINGS_BASE_URL || 'http://ratings:9080';
+    const PREFIX = __ENV.PREFIX || '';
+    const TARGET_RPS = parseInt(__ENV.TARGET_RPS || '150');
+
+    const PRE_ALLOCATED_VUS = parseInt(__ENV.PRE_ALLOCATED_VUS || '100');
+    const MAX_VUS = parseInt(__ENV.MAX_VUS || '500');
+    const WEIGHT_PRODUCTPAGE = parseInt(__ENV.WEIGHT_PRODUCTPAGE || '40');
+    const WEIGHT_DETAILS = parseInt(__ENV.WEIGHT_DETAILS || '30');
+    const WEIGHT_RATINGS = parseInt(__ENV.WEIGHT_RATINGS || '30');
+
+    export const options = {
+      scenarios: {
+        constant_load: {
+          executor: 'constant-arrival-rate',
+          rate: TARGET_RPS,
+          timeUnit: '1s',
+          duration: __ENV.DURATION || '24h',
+          preAllocatedVUs: PRE_ALLOCATED_VUS,
+          maxVUs: MAX_VUS,
+        },
+      },
+      discardResponseBodies: true,
+      systemTags: ['method', 'status', 'scenario'],
+      summaryTrendStats: ['avg', 'p(95)', 'p(99)'],
+      thresholds: {
+        http_req_failed: ['rate<0.9'],
+        http_req_duration: ['p(95)<10000'],
+      },
+    };
+
+    const endpoints = [
+      { name: 'productpage', url: `${PRODUCTPAGE_URL}${PREFIX}/productpage`, weight: WEIGHT_PRODUCTPAGE },
+      { name: 'details', url: `${DETAILS_URL}${PREFIX}/details/0`, weight: WEIGHT_DETAILS },
+      { name: 'ratings', url: `${RATINGS_URL}${PREFIX}/ratings/0`, weight: WEIGHT_RATINGS },
+    ];
+
+    function selectEndpoint() {
+      const total = endpoints.reduce((acc, ep) => acc + (ep.weight > 0 ? ep.weight : 0), 0);
+      if (total <= 0) {
+        return endpoints[0];
+      }
+      const rand = Math.random() * total;
+      let cumulative = 0;
+      for (const ep of endpoints) {
+        const weight = ep.weight > 0 ? ep.weight : 0;
+        cumulative += weight;
+        if (rand <= cumulative) {
+          return ep;
+        }
+      }
+      return endpoints[0];
+    }
+
+    export default function () {
+      const endpoint = selectEndpoint();
+
+      const res = http.get(endpoint.url, {
+        timeout: '10s',
+        tags: { endpoint: endpoint.name },
+      });
+
+      check(res, {
+        'status ok': (r) => r.status >= 200 && r.status < 400,
+      });
+    }

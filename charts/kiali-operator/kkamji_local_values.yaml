@@ -1,0 +1,17 @@
+cr:
+  create: true
+  namespace: istio-system
+  spec:
+    auth:
+      strategy: anonymous
+    external_services:
+      prometheus:
+        url: "http://kube-prometheus-stack-prometheus.monitoring:9090"
+      tracing:
+        enabled: true
+        provider: tempo
+        internal_url: "http://tempo.monitoring.svc.cluster.local:3200"
+        external_url: "https://grafana.kkamji.net/explore"
+        tempo_config:
+          datasource_uid: tempo
+          url_format: grafana

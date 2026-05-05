@@ -1,0 +1,13 @@
+destinationNamespace: argocd
+destinationServer: https://kubernetes.default.svc
+project: default
+syncPolicy:
+  automated:
+    prune: true
+    selfHeal: true
+  syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true
+    - ServerSideApply=true
+
+applications: {}

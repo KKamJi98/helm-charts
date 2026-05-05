@@ -1,0 +1,38 @@
+# Istio istiod values for kube-rca
+# Upstream chart baseline: istio/istiod 1.28.2
+
+global:
+  istioNamespace: istio-system
+  # istiod needs cluster-scoped RBAC to watch the istio config ConfigMap and related resources.
+  # istio-base still owns CRDs; istio-istiod owns its runtime RBAC.
+  resourceScope: all
+
+  # Keep proxy tracer disabled to rely on meshConfig extensionProviders.
+  proxy:
+    tracer: none
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 512Mi
+
+# Pilot tracing env (PILOT_TRACE_SAMPLING)
+traceSampling: 100
+
+# Mesh config used to generate istio configmap.
+meshConfig:
+  defaultConfig:
+    tracing:
+      sampling: 100.0
+  extensionProviders:
+    - name: otel-tracing
+      opentelemetry:
+        service: tempo.monitoring.svc.cluster.local
+        port: 4317
+  defaultProviders:
+    metrics:
+      - prometheus
+    tracing:
+      - otel-tracing
