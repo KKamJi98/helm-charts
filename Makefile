@@ -100,7 +100,8 @@ detect-helm-ownership: ## (진단) argocd 네임스페이스에서 manager=helm 
 	@printf "$(B)$(G)==> scan stale 'manager: helm' fields in $(NAMESPACE)$(N)\n"
 	@command -v jq >/dev/null || { echo "jq 필요"; exit 1; }
 	@for kind in deployment statefulset daemonset service ingress configmap secret \
-	             serviceaccount role rolebinding networkpolicy hpa pdb certificate; do \
+	             serviceaccount role rolebinding networkpolicy hpa pdb certificate \
+	             application appproject externalsecret; do \
 	  for name in $$(kubectl -n $(NAMESPACE) get $$kind -o name 2>/dev/null); do \
 	    has=$$(kubectl -n $(NAMESPACE) get $$name --show-managed-fields -o json 2>/dev/null \
 	      | jq -r '[.metadata.managedFields[]? | select(.manager=="helm")] | length'); \
