@@ -423,3 +423,31 @@ rootApplications:
     kuberca-root:
       valueFiles:
         - kuberca_local_values.yaml
+
+# Repo credentials via ESO. SSM parameters must be pre-populated.
+# Single GitHub App registered with two installations (KKamJi98 + kube-rca).
+# App ID + private key are shared; only installationID differs per prefix.
+repoCredentials:
+  github-app-creds-personal:
+    enabled: true
+    url: "https://github.com/KKamJi98/"
+    refreshInterval: 1h
+    secretStoreRef:
+      name: parameter-store
+      kind: ClusterSecretStore
+    ssm:
+      appID: /kkamji/argocd/github-app/app-id
+      installationID: /kkamji/argocd/github-app/installation-id-personal
+      privateKey: /kkamji/argocd/github-app/private-key
+
+  github-app-creds-kuberca:
+    enabled: true
+    url: "https://github.com/kube-rca/"
+    refreshInterval: 1h
+    secretStoreRef:
+      name: parameter-store
+      kind: ClusterSecretStore
+    ssm:
+      appID: /kkamji/argocd/github-app/app-id
+      installationID: /kkamji/argocd/github-app/installation-id-kuberca
+      privateKey: /kkamji/argocd/github-app/private-key

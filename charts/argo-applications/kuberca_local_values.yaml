@@ -110,7 +110,7 @@ applications:
     destination:
       namespace: kube-rca
     source:
-      repoURL: git@github.com:kube-rca/k8s-resources.git
+      repoURL: https://github.com/kube-rca/k8s-resources.git
       targetRevision: main
       path: external-secrets
       directory:
