@@ -215,16 +215,16 @@ applications:
         valueFiles:
           - kkamji_local_values.yaml
 
-  prometheus-stack:
+  kube-prometheus-stack:
     enabled: true
-    name: prometheus-stack
+    name: kube-prometheus-stack
     project: management
     destination:
       namespace: monitoring
     source:
       repoURL: https://github.com/KKamJi98/helm-charts.git
       targetRevision: main
-      path: charts/prometheus-stack
+      path: charts/kube-prometheus-stack
       helm:
         valueFiles:
           - kkamji_local_values.yaml

@@ -10,7 +10,7 @@ prometheusRules:
   enabled: true
   namespace: monitoring
   labels:
-    release: prometheus-stack
+    release: kube-prometheus-stack
   rules:
     kube-rca-container-terminated:
       groups:
