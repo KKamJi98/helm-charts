@@ -87,36 +87,29 @@ _archived/                   # legacy (참고용 보관)
   aws ssm put-parameter --name "/kkamji/argocd/github-app/private-key" --type SecureString --value "$(cat ~/path/to/argocd-app.pem)" --overwrite
   ```
 
-### 2. helm upgrade --install (1회만)
+### 2. 부트스트랩 (Makefile 기반)
 
 ```bash
 cd ~/code/code-personal/helm-charts
 
-helm dependency update charts/argocd
+make setup        # = make deps + make install
+                  # 내부적으로 helm dependency update + helm upgrade --install --take-ownership
 
-helm upgrade --install argocd charts/argocd -n argocd \
-  --create-namespace \
-  -f charts/argocd/kkamji_local_values.yaml \
-  --take-ownership \
-  --wait --timeout 10m
+# 다른 namespace/release로 띄우려면:
+make setup RELEASE=argocd NAMESPACE=argocd
 ```
 
-`--take-ownership`은 helm 3.13+에서 ArgoCD self-sync로 미리 만들어진 리소스에 helm ownership annotation을 자동 주입.
+`--take-ownership` (helm 3.13+)이 ArgoCD self-sync로 미리 만들어진 리소스에 helm ownership annotation을 자동 주입.
 
 ### 3. 자동 propagation 확인
 
 ```bash
-# AppProject 5개
+make status       # AppProject 5개 + Application 4 root + 23 children + ExternalSecret 한눈에
+
+# 또는 raw kubectl
 kubectl -n argocd get appproject
-
-# Root Application 4개
-kubectl -n argocd get app | grep -E "management-root|automation-root|personal-root|kuberca-root"
-
-# ExternalSecret 2개 (GitHub App credential 자동 hydrate)
+kubectl -n argocd get app -o wide
 kubectl -n argocd get externalsecret
-
-# 그 자식 Application들 정상 sync까지 1~5분
-kubectl -n argocd get app -o jsonpath='{range .items[*]}{.metadata.name}\t{.status.sync.status}\t{.status.health.status}\n{end}' | column -t
 ```
 
 ## 일상 운영
@@ -132,10 +125,28 @@ git add -A && git commit -m "fix(<chart>): <change>" && git push
 
 # 3) ArgoCD가 webhook 또는 polling(3분)으로 자동 감지·동기화
 #    즉시 트리거하고 싶으면:
+make refresh       # 모든 root에 hard refresh
+# 또는 단일:
 kubectl -n argocd annotate app <name> argocd.argoproj.io/refresh=hard --overwrite
 ```
 
 수동 helm 명령 절대 금지(예외: 부트스트랩, 복구).
+
+### Make targets
+
+```
+make help              # 전체 target 도움말
+make setup             # deps + install (부트스트랩)
+make deps              # helm dependency update
+make install           # helm upgrade --install --take-ownership
+make refresh           # 모든 root hard refresh
+make status            # 현재 상태 스냅샷
+make template          # helm template 검증 (apply 없이)
+make lint              # helm lint 전 차트
+make recover-ownership # helm upgrade 거부 시 ownership annotation 일괄 주입
+make recover-secrets   # argocd-cm/secret 등 사라졌을 때 재apply + rollout restart
+make unstick-projects  # AppProject Pending deletion stuck 해소
+```
 
 ## 시크릿 관리
 
