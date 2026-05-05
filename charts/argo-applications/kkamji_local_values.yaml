@@ -27,21 +27,9 @@ applications:
         valueFiles:
           - kkamji_local_values.yaml
 
-  argocd-projects:
-    enabled: true
-    name: argocd-projects
-    project: argocd
-    annotations:
-      argocd.argoproj.io/sync-wave: "-10"
-    destination:
-      namespace: argocd
-    source:
-      repoURL: https://github.com/KKamJi98/helm-charts.git
-      targetRevision: main
-      path: charts/argocd-projects
-      helm:
-        valueFiles:
-          - kkamji_local_values.yaml
+  # NOTE: argo-projects (AppProject CRs) and root-applications (local-root,
+  # kuberca-root meta) are bundled into the argo-cd umbrella chart as subcharts.
+  # No separate Applications needed here.
 
   # ---------- management project ----------
   cilium:
