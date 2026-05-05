@@ -381,8 +381,8 @@ argo-projects:
         - group: "*"
           kind: "*"
   
-    play-hub:
-      description: "Toy projects (play-hub)"
+    personal:
+      description: "Personal projects (play-hub, lf-oss-na-2026)"
       sourceRepos:
         - "*"
       destinations:
