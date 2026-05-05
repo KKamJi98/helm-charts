@@ -115,3 +115,17 @@ applications:
       path: external-secrets
       directory:
         recurse: true
+
+  kube-rca:
+    enabled: true
+    name: kube-rca
+    project: kuberca
+    destination:
+      namespace: kube-rca
+    source:
+      repoURL: https://github.com/kube-rca/kuberca.git
+      targetRevision: main
+      path: charts/kube-rca
+      helm:
+        valueFiles:
+          - kube-rca-values.yaml
