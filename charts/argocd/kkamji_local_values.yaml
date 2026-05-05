@@ -454,3 +454,13 @@ repoCredentials:
       appID: /kkamji/argocd/github-app/app-id
       installationID: /kkamji/argocd/github-app/installation-id-kuberca
       privateKey: /kkamji/argocd/github-app/private-key
+
+# GitHub webhook secret. ESO 가 argocd-secret 에 webhook.github.secret 키만
+# merge 로 추가 → repo push 즉시 ArgoCD sync 트리거 가능.
+githubWebhook:
+  enabled: true
+  refreshInterval: 1h
+  secretStoreRef:
+    name: parameter-store
+    kind: ClusterSecretStore
+  ssmKey: /kkamji/argocd/github-webhook/secret
