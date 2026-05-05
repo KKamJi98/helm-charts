@@ -6,7 +6,7 @@ NAMESPACE      ?= argocd
 RELEASE        ?= argocd
 UMBRELLA_CHART ?= charts/argocd
 VALUES         ?= $(UMBRELLA_CHART)/kkamji_local_values.yaml
-TIMEOUT        ?= 10m
+FIELD_MANAGER  ?= argocd-controller
 
 # 색상
 B := \033[1m
@@ -17,25 +17,45 @@ N := \033[0m
 
 .DEFAULT_GOAL := help
 
+# ============================================================
+# 부트스트랩 정책 (중요)
+# ------------------------------------------------------------
+# - helm install/upgrade 는 사용하지 않는다.
+#   * 이유: SSA(Server-Side Apply) 환경에서 helm 매니저가 모든 필드의
+#     ownership 을 잡아버리면, 이후 ArgoCD self-sync 가 stale 필드를
+#     제거하지 못해 cert-manager annotation/tls 같은 잔재가 남는다.
+# - 신규 클러스터에서도 'helm template | kubectl apply --server-side
+#   --field-manager=argocd-controller' 한 번이면 충분하다.
+#   ArgoCD 가 root Application 들을 즉시 만들고, 그 중 하나가 argocd
+#   자기 자신을 self-manage 한다 (charts/argocd → argocd Application
+#   in charts/argo-applications/management_local_values.yaml).
+# - 일상 변경은 git push → ArgoCD self-sync. Makefile 재실행 불필요.
+# ============================================================
+
 ##@ 메인
 
 .PHONY: setup
-setup: deps install ## 신규/재설치 클러스터 부트스트랩 (deps + install)
+setup: deps bootstrap ## 신규 클러스터 일회성 부트스트랩 (deps + bootstrap)
 
 .PHONY: deps
 deps: ## umbrella chart 의존성 갱신 (argo-cd, argo-projects)
 	@printf "$(B)$(G)==> helm dependency update $(UMBRELLA_CHART)$(N)\n"
 	helm dependency update $(UMBRELLA_CHART)
 
-.PHONY: install
-install: ## helm upgrade --install (--take-ownership 포함)
-	@printf "$(B)$(G)==> helm upgrade --install $(RELEASE) ($(NAMESPACE))$(N)\n"
-	helm upgrade --install $(RELEASE) $(UMBRELLA_CHART) \
+.PHONY: bootstrap
+bootstrap: ## helm template + kubectl apply --server-side (helm release secret 미생성, manager=argocd-controller)
+	@printf "$(B)$(G)==> bootstrap $(RELEASE) into $(NAMESPACE) (SSA, fieldManager=$(FIELD_MANAGER))$(N)\n"
+	kubectl create ns $(NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
+	helm template $(RELEASE) $(UMBRELLA_CHART) \
 		-n $(NAMESPACE) \
-		--create-namespace \
 		-f $(VALUES) \
-		--take-ownership \
-		--wait --timeout $(TIMEOUT)
+	  | kubectl apply -n $(NAMESPACE) \
+			--server-side \
+			--field-manager=$(FIELD_MANAGER) \
+			--force-conflicts \
+			-f -
+	@printf "$(Y)부트스트랩 완료. 이후 변경은 git push → ArgoCD self-sync 로 진행하세요.$(N)\n"
+	@printf "$(R)WARN: 운영 중 helm install/upgrade 를 돌리지 마세요 (SSA ownership drift 발생).$(N)\n"
 
 ##@ 운영
 
@@ -57,12 +77,8 @@ template: ## helm template 으로 매니페스트 검증 (apply 없이)
 
 ##@ 복구
 
-.PHONY: recover-ownership
-recover-ownership: ## ArgoCD self-sync로 만든 리소스에 helm ownership annotation 주입 (helm upgrade 거부 시)
-	@bash scripts/recover-ownership.sh $(NAMESPACE) $(RELEASE)
-
 .PHONY: recover-secrets
-recover-secrets: install ## argocd-cm/argocd-secret 등이 사라졌을 때 helm으로 재생성 후 pod 재시작
+recover-secrets: bootstrap ## argocd-cm/argocd-secret 등이 사라졌을 때 재apply 후 pod 재시작
 	@printf "$(B)$(G)==> rollout restart all argocd workloads$(N)\n"
 	kubectl -n $(NAMESPACE) rollout restart deploy
 	kubectl -n $(NAMESPACE) rollout restart statefulset
@@ -78,6 +94,20 @@ unstick-projects: ## AppProject가 Pending deletion으로 stuck인 경우 finali
 	  fi; \
 	done
 	@$(MAKE) refresh
+
+.PHONY: detect-helm-ownership
+detect-helm-ownership: ## (진단) argocd 네임스페이스에서 manager=helm 잔존 리소스 탐지
+	@printf "$(B)$(G)==> scan stale 'manager: helm' fields in $(NAMESPACE)$(N)\n"
+	@command -v jq >/dev/null || { echo "jq 필요"; exit 1; }
+	@for kind in deployment statefulset daemonset service ingress configmap secret \
+	             serviceaccount role rolebinding networkpolicy hpa pdb certificate; do \
+	  for name in $$(kubectl -n $(NAMESPACE) get $$kind -o name 2>/dev/null); do \
+	    has=$$(kubectl -n $(NAMESPACE) get $$name --show-managed-fields -o json 2>/dev/null \
+	      | jq -r '[.metadata.managedFields[]? | select(.manager=="helm")] | length'); \
+	    if [ -n "$$has" ] && [ "$$has" != "0" ]; then echo "$$name"; fi; \
+	  done; \
+	done
+	@printf "$(Y)결과가 비어있어야 정상. 잔존 시 git history 의 helm install/upgrade 흔적 점검.$(N)\n"
 
 ##@ 유틸
 
