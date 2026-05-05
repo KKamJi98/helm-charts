@@ -1,0 +1,2 @@
+tcp:
+  "5432": "kube-rca/kube-rca-postgresql:5432"

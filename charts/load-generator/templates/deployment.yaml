@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "load-generator.fullname" . }}
+  labels:
+    {{- include "load-generator.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "load-generator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "load-generator.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: k6
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              trap 'exit 0' TERM INT
+              while true; do
+                k6 run --quiet /scripts/script.js
+                sleep 5
+              done
+          env:
+            - name: BASE_URL
+              value: {{ .Values.target.baseUrl | quote }}
+            - name: DETAILS_BASE_URL
+              value: {{ .Values.target.detailsBaseUrl | quote }}
+            - name: RATINGS_BASE_URL
+              value: {{ .Values.target.ratingsBaseUrl | quote }}
+            - name: WEIGHT_PRODUCTPAGE
+              value: {{ .Values.target.weights.productpage | quote }}
+            - name: WEIGHT_DETAILS
+              value: {{ .Values.target.weights.details | quote }}
+            - name: WEIGHT_RATINGS
+              value: {{ .Values.target.weights.ratings | quote }}
+            - name: TARGET_RPS
+              value: {{ .Values.target.rps | quote }}
+            - name: DURATION
+              value: {{ .Values.target.duration | quote }}
+            - name: PREFIX
+              value: {{ .Values.target.prefix | quote }}
+            - name: PRE_ALLOCATED_VUS
+              value: {{ .Values.target.preAllocatedVUs | quote }}
+            - name: MAX_VUS
+              value: {{ .Values.target.maxVUs | quote }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+              readOnly: true
+      volumes:
+        - name: script
+          configMap:
+            name: {{ include "load-generator.fullname" . }}-script

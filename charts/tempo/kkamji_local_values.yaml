@@ -1,0 +1,41 @@
+tempo:
+  tag: "2.9.0"
+  reportingEnabled: false
+  retention: 48h
+  memBallastSizeMbs: 256
+  metricsGenerator:
+    enabled: true
+    remoteWriteUrl: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
+    processor:
+      local_blocks:
+        flush_to_storage: true
+      span_metrics: {}
+    storage:
+      path: "/var/tempo/generator"
+      remote_write:
+        - url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
+          send_exemplars: false
+    traces_storage:
+      path: "/var/tempo/generator/traces"
+  overrides:
+    defaults:
+      metrics_generator:
+        processors:
+          - local-blocks
+          - span-metrics
+          - service-graphs
+  querier:
+    max_concurrent_queries: 10
+  queryFrontend:
+    search:
+      concurrent_jobs: 120
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 4Gi
+
+persistence:
+  enabled: false

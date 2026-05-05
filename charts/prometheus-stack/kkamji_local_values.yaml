@@ -1,20 +1,202 @@
+alertmanager:
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/auth-type: "basic"
+      nginx.ingress.kubernetes.io/auth-secret: "basic-auth"
+      nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+      external-dns.alpha.kubernetes.io/target: 121.130.214.237
+    hosts:
+      - alertmanager.kkamji.net
+    paths:
+      - /
+    tls:
+      - secretName: alertmanager-tls
+        hosts:
+          - alertmanager.kkamji.net
+  config:
+    global:
+      resolve_timeout: 1m
+    route:
+      receiver: "kube-rca-backend"
+      group_by:
+        [
+          "alertname",
+          "namespace",
+          "severity",
+          "workload",
+          "destination_service_name",
+        ]
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 15m
+      routes:
+        # Watchdog 예외처리
+        - receiver: "null"
+          matchers:
+            - alertname = "Watchdog"
+        # Cilium 사용, kube-proxy 예외처리
+        - receiver: "null"
+          matchers:
+            - alertname = "KubeProxyDown"
+        # API server 버전 낮음, 임시 예외처리
+        - receiver: "null"
+          matchers:
+            - alertname = "KubeVersionMismatch"
+        - receiver: "kube-rca-backend"
+          matchers:
+            - alertname = "KubePodContainerTerminated"
+        - receiver: "kube-rca-backend"
+          matchers:
+            - alertname = "KubePodImagePullError"
+        - receiver: "kube-rca-backend"
+          matchers:
+            - alertname =~ "IstioHigh5xxErrorRate.*"
+        - receiver: "kube-rca-backend"
+          matchers:
+            - alertname =~ "IstioHigh4xxErrorRate.*"
+    receivers:
+      - name: "null"
+      - name: "kube-rca-backend"
+        webhook_configs:
+          # 추후 svc, ns 이름 확정 후 수정 필요
+          - url: "http://kube-rca-backend.kube-rca.svc:8080/webhook/alertmanager"
+            send_resolved: true
+
 grafana:
+  admin:
+    existingSecret: grafana-auth
+    userKey: admin-user
+    passwordKey: admin-password
+  defaultDashboardsTimezone: browser # TimeZone 설정 (default: UTC)
   ingress:
     ingressClassName: nginx
     enabled: true
     annotations:
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
       cert-manager.io/cluster-issuer: letsencrypt-prod
+      external-dns.alpha.kubernetes.io/target: 121.130.214.237
     hosts:
       - grafana.kkamji.net
-    paths:
-      - /
+    path: /
+    pathType: Prefix
     tls:
       - secretName: grafana-tls
         hosts:
           - grafana.kkamji.net
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki-gateway:80
+      jsonData:
+        timeout: 60
+        maxLines: 1000
+        httpHeaderName1: "X-Scope-OrgID"
+      secureJsonData:
+        httpHeaderValue1: "kube-rca"
+    - name: Tempo
+      uid: tempo
+      type: tempo
+      access: proxy
+      url: http://tempo.monitoring.svc.cluster.local:3200
+      jsonData:
+        httpMethod: GET
+        serviceMap:
+          datasourceUid: Prometheus
+  sidecar:
+    datasources:
+      exemplarTraceIdDestinations:
+        datasourceUid: tempo
+        traceIdLabelName: trace_id
+        urlDisplayLabel: View Trace
+    dashboards:
+      folderAnnotation: "grafana_folder"
+      defaultFolderName: "Default Dashboard"
+      provider:
+        foldersFromFilesStructure: true
 
 prometheus:
+  prometheusSpec:
+    enableRemoteWriteReceiver: true
+    additionalScrapeConfigs:
+      # Hubble & Cilium Metric 수집을 위한 설정
+      - job_name: "kubernetes-pods" ## Cilium
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels:
+              [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels:
+              [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: ${1}:${2}
+            target_label: __address__
+
+      - job_name: "kubernetes-endpoints" ## Hubble
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+          - role: endpoints
+        relabel_configs:
+          - source_labels:
+              [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels:
+              [
+                __address__,
+                __meta_kubernetes_service_annotation_prometheus_io_port,
+              ]
+            action: replace
+            target_label: __address__
+            regex: (.+)(?::\d+);(\d+)
+            replacement: $1:$2
+
+      # Istio Envoy sidecar metrics
+      - job_name: "envoy-stats"
+        metrics_path: /stats/prometheus
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_container_port_name]
+            action: keep
+            regex: ".*-envoy-prom"
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+      # Istiod control plane metrics
+      - job_name: "istiod"
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - istio-system
+        relabel_configs:
+          - source_labels:
+              [
+                __meta_kubernetes_service_name,
+                __meta_kubernetes_endpoint_port_name,
+              ]
+            action: keep
+            regex: istiod;http-monitoring
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+    retention: 14d
   ingress:
     ingressClassName: nginx
     enabled: true
@@ -22,8 +204,9 @@ prometheus:
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
       cert-manager.io/cluster-issuer: letsencrypt-prod
       nginx.ingress.kubernetes.io/auth-type: "basic" # 인증 타입
-      nginx.ingress.kubernetes.io/auth-secret: "prometheus-basic-auth" # 인증에 사용할 secret
+      nginx.ingress.kubernetes.io/auth-secret: "basic-auth" # 인증에 사용할 secret
       nginx.ingress.kubernetes.io/auth-realm: "Authentication Required" # 인증 프롬프트에 보내는 메시지
+      external-dns.alpha.kubernetes.io/target: 121.130.214.237
     hosts:
       - prometheus.kkamji.net
     paths:
@@ -33,8 +216,7 @@ prometheus:
         hosts:
           - prometheus.kkamji.net
 
-# prometheusOperator:
-#   admissionWebhooks:
-#     patch:
-#       enabled: false
-    
+defaultRules:
+  disabled:
+    KubePodCrashLooping: true
+

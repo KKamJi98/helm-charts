@@ -1,0 +1,39 @@
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 60
+
+image:
+  repository: grafana/k6
+  tag: "0.52.0"
+  pullPolicy: IfNotPresent
+
+# Target configuration
+target:
+  baseUrl: "http://productpage.bookinfo.svc.cluster.local:9080"
+  detailsBaseUrl: "http://details.bookinfo.svc.cluster.local:9080"
+  ratingsBaseUrl: "http://ratings.bookinfo.svc.cluster.local:9080"
+  weights:
+    productpage: 20
+    details: 40
+    ratings: 40
+  rps: 30
+  duration: "1h" # 1 hour per cycle (wrapper restarts k6 to release accumulated metric heap)
+  prefix: ""
+  preAllocatedVUs: 30
+  maxVUs: 150
+
+resources:
+  limits:
+    cpu: "500m"
+    memory: 512Mi
+  requests:
+    cpu: 125m
+    memory: 128Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

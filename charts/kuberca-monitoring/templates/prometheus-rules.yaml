@@ -1,0 +1,17 @@
+{{- if .Values.prometheusRules.enabled }}
+{{- $namespace := .Values.prometheusRules.namespace | default .Values.namespace }}
+{{- $labels := .Values.prometheusRules.labels | default dict }}
+{{- range $name, $rule := .Values.prometheusRules.rules }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ $name }}
+  namespace: {{ $namespace }}
+  labels:
+{{ toYaml $labels | indent 4 }}
+spec:
+  groups:
+{{ toYaml $rule.groups | indent 4 }}
+{{- end }}
+{{- end }}

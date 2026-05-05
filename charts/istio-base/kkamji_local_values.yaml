@@ -1,0 +1,14 @@
+# Istio CRDs 및 클러스터 리소스 설정
+
+defaultRevision: default
+
+global:
+  istioNamespace: istio-system
+  # resourceScope를 분리하여 ArgoCD shared resource 충돌 방지
+  # istio-base: cluster (CRDs, ValidatingWebhook)
+  # istio-istiod: namespace (ServiceAccount)
+  resourceScope: cluster
+
+base:
+  enableCRDTemplates: true
+  enableIstioConfigCRDs: true
