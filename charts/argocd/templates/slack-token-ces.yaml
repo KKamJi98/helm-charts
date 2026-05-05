@@ -1,3 +1,4 @@
+{{- with .Values.slackToken }}
 apiVersion: external-secrets.io/v1
 kind: ClusterExternalSecret
 metadata:
@@ -22,4 +23,5 @@ spec:
     data:
       - secretKey: slack-token
         remoteRef:
-          key: {{ .Values.slackToken.ssmKey | quote }}
+          key: {{ .ssmKey | quote }}
+{{- end }}

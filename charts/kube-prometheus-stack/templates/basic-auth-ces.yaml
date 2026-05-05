@@ -1,3 +1,4 @@
+{{- with .Values.basicAuth }}
 apiVersion: external-secrets.io/v1
 kind: ClusterExternalSecret
 metadata:
@@ -9,7 +10,7 @@ spec:
       - key: kubernetes.io/metadata.name
         operator: In
         values:
-{{- range .Values.basicAuth.namespaces }}
+{{- range .namespaces }}
           - {{ . | quote }}
 {{- end }}
   refreshTime: 1h
@@ -24,4 +25,5 @@ spec:
     data:
       - secretKey: auth
         remoteRef:
-          key: {{ .Values.basicAuth.ssmKey | quote }}
+          key: {{ .ssmKey | quote }}
+{{- end }}
