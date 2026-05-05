@@ -1,2 +1,10 @@
+controller:
+  # ssl-passthrough 는 컨트롤러 전역 flag 가 명시적으로 켜져 있어야만
+  # nginx.ingress.kubernetes.io/ssl-passthrough: "true" annotation 이 해석된다.
+  # argocd-server (gRPC + 자체 LE Certificate) 가 직접 TLS 종료하도록 사용.
+  # 다른 호스트는 annotation 이 없으니 영향 없음 (default 종료 모드 유지).
+  extraArgs:
+    enable-ssl-passthrough: "true"
+
 tcp:
   "5432": "kube-rca/kube-rca-postgresql:5432"
