@@ -35,8 +35,10 @@ ipv4NativeRoutingCIDR: 10.233.64.0/18
 # Operate in native routing mode rather than tunneling.
 routingMode: native
 
-k8sServiceHost: auto
-k8sServicePort: auto
+# cilium-operator는 'auto' 매직값을 처리 못 해서 control-plane endpoint를 명시.
+# 단일 master 환경: k8s-m1 (10.0.0.101). HA로 전환 시 VIP/LB로 변경 필요.
+k8sServiceHost: 10.0.0.101
+k8sServicePort: 6443
 
 ipam:
   # Use cluster-pool IPAM managed by the operator.
