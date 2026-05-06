@@ -1,0 +1,27 @@
+{{- with .Values.slackToken }}
+apiVersion: external-secrets.io/v1
+kind: ClusterExternalSecret
+metadata:
+  name: slack-token-ces
+spec:
+  externalSecretName: slack-token-es
+  namespaceSelector:
+    matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values:
+          - argocd
+  refreshTime: 1h
+  externalSecretSpec:
+    refreshInterval: 1h
+    secretStoreRef:
+      name: parameter-store
+      kind: ClusterSecretStore
+    target:
+      name: argocd-notifications-secret
+      creationPolicy: Owner
+    data:
+      - secretKey: slack-token
+        remoteRef:
+          key: {{ .ssmKey | quote }}
+{{- end }}

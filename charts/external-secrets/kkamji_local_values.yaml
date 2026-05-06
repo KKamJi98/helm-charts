@@ -1,3 +1,13 @@
-installCRDs: true
-crds:
-  unsafeServeV1Beta1: true
+external-secrets:
+  installCRDs: true
+  crds:
+    unsafeServeV1Beta1: true
+
+clusterSecretStore:
+  name: parameter-store
+  region: ap-northeast-2
+  authSecretRef:
+    namespace: external-secrets
+    name: awssm-secret
+    accessKeyIDKey: access-key
+    secretAccessKeyKey: secret-access-key

@@ -464,3 +464,8 @@ githubWebhook:
     name: parameter-store
     kind: ClusterSecretStore
   ssmKey: /kkamji/argocd/github-webhook/secret
+
+# Slack token for argocd-notifications. ESO 가 argocd-notifications-secret 에
+# slack-token 키를 sync.
+slackToken:
+  ssmKey: /kkamji/argocd/notifications/slack-token

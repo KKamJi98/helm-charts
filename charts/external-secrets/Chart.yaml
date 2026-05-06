@@ -1,20 +1,10 @@
 apiVersion: v2
-appVersion: v2.4.1
-dependencies:
-- condition: bitwarden-sdk-server.enabled
-  name: bitwarden-sdk-server
-  repository: oci://ghcr.io/external-secrets/charts
-  version: v0.6.0
-description: External secrets management for Kubernetes
-home: https://github.com/external-secrets/external-secrets
-icon: https://raw.githubusercontent.com/external-secrets/external-secrets/main/assets/eso-logo-large.png
-keywords:
-- kubernetes-external-secrets
-- secrets
-kubeVersion: '>= 1.19.0-0'
-maintainers:
-- email: kellinmcavoy@gmail.com
-  name: mcavoyk
-name: external-secrets
+name: external-secrets-bundle
+description: ESO + ClusterSecretStore wrapper for kkamji clusters
 type: application
-version: 2.4.1
+version: 0.1.0
+appVersion: "v2.4.1"
+dependencies:
+  - name: external-secrets
+    version: 2.4.1
+    repository: https://charts.external-secrets.io

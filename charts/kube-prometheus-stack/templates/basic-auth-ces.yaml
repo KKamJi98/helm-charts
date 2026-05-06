@@ -1,0 +1,29 @@
+{{- with .Values.basicAuth }}
+apiVersion: external-secrets.io/v1
+kind: ClusterExternalSecret
+metadata:
+  name: basic-auth-ces
+spec:
+  externalSecretName: basic-auth-es
+  namespaceSelector:
+    matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values:
+{{- range .namespaces }}
+          - {{ . | quote }}
+{{- end }}
+  refreshTime: 1h
+  externalSecretSpec:
+    refreshInterval: 1h
+    secretStoreRef:
+      name: parameter-store
+      kind: ClusterSecretStore
+    target:
+      name: basic-auth
+      creationPolicy: Owner
+    data:
+      - secretKey: auth
+        remoteRef:
+          key: {{ .ssmKey | quote }}
+{{- end }}

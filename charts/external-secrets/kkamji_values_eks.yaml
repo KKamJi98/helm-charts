@@ -1,2 +1,3 @@
-serviceAccount:
-  name: external-secrets-sa
+external-secrets:
+  serviceAccount:
+    name: external-secrets-sa
