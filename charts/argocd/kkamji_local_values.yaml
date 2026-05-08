@@ -1,4 +1,19 @@
 argocd:
+  configs:
+    cm:
+      resource.customizations.ignoreDifferences.external-secrets.io_ExternalSecret: |
+        jqPathExpressions:
+        - .spec.data[].remoteRef.conversionStrategy
+        - .spec.data[].remoteRef.decodingStrategy
+        - .spec.data[].remoteRef.metadataPolicy
+        - .spec.data[].remoteRef.nullBytePolicy
+        - .spec.dataFrom[].extract.conversionStrategy
+        - .spec.dataFrom[].extract.decodingStrategy
+        - .spec.dataFrom[].extract.metadataPolicy
+        - .spec.dataFrom[].find.conversionStrategy
+        - .spec.dataFrom[].find.decodingStrategy
+        - .spec.dataFrom[].find.metadataPolicy
+
   global:
     domain: argocd.kkamji.net
   
