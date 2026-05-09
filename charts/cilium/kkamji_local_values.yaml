@@ -1,94 +1,95 @@
-# Enable automatic direct routes for pods when native routing is active.
-autoDirectNodeRoutes: true
+cilium:
+  # Enable automatic direct routes for pods when native routing is active.
+  autoDirectNodeRoutes: true
 
-bgpControlPlane:
-  # Keep the BGP control plane active for advertising service routes.
-  enabled: true
-
-# Skip unreachable nodes when programming native direct routes.
-directRoutingSkipUnreachable: true
-
-endpointRoutes:
-  # Prefer per-endpoint routes instead of hairpinning via cilium_host.
-  enabled: true
-
-endpointHealthChecking:
-  # Disable endpoint health probes to reduce datapath noise.
-  enabled: false
-
-# Disable legacy agent connectivity checks.
-healthChecking: false
-
-# Run the kube-proxy replacement datapath.
-kubeProxyReplacement: true
-
-bpf:
-  # Enable BPF-based native masquerading.
-  masquerade: true
-
-# Install conntrack bypass rules for kube-proxy-free routing.
-installNoConntrackIptablesRules: true
-
-# Advertise the workload pod CIDR through native routing.
-ipv4NativeRoutingCIDR: 10.233.64.0/18
-
-# Operate in native routing mode rather than tunneling.
-routingMode: native
-
-# cilium-operator는 'auto' 매직값을 처리 못 해서 control-plane endpoint를 명시.
-# 단일 master 환경: k8s-m1 (10.0.0.101). HA로 전환 시 VIP/LB로 변경 필요.
-k8sServiceHost: 10.0.0.101
-k8sServicePort: 6443
-
-ipam:
-  # Use cluster-pool IPAM managed by the operator.
-  mode: cluster-pool
-  operator:
-    # Restrict IPv4 allocations to the desired pod CIDR.
-    clusterPoolIPv4PodCIDRList:
-    - 10.233.64.0/18
-
-# l2announcements:
-#   enabled: true
-
-# Allow node-local redirect policies for fast-path services.
-localRedirectPolicy: true
-
-# ingressController:
-#   enabled: true
-#   loadbalancerMode: shared
-
-# loadBalancer:
-#   l7:
-#     backend: envoy
-
-debug:
-  # Enable debug logging for targeted troubleshooting.
-  enabled: true
-
-hubble:
-  # Keep Hubble datapath visibility enabled.
-  enabled: true
-  relay:
-    # Run Hubble relay for aggregated flow export.
+  bgpControlPlane:
+    # Keep the BGP control plane active for advertising service routes.
     enabled: true
-  ui:
-    # Deploy the Hubble UI.
+
+  # Skip unreachable nodes when programming native direct routes.
+  directRoutingSkipUnreachable: true
+
+  endpointRoutes:
+    # Prefer per-endpoint routes instead of hairpinning via cilium_host.
     enabled: true
-    service:
-      # Expose the UI via NodePort for cluster-edge access.
-      type: NodePort
-      # Use a fixed NodePort for firewall allowlisting.
-      nodePort: 30003
-  metrics:
-    # Publish metrics using the OpenMetrics endpoint.
-    enableOpenMetrics: true
-    # Enable flow-level metrics including HTTP exemplars.
-    enabled:
-    - dns
-    - drop
-    - tcp
-    - flow
-    - port-distribution
-    - icmp
-    - 'httpV2:exemplars=true;labelsContext=source_ip,source_namespace,source_workload,destination_ip,destination_namespace,destination_workload,traffic_direction'
+
+  endpointHealthChecking:
+    # Disable endpoint health probes to reduce datapath noise.
+    enabled: false
+
+  # Disable legacy agent connectivity checks.
+  healthChecking: false
+
+  # Run the kube-proxy replacement datapath.
+  kubeProxyReplacement: true
+
+  bpf:
+    # Enable BPF-based native masquerading.
+    masquerade: true
+
+  # Install conntrack bypass rules for kube-proxy-free routing.
+  installNoConntrackIptablesRules: true
+
+  # Advertise the workload pod CIDR through native routing.
+  ipv4NativeRoutingCIDR: 10.233.64.0/18
+
+  # Operate in native routing mode rather than tunneling.
+  routingMode: native
+
+  # cilium-operator는 'auto' 매직값을 처리 못 해서 control-plane endpoint를 명시.
+  # 단일 master 환경: k8s-m1 (10.0.0.101). HA로 전환 시 VIP/LB로 변경 필요.
+  k8sServiceHost: 10.0.0.101
+  k8sServicePort: 6443
+
+  ipam:
+    # Use cluster-pool IPAM managed by the operator.
+    mode: cluster-pool
+    operator:
+      # Restrict IPv4 allocations to the desired pod CIDR.
+      clusterPoolIPv4PodCIDRList:
+      - 10.233.64.0/18
+
+  # l2announcements:
+  #   enabled: true
+
+  # Allow node-local redirect policies for fast-path services.
+  localRedirectPolicy: true
+
+  # ingressController:
+  #   enabled: true
+  #   loadbalancerMode: shared
+
+  # loadBalancer:
+  #   l7:
+  #     backend: envoy
+
+  debug:
+    # Enable debug logging for targeted troubleshooting.
+    enabled: true
+
+  hubble:
+    # Keep Hubble datapath visibility enabled.
+    enabled: true
+    relay:
+      # Run Hubble relay for aggregated flow export.
+      enabled: true
+    ui:
+      # Deploy the Hubble UI.
+      enabled: true
+      service:
+        # Expose the UI via NodePort for cluster-edge access.
+        type: NodePort
+        # Use a fixed NodePort for firewall allowlisting.
+        nodePort: 30003
+    metrics:
+      # Publish metrics using the OpenMetrics endpoint.
+      enableOpenMetrics: true
+      # Enable flow-level metrics including HTTP exemplars.
+      enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - port-distribution
+      - icmp
+      - 'httpV2:exemplars=true;labelsContext=source_ip,source_namespace,source_workload,destination_ip,destination_namespace,destination_workload,traffic_direction'
