@@ -97,3 +97,36 @@ cilium:
       - port-distribution
       - icmp
       - 'httpV2:exemplars=true;labelsContext=source_ip,source_namespace,source_workload,destination_ip,destination_namespace,destination_workload,traffic_direction'
+      # Expose Hubble metrics via Prometheus ServiceMonitor.
+      serviceMonitor:
+        enabled: true
+        trustCRDsExist: true
+      # Ship Hubble Grafana dashboards into the monitoring namespace.
+      dashboards:
+        enabled: true
+        namespace: monitoring
+
+  # Cilium agent metrics + ServiceMonitor.
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      # helm template cannot introspect cluster CRDs; monitoring.coreos.com/v1
+      # is provided by kube-prometheus-stack.
+      trustCRDsExist: true
+
+  # Cilium operator: metrics + dashboards.
+  operator:
+    prometheus:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+        trustCRDsExist: true
+    dashboards:
+      enabled: true
+      namespace: monitoring
+
+  # Cilium agent Grafana dashboards.
+  dashboards:
+    enabled: true
+    namespace: monitoring
