@@ -1,4 +1,8 @@
 cilium:
+  # Pin upgrade compatibility to 1.18 during the 1.19 transition; remove
+  # in a follow-up PR after the 1.19 stability window closes.
+  upgradeCompatibility: "1.18"
+
   # Enable automatic direct routes for pods when native routing is active.
   autoDirectNodeRoutes: true
 

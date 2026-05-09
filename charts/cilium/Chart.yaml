@@ -3,8 +3,8 @@ name: cilium
 description: Cilium wrapper chart (umbrella) for kkamji clusters
 type: application
 version: 0.1.0
-appVersion: v1.18.2
+appVersion: v1.19.3
 dependencies:
   - name: cilium
-    version: 1.18.2
+    version: 1.19.3
     repository: https://helm.cilium.io/
