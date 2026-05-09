@@ -1,6 +1,9 @@
 argocd:
   configs:
     cm:
+      # ESO controller 가 admission/defaulting 으로 채워 ArgoCD diff 에서 OutOfSync 로 보이는
+      # remoteRef/extract/find 의 default 필드들을 ignore. ClusterExternalSecret 은 spec 안에
+      # externalSecretSpec 이 한 단계 nested 되어 있어 path 가 다르다.
       resource.customizations.ignoreDifferences.external-secrets.io_ExternalSecret: |
         jqPathExpressions:
         - .spec.data[].remoteRef.conversionStrategy
@@ -10,9 +13,25 @@ argocd:
         - .spec.dataFrom[].extract.conversionStrategy
         - .spec.dataFrom[].extract.decodingStrategy
         - .spec.dataFrom[].extract.metadataPolicy
+        - .spec.dataFrom[].extract.nullBytePolicy
         - .spec.dataFrom[].find.conversionStrategy
         - .spec.dataFrom[].find.decodingStrategy
         - .spec.dataFrom[].find.metadataPolicy
+        - .spec.dataFrom[].find.nullBytePolicy
+      resource.customizations.ignoreDifferences.external-secrets.io_ClusterExternalSecret: |
+        jqPathExpressions:
+        - .spec.externalSecretSpec.data[].remoteRef.conversionStrategy
+        - .spec.externalSecretSpec.data[].remoteRef.decodingStrategy
+        - .spec.externalSecretSpec.data[].remoteRef.metadataPolicy
+        - .spec.externalSecretSpec.data[].remoteRef.nullBytePolicy
+        - .spec.externalSecretSpec.dataFrom[].extract.conversionStrategy
+        - .spec.externalSecretSpec.dataFrom[].extract.decodingStrategy
+        - .spec.externalSecretSpec.dataFrom[].extract.metadataPolicy
+        - .spec.externalSecretSpec.dataFrom[].extract.nullBytePolicy
+        - .spec.externalSecretSpec.dataFrom[].find.conversionStrategy
+        - .spec.externalSecretSpec.dataFrom[].find.decodingStrategy
+        - .spec.externalSecretSpec.dataFrom[].find.metadataPolicy
+        - .spec.externalSecretSpec.dataFrom[].find.nullBytePolicy
 
   global:
     domain: argocd.kkamji.net
