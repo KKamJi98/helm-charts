@@ -202,6 +202,7 @@ basicAuth:
     - monitoring
     - kube-rca
     - bookinfo
+    - kube-system
 
 grafanaAuth:
   adminUserSsmKey: /kkamji/monitoring/grafana/admin-user
