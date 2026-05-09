@@ -1,0 +1,22 @@
+{{- with .Values.issuer }}
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ .name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"   # cert-manager controller/webhook Ready 후 적용
+spec:
+  acme:
+    email: {{ .email | quote }}
+    server: {{ .server | quote }}
+    privateKeySecretRef:
+      name: {{ .privateKeySecretName }}
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: {{ .ingressClassName | quote }}
+            podTemplate:
+              metadata:
+                annotations:
+{{ toYaml .solverPodAnnotations | indent 18 }}
+{{- end }}

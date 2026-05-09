@@ -1,3 +1,9 @@
+cert-manager:                       # ← sub-chart values (jetstack/cert-manager)
+  crds:
+    enabled: true
+    keep: true
+
+# 우리 매니페스트용 (templates/clusterissuer.yaml 가 참조)
 issuer:
   name: letsencrypt-prod
   email: rlaxowl5460@gmail.com

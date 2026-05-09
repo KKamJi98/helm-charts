@@ -127,25 +127,12 @@ applications:
     destination:
       namespace: cert-manager
     source:
-      repoURL: https://charts.jetstack.io
-      chart: cert-manager
-      targetRevision: v1.20.1
-      helm:
-        values: |
-          installCRDs: true
-
-  cert-manager-issuer:
-    enabled: true
-    name: cert-manager-issuer
-    project: management
-    annotations:
-      argocd.argoproj.io/sync-wave: "-3"
-    destination:
-      namespace: cert-manager
-    source:
       repoURL: https://github.com/KKamJi98/helm-charts.git
       targetRevision: main
-      path: charts/cert-manager-issuer
+      path: charts/cert-manager
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
 
   istio-base:
     enabled: true

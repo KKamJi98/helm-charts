@@ -1,0 +1,10 @@
+apiVersion: v2
+name: cert-manager
+description: cert-manager wrapper chart (umbrella) + ClusterIssuer for kkamji clusters
+type: application
+version: 0.1.0
+appVersion: "v1.20.2"
+dependencies:
+  - name: cert-manager
+    version: v1.20.2
+    repository: https://charts.jetstack.io
