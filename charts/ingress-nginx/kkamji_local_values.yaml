@@ -5,6 +5,12 @@ controller:
   # 다른 호스트는 annotation 이 없으니 영향 없음 (default 종료 모드 유지).
   extraArgs:
     enable-ssl-passthrough: "true"
+  # nginx-ingress v1.12 부터 default 로 켜진 strict path-type 검증을 끔.
+  # cert-manager 의 HTTP-01 solver 가 만드는
+  # path: /.well-known/acme-challenge/<token> + pathType: Exact 조합이
+  # admission webhook 에서 거부되어 Challenge 가 stuck 되는 이슈 회피용.
+  config:
+    strict-validate-path-type: "false"
 
 tcp:
   "5432": "kube-rca/kube-rca-postgresql:5432"
