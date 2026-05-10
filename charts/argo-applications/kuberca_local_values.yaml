@@ -36,6 +36,12 @@ applications:
     project: kuberca
     destination:
       namespace: bookinfo
+    ignoreDifferences:
+      - group: apps
+        kind: Deployment
+        name: load-generator
+        jsonPointers:
+          - /spec/replicas
     source:
       repoURL: https://github.com/KKamJi98/helm-charts.git
       targetRevision: main
