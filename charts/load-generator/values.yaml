@@ -17,14 +17,14 @@ target:
   detailsBaseUrl: "http://details.bookinfo.svc.cluster.local:9080"
   ratingsBaseUrl: "http://ratings.bookinfo.svc.cluster.local:9080"
   weights:
-    productpage: 20
-    details: 40
-    ratings: 40
-  rps: 30
+    productpage: 60
+    details: 20
+    ratings: 20
+  rps: 60
   duration: "1h" # 1 hour per cycle (wrapper restarts k6 to release accumulated metric heap)
   prefix: ""
-  preAllocatedVUs: 30
-  maxVUs: 150
+  preAllocatedVUs: 60
+  maxVUs: 200
 
 resources:
   limits:
