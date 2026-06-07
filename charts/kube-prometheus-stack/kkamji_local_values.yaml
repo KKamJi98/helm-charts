@@ -216,8 +216,6 @@ basicAuth:
   ssmKey: /kkamji/monitoring/ingress/basic-auth
   namespaces:
     - monitoring
-    - kube-rca
-    - bookinfo
     - kube-system
 
 grafanaAuth:
