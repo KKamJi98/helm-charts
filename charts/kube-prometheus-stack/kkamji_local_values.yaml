@@ -60,7 +60,7 @@ kube-prometheus-stack:
         - name: "slack-critical"
           slack_configs:
             - api_url: "https://slack.com/api/chat.postMessage"
-              channel: "#00_monitor-critical"
+              channel: "C0B8URUE5J6"  # 00_monitor-critical (채널 ID - rename 무관)
               send_resolved: true
               http_config:
                 authorization:
@@ -69,7 +69,7 @@ kube-prometheus-stack:
         - name: "slack-warning"
           slack_configs:
             - api_url: "https://slack.com/api/chat.postMessage"
-              channel: "#00_monitor-warning"
+              channel: "C0B8RBKCT45"  # 00_monitor-warning (채널 ID - rename 무관)
               send_resolved: true
               http_config:
                 authorization:
