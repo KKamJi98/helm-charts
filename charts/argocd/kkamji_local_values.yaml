@@ -98,9 +98,10 @@ argocd:
         token: $slack-token
   
     subscriptions:
-      # ArgoCD 전용 단일 채널. (00_monitor-critical / 00_monitor-warning 은 AlertManager 전용이므로 사용하지 않는다)
+      # ArgoCD 전용 단일 채널. 채널 ID 로 지정해 rename 에 영향받지 않는다.
+      # (00_monitor-critical / 00_monitor-warning 은 AlertManager 전용이므로 사용하지 않는다)
       - recipients:
-          - slack:00_monitor-argocd
+          - slack:C0B8D959UQP  # 00_monitor-argocd
         triggers:
           - on-deployed
           - on-sync-failed

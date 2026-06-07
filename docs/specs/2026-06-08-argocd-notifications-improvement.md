@@ -51,7 +51,7 @@
 
 - `00_monitor-argocd` 가 private 이면 ArgoCD Slack 봇이 **채널 멤버여야** 전송된다.
 - **채널 rename 또는 public -> private 전환 시 봇이 이탈**할 수 있다 -> 재초대 필요. (2026-06-07 실제 발생)
-- 권장: recipient 를 채널명 대신 **채널 ID** 로 지정하면 rename 영향이 사라진다 (Slack 채널 세부정보에서 채널 ID 확인).
+- **적용**: recipient 를 **채널 ID** (`C0B8D959UQP` = `00_monitor-argocd`)로 지정해 rename 영향을 제거했다. (단, 봇은 여전히 해당 채널 멤버여야 한다)
 
 ### 검증 / 강제 테스트
 
@@ -73,7 +73,7 @@ kubectl -n argocd annotate app <app> notified.notifications.argoproj.io- --conte
 
 ## 잔여 / TODO
 
-- [ ] (권장) recipient 채널명 -> 채널 ID 전환 (rename 무관하게 견고)
+- [x] recipient 채널 ID 전환 완료 (`00_monitor-argocd` = `C0B8D959UQP`)
 - [ ] `on-sync-succeeded` template 미사용 정리 또는 trigger 추가 결정 (현재는 `on-deployed` 와 중복이라 미사용)
 - [ ] `on-sync-running` 구독 여부 결정 (현재 노이즈 회피로 미구독)
 - [ ] 단일 `00_monitor-argocd` 채널에서 `@here` 멘션이 과하면 제거 검토
