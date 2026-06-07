@@ -100,7 +100,7 @@ argocd:
     subscriptions:
       # 1) 전역 구독 - 특정 트리거들에 대해 Slack 채널(argocd-alarm)로 알림 발송
       - recipients:
-          - slack:monitor-argocd
+          - slack:00_monitor-argocd
         triggers:
           - on-sync-status-unknown
           - on-sync-failed
@@ -108,7 +108,7 @@ argocd:
           - on-health-degraded
       # 2) 라벨 셀렉터 기반 구독 예시 - test=true 라벨이 붙은 앱에서만 Unknown 이벤트 알림
       - recipients:
-          - slack:monitor-argocd
+          - slack:00_monitor-argocd
         selector: test=true
         triggers:
           - on-sync-status-unknown
