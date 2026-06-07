@@ -98,19 +98,13 @@ argocd:
         token: $slack-token
   
     subscriptions:
-      # 1) 전역 구독 - 특정 트리거들에 대해 Slack 채널(argocd-alarm)로 알림 발송
+      # ArgoCD 전용 단일 채널. (00_monitor-critical / 00_monitor-warning 은 AlertManager 전용이므로 사용하지 않는다)
       - recipients:
           - slack:00_monitor-argocd
         triggers:
-          - on-sync-status-unknown
-          - on-sync-failed
           - on-deployed
+          - on-sync-failed
           - on-health-degraded
-      # 2) 라벨 셀렉터 기반 구독 예시 - test=true 라벨이 붙은 앱에서만 Unknown 이벤트 알림
-      - recipients:
-          - slack:00_monitor-argocd
-        selector: test=true
-        triggers:
           - on-sync-status-unknown
     templates:
       template.app-deployed: |
@@ -155,7 +149,7 @@ argocd:
         email:
           subject: Application {{.app.metadata.name}} has degraded.
         message: |
-          {{if eq .serviceType "slack"}}:exclamation:{{end}} Application {{.app.metadata.name}} has degraded.
+          {{if eq .serviceType "slack"}}<!here> :exclamation:{{end}} Application {{.app.metadata.name}} has degraded.
           Application details: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}.
         slack:
           attachments: |-
@@ -189,7 +183,7 @@ argocd:
         email:
           subject: Failed to sync application {{.app.metadata.name}}.
         message: |
-          {{if eq .serviceType "slack"}}:exclamation:{{end}}  The sync operation of application {{.app.metadata.name}} has failed at {{.app.status.operationState.finishedAt}} with the following error: {{.app.status.operationState.message}}
+          {{if eq .serviceType "slack"}}<!here> :exclamation:{{end}}  The sync operation of application {{.app.metadata.name}} has failed at {{.app.status.operationState.finishedAt}} with the following error: {{.app.status.operationState.message}}
           Sync operation details are available at: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true .
         slack:
           attachments: |-
@@ -333,7 +327,7 @@ argocd:
           oncePer: app.status.operationState.syncResult.revision
           send:
           - app-deployed
-          when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+          when: app.status.operationState != nil and app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
       trigger.on-health-degraded: |
         - description: Application has degraded
           send:
@@ -343,12 +337,12 @@ argocd:
         - description: Application syncing has failed
           send:
           - app-sync-failed
-          when: app.status.operationState.phase in ['Error', 'Failed']
+          when: app.status.operationState != nil and app.status.operationState.phase in ['Error', 'Failed']
       trigger.on-sync-running: |
         - description: Application is being synced
           send:
           - app-sync-running
-          when: app.status.operationState.phase in ['Running']
+          when: app.status.operationState != nil and app.status.operationState.phase in ['Running']
       trigger.on-sync-status-unknown: |
         - description: Application status is 'Unknown'
           send:
