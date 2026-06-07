@@ -1,0 +1,27 @@
+{{- with .Values.alertmanagerSlack }}
+apiVersion: external-secrets.io/v1
+kind: ClusterExternalSecret
+metadata:
+  name: alertmanager-slack-ces
+spec:
+  externalSecretName: alertmanager-slack-es
+  namespaceSelector:
+    matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values:
+          - monitoring
+  refreshTime: 1h
+  externalSecretSpec:
+    refreshInterval: 1h
+    secretStoreRef:
+      name: parameter-store
+      kind: ClusterSecretStore
+    target:
+      name: alertmanager-slack
+      creationPolicy: Owner
+    data:
+      - secretKey: bot-token
+        remoteRef:
+          key: {{ .ssmKey | quote }}
+{{- end }}
