@@ -451,7 +451,7 @@ repoCredentials:
   github-app-creds-personal:
     enabled: true
     url: "https://github.com/KKamJi98/"
-    refreshInterval: 1h
+    refreshInterval: 1h0m0s
     secretStoreRef:
       name: parameter-store
       kind: ClusterSecretStore
@@ -463,7 +463,7 @@ repoCredentials:
   github-app-creds-kuberca:
     enabled: true
     url: "https://github.com/kube-rca/"
-    refreshInterval: 1h
+    refreshInterval: 1h0m0s
     secretStoreRef:
       name: parameter-store
       kind: ClusterSecretStore
@@ -476,7 +476,7 @@ repoCredentials:
 # merge 로 추가 → repo push 즉시 ArgoCD sync 트리거 가능.
 githubWebhook:
   enabled: true
-  refreshInterval: 1h
+  refreshInterval: 1h0m0s
   secretStoreRef:
     name: parameter-store
     kind: ClusterSecretStore
