@@ -376,20 +376,6 @@ argo-projects:
         - group: "*"
           kind: "*"
   
-    kuberca:
-      description: "kube-rca demo workloads (bookinfo, load-generator, chaos-mesh, kuberca-monitoring)"
-      sourceRepos:
-        - "*"
-      destinations:
-        - server: https://kubernetes.default.svc
-          namespace: "*"
-      clusterResourceWhitelist:
-        - group: "*"
-          kind: "*"
-      namespaceResourceWhitelist:
-        - group: "*"
-          kind: "*"
-  
     management:
       description: "Cluster management addons (CNI, ingress, observability, security)"
       sourceRepos:
@@ -419,7 +405,7 @@ argo-projects:
           kind: "*"
   
     personal:
-      description: "Personal projects (play-hub, lf-oss-na-2026)"
+      description: "Personal projects (play-hub)"
       sourceRepos:
         - "*"
       destinations:
