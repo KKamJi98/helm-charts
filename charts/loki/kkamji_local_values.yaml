@@ -1,3 +1,8 @@
+global:
+  # kubespray-deployed CoreDNS service is named "coredns", not the upstream
+  # default "kube-dns"; loki-gateway nginx resolver fails to start otherwise.
+  dnsService: coredns
+
 loki:
   commonConfig:
     replication_factor: 1
