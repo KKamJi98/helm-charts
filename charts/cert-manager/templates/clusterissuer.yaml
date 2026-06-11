@@ -13,8 +13,13 @@ spec:
       name: {{ .privateKeySecretName }}
     solvers:
       - http01:
-          ingress:
-            ingressClassName: {{ .ingressClassName | quote }}
+          # Envoy Gateway 전환: HTTP-01 챌린지를 Gateway(:80) HTTPRoute 로 해결
+          gatewayHTTPRoute:
+            parentRefs:
+              - group: gateway.networking.k8s.io
+                kind: Gateway
+                name: {{ .gatewayName }}
+                namespace: {{ .gatewayNamespace }}
             podTemplate:
               metadata:
                 annotations:

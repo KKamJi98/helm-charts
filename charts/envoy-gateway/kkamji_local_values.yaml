@@ -9,8 +9,8 @@ gateway-helm: {}
 gateway:
   name: kkamji
   className: envoy
-  # Stage B 에서 10.0.1.100 으로 교체 (Windows host portproxy 80/443 타깃)
-  lbIP: 10.0.1.101
+  # Windows host portproxy(80/443) 타깃 - Stage B 컷오버로 nginx 에서 인계
+  lbIP: 10.0.1.100
   externalDNSTarget: 121.130.214.237
   issuer: letsencrypt-prod
 

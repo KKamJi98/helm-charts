@@ -14,6 +14,7 @@ issuer:
   email: rlaxowl5460@gmail.com
   server: https://acme-v02.api.letsencrypt.org/directory
   privateKeySecretName: letsencrypt-prod
-  ingressClassName: nginx
+  gatewayName: kkamji
+  gatewayNamespace: envoy-gateway-system
   solverPodAnnotations:
     sidecar.istio.io/inject: "false"
