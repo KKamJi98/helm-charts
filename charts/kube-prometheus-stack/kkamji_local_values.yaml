@@ -25,7 +25,11 @@ kube-prometheus-stack:
         - alertmanager-slack
     config:
       global:
-        resolve_timeout: 1m
+        # 1m 은 Prometheus resend 주기와 너무 근접해 flap 시 resolved 누락 여지가 있어
+        # 기본값(5m)으로 복원.
+        resolve_timeout: 5m
+      templates:
+        - "/etc/alertmanager/config/*.tmpl"
       route:
         # critical / warning 외 나머지(info 등)는 null 로 드롭
         receiver: "null"
@@ -39,10 +43,6 @@ kube-prometheus-stack:
           - receiver: "null"
             matchers:
               - alertname = "Watchdog"
-          # Cilium 사용, kube-proxy 예외처리
-          - receiver: "null"
-            matchers:
-              - alertname = "KubeProxyDown"
           # API server 버전 낮음, 임시 예외처리
           - receiver: "null"
             matchers:
@@ -62,6 +62,9 @@ kube-prometheus-stack:
             - api_url: "https://slack.com/api/chat.postMessage"
               channel: "C0B8URUE5J6"  # 00_monitor-critical (채널 ID - rename 무관)
               send_resolved: true
+              title: '{{ template "slack.kkamji.title" . }}'
+              text: '{{ template "slack.kkamji.text" . }}'
+              color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
               http_config:
                 authorization:
                   type: Bearer
@@ -71,10 +74,37 @@ kube-prometheus-stack:
             - api_url: "https://slack.com/api/chat.postMessage"
               channel: "C0B8RBKCT45"  # 00_monitor-warning (채널 ID - rename 무관)
               send_resolved: true
+              title: '{{ template "slack.kkamji.title" . }}'
+              text: '{{ template "slack.kkamji.text" . }}'
+              color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
               http_config:
                 authorization:
                   type: Bearer
                   credentials_file: /etc/alertmanager/secrets/alertmanager-slack/bot-token
+    # Slack 메시지 커스텀 템플릿. secret 에 .tmpl 로 들어가 config.templates 가 로드한다.
+    templateFiles:
+      kkamji-slack.tmpl: |-
+        {{ define "slack.kkamji.title" -}}
+        {{ if eq .Status "firing" }}:rotating_light: [FIRING:{{ .Alerts.Firing | len }}]{{ else }}:white_check_mark: [RESOLVED]{{ end }} {{ .CommonLabels.alertname }}{{ if .CommonLabels.namespace }} ({{ .CommonLabels.namespace }}){{ end }}
+        {{- end }}
+
+        {{ define "slack.kkamji.text" -}}
+        {{ range .Alerts -}}
+        {{ if eq .Status "firing" }}:small_red_triangle: *Firing*{{ else }}:large_green_circle: *Resolved*{{ end }} `{{ .Labels.severity }}` *{{ .Labels.alertname }}*
+        {{- if .Annotations.summary }}
+        {{ .Annotations.summary }}{{ end }}
+        {{- if .Labels.pod }}
+        Target: `{{ .Labels.namespace }}/{{ .Labels.pod }}`
+        {{- else if .Labels.instance }}
+        Target: `{{ .Labels.instance }}`
+        {{- else if .Labels.namespace }}
+        Namespace: `{{ .Labels.namespace }}`{{ end }}
+        Started: {{ .StartsAt.Format "01-02 15:04 UTC" }}{{ if eq .Status "resolved" }} / Ended: {{ .EndsAt.Format "01-02 15:04 UTC" }}{{ end }}
+        {{- if .Annotations.runbook_url }}
+        <{{ .Annotations.runbook_url }}|Runbook>{{ end }}
+
+        {{ end }}
+        {{- end }}
   grafana:
     admin:
       existingSecret: grafana-auth
@@ -208,9 +238,14 @@ kube-prometheus-stack:
         - secretName: prometheus-tls
           hosts:
             - prometheus.kkamji.net
-  defaultRules:
-    disabled:
-      KubePodCrashLooping: true
+  # CrashLoopBackOff 전용 알람을 복원한다 (이전에 disabled 였으나, pod 단위
+  # crashloop 신호가 없으면 KubePodNotReady 등 간접 알람만 남아 추적이 어렵다).
+  defaultRules: {}
+
+  # Cilium kubeProxyReplacement 환경 - kube-proxy 가 없으므로 scrape 대상과
+  # KubeProxyDown 룰 자체를 생성하지 않는다 (영구 firing 노이즈 제거).
+  kubeProxy:
+    enabled: false
 
 basicAuth:
   ssmKey: /kkamji/monitoring/ingress/basic-auth
