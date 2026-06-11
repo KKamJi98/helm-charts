@@ -93,10 +93,14 @@ kube-prometheus-stack:
         {{ if eq .Status "firing" }}:small_red_triangle: *Firing*{{ else }}:large_green_circle: *Resolved*{{ end }} `{{ .Labels.severity }}` *{{ .Labels.alertname }}*
         {{- if .Annotations.summary }}
         {{ .Annotations.summary }}{{ end }}
+        {{- if and .Annotations.description (ne .Annotations.description .Annotations.summary) }}
+        {{ .Annotations.description }}{{ end }}
         {{- if .Labels.pod }}
         Target: `{{ .Labels.namespace }}/{{ .Labels.pod }}`
         {{- else if .Labels.instance }}
-        Target: `{{ .Labels.instance }}`
+        Target: `{{ .Labels.instance }}`{{ if .Labels.job }} (job `{{ .Labels.job }}`){{ end }}
+        {{- else if .Labels.job }}
+        Target: job `{{ .Labels.job }}`{{ if .Labels.service }} / svc `{{ .Labels.service }}`{{ end }}{{ if .Labels.namespace }} in `{{ .Labels.namespace }}`{{ end }}
         {{- else if .Labels.namespace }}
         Namespace: `{{ .Labels.namespace }}`{{ end }}
         Started: {{ .StartsAt.Format "01-02 15:04 UTC" }}{{ if eq .Status "resolved" }} / Ended: {{ .EndsAt.Format "01-02 15:04 UTC" }}{{ end }}
