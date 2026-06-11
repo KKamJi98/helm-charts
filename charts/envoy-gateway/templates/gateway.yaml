@@ -13,6 +13,9 @@ metadata:
   annotations:
     # gateway-shim: HTTPS listener 별 Certificate 를 이 네임스페이스에 자동 생성
     cert-manager.io/cluster-issuer: {{ .Values.gateway.issuer }}
+    # external-dns 는 gateway 소스에서 route 가 아닌 Gateway 의 target 을 본다.
+    # 누락 시 내부 LB IP(10.0.1.100)가 A 레코드로 들어가 외부 접근이 끊긴다.
+    external-dns.alpha.kubernetes.io/target: {{ .Values.gateway.externalDNSTarget | quote }}
 spec:
   gatewayClassName: {{ .Values.gateway.className }}
   infrastructure:
