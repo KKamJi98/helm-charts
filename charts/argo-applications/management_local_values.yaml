@@ -88,6 +88,21 @@ applications:
         valueFiles:
           - kkamji_local_values.yaml
 
+  # Envoy Gateway (Gateway API) - ingress-nginx 대체 진행 중 (Stage A: 병행 기동)
+  envoy-gateway:
+    enabled: true
+    name: envoy-gateway
+    project: management
+    destination:
+      namespace: envoy-gateway-system
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/envoy-gateway
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
   external-dns:
     enabled: true
     name: external-dns

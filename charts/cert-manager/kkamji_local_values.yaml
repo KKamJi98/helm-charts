@@ -2,6 +2,11 @@ cert-manager:                       # ← sub-chart values (jetstack/cert-manage
   crds:
     enabled: true
     keep: true
+  # Gateway API 지원 (gateway-shim: Gateway annotation -> Certificate 자동 생성).
+  # Gateway API CRD(envoy-gateway 앱이 설치)가 없으면 controller 가 기동 실패하므로
+  # envoy-gateway 보다 늦게 활성화되어야 한다 (CRD 설치 후 self-heal 됨).
+  config:
+    enableGatewayAPI: true
 
 # 우리 매니페스트용 (templates/clusterissuer.yaml 가 참조)
 issuer:

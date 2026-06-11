@@ -249,6 +249,8 @@ kube-prometheus-stack:
 
 basicAuth:
   ssmKey: /kkamji/monitoring/ingress/basic-auth
+  # Envoy Gateway basic auth 용 {SHA} 형식 htpasswd (htpasswd -nbs 로 생성)
+  shaSsmKey: /kkamji/monitoring/ingress/basic-auth-sha
   namespaces:
     - monitoring
     - kube-system

@@ -26,4 +26,10 @@ spec:
       - secretKey: auth
         remoteRef:
           key: {{ .ssmKey | quote }}
+{{- if .shaSsmKey }}
+      # Envoy Gateway SecurityPolicy basicAuth 용 ({SHA} 형식 htpasswd 만 지원)
+      - secretKey: .htpasswd
+        remoteRef:
+          key: {{ .shaSsmKey | quote }}
+{{- end }}
 {{- end }}

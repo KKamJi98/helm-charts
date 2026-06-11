@@ -1,0 +1,22 @@
+{{- $root := . }}
+{{- range .Values.routes }}
+{{- if .basicAuth }}
+---
+# Envoy Gateway basic auth. secret 의 .htpasswd 키는 {SHA} 형식만 지원
+# (nginx 의 bcrypt 값과 다름 - charts/kube-prometheus-stack 의 basic-auth CES 가
+# /kkamji/monitoring/ingress/basic-auth-sha SSM 파라미터에서 sync).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: {{ .name }}-basic-auth
+  namespace: {{ .namespace }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: {{ .name }}
+  basicAuth:
+    users:
+      name: basic-auth
+{{- end }}
+{{- end }}

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: envoy-gateway
+description: Envoy Gateway wrapper chart (umbrella) for kkamji clusters
+type: application
+version: 0.1.0
+appVersion: v1.8.1
+dependencies:
+  - name: gateway-helm
+    version: 1.8.1
+    repository: oci://docker.io/envoyproxy
