@@ -428,6 +428,12 @@ rootApplications:
       valueFiles:
         - personal_local_values.yaml
 
+# Admin 비밀번호를 ESO 로 고정 (SSM 값은 bcrypt 해시).
+# 재구성/부트스트랩 직후에도 initial-admin-secret 대신 지정 비밀번호로 수렴.
+adminPassword:
+  enabled: true
+  ssmKey: /kkamji/argocd/admin-password-bcrypt
+
 # Repo credentials via ESO. SSM parameters must be pre-populated.
 # Single GitHub App registered with two installations (KKamJi98 + kube-rca).
 # App ID + private key are shared; only installationID differs per prefix.
