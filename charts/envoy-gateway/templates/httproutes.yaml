@@ -10,7 +10,9 @@ metadata:
     external-dns.alpha.kubernetes.io/target: {{ $root.Values.gateway.externalDNSTarget | quote }}
 spec:
   parentRefs:
-    - name: {{ $root.Values.gateway.name }}
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ $root.Values.gateway.name }}
       namespace: {{ $root.Release.Namespace }}
       sectionName: https-{{ .name }}
   hostnames:
@@ -22,16 +24,22 @@ spec:
             type: PathPrefix
             value: {{ .path }}
       backendRefs:
-        - name: {{ .backend.name }}
+        - group: ""
+          kind: Service
+          name: {{ .backend.name }}
           port: {{ .backend.port }}
+          weight: 1
 {{- end }}
     - matches:
         - path:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: {{ .backend.name }}
+        - group: ""
+          kind: Service
+          name: {{ .backend.name }}
           port: {{ .backend.port }}
+          weight: 1
 {{- end }}
 {{- range .Values.tlsPassthrough }}
 ---
@@ -44,13 +52,18 @@ metadata:
     external-dns.alpha.kubernetes.io/target: {{ $root.Values.gateway.externalDNSTarget | quote }}
 spec:
   parentRefs:
-    - name: {{ $root.Values.gateway.name }}
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ $root.Values.gateway.name }}
       namespace: {{ $root.Release.Namespace }}
       sectionName: tls-{{ .name }}
   hostnames:
     - {{ .host | quote }}
   rules:
     - backendRefs:
-        - name: {{ .backend.name }}
+        - group: ""
+          kind: Service
+          name: {{ .backend.name }}
           port: {{ .backend.port }}
+          weight: 1
 {{- end }}

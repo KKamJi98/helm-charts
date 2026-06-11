@@ -35,7 +35,10 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
-          - name: {{ .name }}-kkamji-net-tls
+          # group/kind 는 API server defaulting 과 일치시켜 ArgoCD diff 를 방지
+          - group: ""
+            kind: Secret
+            name: {{ .name }}-kkamji-net-tls
       allowedRoutes:
         namespaces:
           from: All
@@ -61,7 +64,9 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   parentRefs:
-    - name: {{ .Values.gateway.name }}
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .Values.gateway.name }}
       namespace: {{ .Release.Namespace }}
       sectionName: http
   rules:
