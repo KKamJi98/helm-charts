@@ -74,8 +74,9 @@ applications:
         valueFiles:
           - kkamji_local_values.yaml
 
+  # Envoy Gateway 로 전면 전환 완료 - chart 는 _archived/ 로 이동
   ingress-nginx:
-    enabled: true
+    enabled: false
     name: ingress-nginx
     project: management
     destination:

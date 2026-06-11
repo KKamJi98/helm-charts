@@ -1,11 +1,9 @@
 external-dns:
   provider:
     name: aws
-  # Gateway API 라우트도 DNS 소스로 추가 (Envoy Gateway 전환).
-  # ingress 는 Stage C(ingress-nginx 제거) 전까지 병행 유지.
+  # Envoy Gateway 전환 완료 - Gateway API 라우트가 DNS 소스
   sources:
     - service
-    - ingress
     - gateway-httproute
     - gateway-tlsroute
   domainFilters:

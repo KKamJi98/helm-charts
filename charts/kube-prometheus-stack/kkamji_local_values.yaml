@@ -1,23 +1,6 @@
 kube-prometheus-stack:
   alertmanager:
-    ingress:
-      enabled: true
-      ingressClassName: nginx
-      annotations:
-        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-        cert-manager.io/cluster-issuer: letsencrypt-prod
-        nginx.ingress.kubernetes.io/auth-type: "basic"
-        nginx.ingress.kubernetes.io/auth-secret: "basic-auth"
-        nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
-        external-dns.alpha.kubernetes.io/target: 121.130.214.237
-      hosts:
-        - alertmanager.kkamji.net
-      paths:
-        - /
-      tls:
-        - secretName: alertmanager-tls
-          hosts:
-            - alertmanager.kkamji.net
+    # 외부 노출은 Envoy Gateway HTTPRoute(charts/envoy-gateway)가 담당
     alertmanagerSpec:
       # ESO 가 SSM 의 Slack bot token 을 monitoring ns 의
       # alertmanager-slack Secret(key: bot-token) 으로 sync → 아래 경로로 mount.
@@ -115,21 +98,6 @@ kube-prometheus-stack:
       userKey: admin-user
       passwordKey: admin-password
     defaultDashboardsTimezone: browser # TimeZone 설정 (default: UTC)
-    ingress:
-      ingressClassName: nginx
-      enabled: true
-      annotations:
-        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-        cert-manager.io/cluster-issuer: letsencrypt-prod
-        external-dns.alpha.kubernetes.io/target: 121.130.214.237
-      hosts:
-        - grafana.kkamji.net
-      path: /
-      pathType: Prefix
-      tls:
-        - secretName: grafana-tls
-          hosts:
-            - grafana.kkamji.net
     additionalDataSources:
       - name: Loki
         type: loki
@@ -224,24 +192,6 @@ kube-prometheus-stack:
             - source_labels: [__meta_kubernetes_pod_name]
               target_label: pod
       retention: 14d
-    ingress:
-      ingressClassName: nginx
-      enabled: true
-      annotations:
-        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-        cert-manager.io/cluster-issuer: letsencrypt-prod
-        nginx.ingress.kubernetes.io/auth-type: "basic" # 인증 타입
-        nginx.ingress.kubernetes.io/auth-secret: "basic-auth" # 인증에 사용할 secret
-        nginx.ingress.kubernetes.io/auth-realm: "Authentication Required" # 인증 프롬프트에 보내는 메시지
-        external-dns.alpha.kubernetes.io/target: 121.130.214.237
-      hosts:
-        - prometheus.kkamji.net
-      paths:
-        - /
-      tls:
-        - secretName: prometheus-tls
-          hosts:
-            - prometheus.kkamji.net
   # CrashLoopBackOff 전용 알람을 복원한다 (이전에 disabled 였으나, pod 단위
   # crashloop 신호가 없으면 KubePodNotReady 등 간접 알람만 남아 추적이 어렵다).
   defaultRules: {}

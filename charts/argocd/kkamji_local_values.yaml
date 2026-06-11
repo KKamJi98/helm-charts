@@ -46,20 +46,9 @@ argocd:
         name: letsencrypt-prod
     metrics:
       enabled: true
-    ingress:
-      enabled: true
-      ingressClassName: nginx
-      hostname: argocd.kkamji.net
-      # ssl-passthrough 환경: TLS 종료는 argocd-server pod 가 직접 수행하므로
-      # Ingress 의 tls 블록과 cert-manager auto-issue 는 사용하지 않는다.
-      # Certificate/argocd-server-tls (ingress-shim 자동 생성) 와
-      # Certificate/argocd-server (server.certificate) 가 같은 Secret 을 다투지 않게 분리.
-      tls: false
-      annotations:
-        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-        nginx.ingress.kubernetes.io/ssl-passthrough: "true"
-        nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
-        external-dns.alpha.kubernetes.io/target: 121.130.214.237
+    # 외부 노출은 Envoy Gateway TLSRoute(charts/envoy-gateway)가 담당.
+    # TLS 종료는 기존 ssl-passthrough 와 동일하게 argocd-server pod 가 직접 수행
+    # (Certificate/argocd-server 는 server.certificate 가 계속 관리).
     extensions:
       enabled: true
       extensionList:
