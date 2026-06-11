@@ -11,6 +11,11 @@ controller:
   # admission webhook 에서 거부되어 Challenge 가 stuck 되는 이슈 회피용.
   config:
     strict-validate-path-type: "false"
+  service:
+    annotations:
+      # Windows host portproxy(80/443/55432)가 바라보는 LB IP 고정.
+      # 재구성 시에도 라우터/호스트 설정 변경 없이 외부 트래픽 유지.
+      metallb.io/loadBalancerIPs: 10.0.1.100
 
 tcp:
   "5432": "kube-rca/kube-rca-postgresql:5432"
