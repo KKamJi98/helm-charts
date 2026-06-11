@@ -2,6 +2,8 @@ kube-prometheus-stack:
   alertmanager:
     # 외부 노출은 Envoy Gateway HTTPRoute(charts/envoy-gateway)가 담당
     alertmanagerSpec:
+      # Slack 메시지의 Silence 링크(.ExternalURL)가 외부 도메인을 가리키도록 설정
+      externalUrl: https://alertmanager.kkamji.net
       # ESO 가 SSM 의 Slack bot token 을 monitoring ns 의
       # alertmanager-slack Secret(key: bot-token) 으로 sync → 아래 경로로 mount.
       secrets:
@@ -17,9 +19,10 @@ kube-prometheus-stack:
         # critical / warning 외 나머지(info 등)는 null 로 드롭
         receiver: "null"
         group_by: ["alertname", "namespace", "severity"]
-        group_wait: 10s
-        group_interval: 1m
-        repeat_interval: 15m
+        # 동시 다발 장애가 첫 메시지에 묶이도록 30s 대기, 같은 그룹 신규 alert 는 5m 단위로 합산
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 12h
         routes:
           # 예외 라우트는 severity 분기보다 먼저 평가되어야 한다 (first-match).
           # Watchdog 예외처리
@@ -30,13 +33,35 @@ kube-prometheus-stack:
           - receiver: "null"
             matchers:
               - alertname = "KubeVersionMismatch"
-          # severity 기반 채널 분기
+          # severity 기반 채널 분기. repeat 은 "리마인드 필요성" 기준으로 차등:
+          # critical 1h(행동 촉구), warning 12h(기록 성격 - 15m 도배 방지)
           - receiver: "slack-critical"
             matchers:
               - severity = "critical"
+            repeat_interval: 1h
           - receiver: "slack-warning"
             matchers:
               - severity = "warning"
+            repeat_interval: 12h
+      inhibit_rules:
+        # pod 단위 원인 알람이 있으면 같은 namespace 의 집계형 TargetDown 은 중복 신호 → 억제
+        - source_matchers:
+            - alertname =~ "KubePodCrashLooping|KubePodNotReady|ScrapeTargetDown"
+          target_matchers:
+            - alertname = "TargetDown"
+          equal: ["namespace"]
+        # 노드가 죽었으면 그 노드 라벨이 붙은 warning 파생 알람 억제
+        - source_matchers:
+            - alertname = "KubeNodeNotReady"
+          target_matchers:
+            - severity = "warning"
+          equal: ["node"]
+        # 같은 알람의 critical 이 이미 발화 중이면 warning 채널 중복 발송 억제
+        - source_matchers:
+            - severity = "critical"
+          target_matchers:
+            - severity = "warning"
+          equal: ["alertname", "namespace"]
       receivers:
         - name: "null"
         # bot token(chat.postMessage)으로 채널 분기. 봇이 각 채널에 초대돼 있어야 한다.
@@ -65,6 +90,9 @@ kube-prometheus-stack:
                   type: Bearer
                   credentials_file: /etc/alertmanager/secrets/alertmanager-slack/bot-token
     # Slack 메시지 커스텀 템플릿. secret 에 .tmpl 로 들어가 config.templates 가 로드한다.
+    # tz/since/humanizeDuration 은 Alertmanager >= 0.27 필요 (현재 v0.28.1).
+    # 제목이 alertname 을 이미 보여주므로(group_by 에 alertname 포함) 본문은
+    # summary + target + 시간 + 액션 링크(Query/Logs/Silence)에 집중한다.
     templateFiles:
       kkamji-slack.tmpl: |-
         {{ define "slack.kkamji.title" -}}
@@ -72,10 +100,9 @@ kube-prometheus-stack:
         {{- end }}
 
         {{ define "slack.kkamji.text" -}}
+        {{ $ext := .ExternalURL -}}
         {{ range .Alerts -}}
-        {{ if eq .Status "firing" }}:small_red_triangle: *Firing*{{ else }}:large_green_circle: *Resolved*{{ end }} `{{ .Labels.severity }}` *{{ .Labels.alertname }}*
-        {{- if .Annotations.summary }}
-        {{ .Annotations.summary }}{{ end }}
+        {{ if eq .Status "firing" }}:small_red_triangle:{{ else }}:large_green_circle:{{ end }} `{{ .Labels.severity }}` {{ if .Annotations.summary }}{{ .Annotations.summary }}{{ else }}{{ .Labels.alertname }}{{ end }}
         {{- if and .Annotations.description (ne .Annotations.description .Annotations.summary) }}
         {{ .Annotations.description }}{{ end }}
         {{- if .Labels.pod }}
@@ -86,9 +113,12 @@ kube-prometheus-stack:
         Target: job `{{ .Labels.job }}`{{ if .Labels.service }} / svc `{{ .Labels.service }}`{{ end }}{{ if .Labels.namespace }} in `{{ .Labels.namespace }}`{{ end }}
         {{- else if .Labels.namespace }}
         Namespace: `{{ .Labels.namespace }}`{{ end }}
-        Started: {{ .StartsAt.Format "01-02 15:04 UTC" }}{{ if eq .Status "resolved" }} / Ended: {{ .EndsAt.Format "01-02 15:04 UTC" }}{{ end }}
-        {{- if .Annotations.runbook_url }}
-        <{{ .Annotations.runbook_url }}|Runbook>{{ end }}
+        {{- if eq .Status "firing" }}
+        Started: {{ (.StartsAt | tz "Asia/Seoul").Format "01-02 15:04" }} KST ({{ humanizeDuration (since .StartsAt).Seconds }} ago)
+        {{- else }}
+        Duration: {{ humanizeDuration (.EndsAt.Sub .StartsAt).Seconds }} ({{ (.StartsAt | tz "Asia/Seoul").Format "01-02 15:04" }} ~ {{ (.EndsAt | tz "Asia/Seoul").Format "15:04" }} KST)
+        {{- end }}
+        {{ if .Annotations.runbook_url }}<{{ .Annotations.runbook_url }}|Runbook> · {{ end }}<{{ .GeneratorURL }}|Query>{{ if .Labels.pod }} · <https://grafana.kkamji.net/explore?schemaVersion=1&orgId=1&panes={{ printf `{"a":{"datasource":"loki","queries":[{"refId":"A","expr":"{namespace=\"%s\", pod=\"%s\"}","datasource":{"type":"loki","uid":"loki"}}],"range":{"from":"now-3h","to":"now"}}}` .Labels.namespace .Labels.pod | urlquery }}|Logs>{{ end }} · <{{ $ext }}/#/silences/new?filter={{ printf "{alertname=%q}" .Labels.alertname | urlquery }}|Silence>
 
         {{ end }}
         {{- end }}
@@ -100,6 +130,8 @@ kube-prometheus-stack:
     defaultDashboardsTimezone: browser # TimeZone 설정 (default: UTC)
     additionalDataSources:
       - name: Loki
+        # Slack 알림의 Logs explore 딥링크가 uid 를 참조하므로 고정한다
+        uid: loki
         type: loki
         access: proxy
         url: http://loki-gateway:80
@@ -131,6 +163,8 @@ kube-prometheus-stack:
           foldersFromFilesStructure: true
   prometheus:
     prometheusSpec:
+      # 알림의 Query 링크(.GeneratorURL)가 외부 도메인을 가리키도록 설정
+      externalUrl: https://prometheus.kkamji.net
       enableRemoteWriteReceiver: true
       additionalScrapeConfigs:
         # Hubble & Cilium Metric 수집을 위한 설정
@@ -146,6 +180,12 @@ kube-prometheus-stack:
               regex: ([^:]+)(?::\d+)?;(\d+)
               replacement: ${1}:${2}
               target_label: __address__
+            # namespace/pod 라벨이 없으면 TargetDown 류 알림에서 어떤 pod 인지
+            # 식별 불가 ("in  namespace" 빈 칸 문제) → up 시계열에 라벨을 입힌다
+            - source_labels: [__meta_kubernetes_namespace]
+              target_label: namespace
+            - source_labels: [__meta_kubernetes_pod_name]
+              target_label: pod
         - job_name: "kubernetes-endpoints" ## Hubble
           scrape_interval: 30s
           kubernetes_sd_configs:
@@ -195,6 +235,24 @@ kube-prometheus-stack:
   # CrashLoopBackOff 전용 알람을 복원한다 (이전에 disabled 였으나, pod 단위
   # crashloop 신호가 없으면 KubePodNotReady 등 간접 알람만 남아 추적이 어렵다).
   defaultRules: {}
+
+  # 기본 TargetDown 은 job/namespace 단위 집계라 어떤 target 이 죽었는지 안 보인다.
+  # per-target 룰을 추가하고, TargetDown 은 inhibit_rules 로 억제한다 (안전망으로 유지).
+  # keep_firing_for 로 resolve 직후 재발화(flapping) 시 중복 알림을 막는다.
+  additionalPrometheusRulesMap:
+    kkamji-scrape-target:
+      groups:
+        - name: kkamji.scrape-target
+          rules:
+            - alert: ScrapeTargetDown
+              expr: up == 0
+              for: 5m
+              keep_firing_for: 5m
+              labels:
+                severity: warning
+              annotations:
+                summary: 'Scrape target down ({{ $labels.job }})'
+                description: '{{ if $labels.pod }}Pod {{ $labels.namespace }}/{{ $labels.pod }}{{ else }}Target {{ $labels.instance }}{{ end }} (job `{{ $labels.job }}`) has been unreachable for 5 minutes.'
 
   # Cilium kubeProxyReplacement 환경 - kube-proxy 가 없으므로 scrape 대상과
   # KubeProxyDown 룰 자체를 생성하지 않는다 (영구 firing 노이즈 제거).
