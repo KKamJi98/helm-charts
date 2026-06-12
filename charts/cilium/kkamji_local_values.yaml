@@ -105,6 +105,12 @@ cilium:
       dashboards:
         enabled: true
         namespace: monitoring
+    tls:
+      auto:
+        # 기본 method(helm)는 매 렌더마다 genCA 로 인증서를 재생성해
+        # ArgoCD 에서 커밋마다 가짜 diff -> auto-sync -> 알림을 유발한다.
+        # certgen CronJob 에 위임해 렌더를 결정적으로 만든다.
+        method: cronJob
 
   # Cilium agent metrics + ServiceMonitor.
   prometheus:
