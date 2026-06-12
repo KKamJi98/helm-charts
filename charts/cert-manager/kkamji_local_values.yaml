@@ -14,7 +14,11 @@ issuer:
   email: rlaxowl5460@gmail.com
   server: https://acme-v02.api.letsencrypt.org/directory
   privateKeySecretName: letsencrypt-prod
-  gatewayName: kkamji
-  gatewayNamespace: envoy-gateway-system
-  solverPodAnnotations:
-    sidecar.istio.io/inject: "false"
+  route53:
+    region: ap-northeast-2
+    hostedZoneID: Z0278737IXIK6D95OCAP   # kkamji.net
+
+# DNS-01 자격증명 (IAM user: cert_manager, zone 한정 최소 권한)
+awsCredentials:
+  enabled: true
+  ssmKey: /kkamji/cert-manager/aws-credentials

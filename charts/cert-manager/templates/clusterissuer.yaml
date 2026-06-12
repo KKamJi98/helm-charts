@@ -12,16 +12,16 @@ spec:
     privateKeySecretRef:
       name: {{ .privateKeySecretName }}
     solvers:
-      - http01:
-          # Envoy Gateway 전환: HTTP-01 챌린지를 Gateway(:80) HTTPRoute 로 해결
-          gatewayHTTPRoute:
-            parentRefs:
-              - group: gateway.networking.k8s.io
-                kind: Gateway
-                name: {{ .gatewayName }}
-                namespace: {{ .gatewayNamespace }}
-            podTemplate:
-              metadata:
-                annotations:
-{{ toYaml .solverPodAnnotations | indent 18 }}
+      # DNS-01 (Route53): wildcard(*.kkamji.net) 인증서 발급 가능, solver pod 불필요.
+      # 자격증명은 templates/aws-credentials-es.yaml 이 SSM 에서 sync.
+      - dns01:
+          route53:
+            region: {{ .route53.region }}
+            hostedZoneID: {{ .route53.hostedZoneID }}
+            accessKeyIDSecretRef:
+              name: cert-manager-aws
+              key: AWS_ACCESS_KEY_ID
+            secretAccessKeySecretRef:
+              name: cert-manager-aws
+              key: AWS_SECRET_ACCESS_KEY
 {{- end }}
