@@ -40,6 +40,9 @@
 ## 5. 클러스터 (kubectl)
 - 타겟 컨텍스트는 `kkamji-lab`. kubeconfig 에 회사 prod/staging 컨텍스트도 함께 있으므로, write/delete 전 반드시 `kubectl config current-context` 를 확인한다.
 - 에이전트 실행 제한: `get`/`describe`/`diff`/`dry-run` 은 자율, `apply`/`delete`/`create` 는 수동 + 승인.
+- 컨텍스트 기본 namespace 가 `default` 가 아니다 - 조회/조작 시 항상 `-n` 을 명시한다.
+- pod 내부 확인은 `kubectl exec` 대신 `kubectl port-forward` + HTTP API 를 사용한다 (exec 는 권한 차단됨; Alertmanager `/api/v2/alerts·status`, Prometheus `/api/v1/rules·targets·query`).
+- amtool/promtool 은 로컬 미설치 - `helm template --show-only` 로 secret 추출 후 docker(`quay.io/prometheus/alertmanager`, `quay.io/prometheus/prometheus`)의 `amtool check-config`/`amtool template render`/`promtool check rules` 로 검증한다.
 
 ## 6. External Secrets (ESO) gotcha
 - ClusterExternalSecret 파생 자식 ExternalSecret 은 `refreshInterval` 이 Go 표준형으로 정규화된다(`1h` -> `1h0m0s`). 직접 정의한 ExternalSecret 은 리터럴 문자열을 유지한다.
