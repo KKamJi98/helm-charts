@@ -1,0 +1,24 @@
+{{/*
+basicAuth: true 인 HTTPRoute(templates/http-route.yaml)에 Envoy Gateway
+basic auth 를 적용한다. {SHA} 형식 htpasswd 만 지원 - basic-auth secret 의
+.htpasswd 키 (SSM /kkamji/monitoring/ingress/basic-auth-sha).
+*/}}
+{{- $root := . }}
+{{- range $name, $r := .Values.gatewayRoutes }}
+{{- if $r.basicAuth }}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: {{ $name }}-basic-auth
+  namespace: {{ $root.Release.Namespace }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: {{ $name }}
+  basicAuth:
+    users:
+      name: basic-auth
+{{- end }}
+{{- end }}

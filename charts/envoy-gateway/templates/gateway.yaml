@@ -1,26 +1,4 @@
 apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
-metadata:
-  name: {{ .Values.gateway.className }}
-spec:
-  controllerName: gateway.envoyproxy.io/gatewayclass-controller
----
-# wildcard 인증서 (DNS-01). 신규 서비스가 리스너/인증서 추가 없이 온보딩된다.
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: wildcard-kkamji-net
-  namespace: {{ .Release.Namespace }}
-spec:
-  secretName: wildcard-kkamji-net-tls
-  issuerRef:
-    name: {{ .Values.gateway.issuer }}
-    kind: ClusterIssuer
-    group: cert-manager.io
-  dnsNames:
-    - {{ .Values.gateway.wildcardHost | quote }}
----
-apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: {{ .Values.gateway.name }}
@@ -36,7 +14,7 @@ spec:
       # Windows host portproxy 가 바라보는 IP 를 MetalLB 에서 고정
       metallb.io/loadBalancerIPs: {{ .Values.gateway.lbIP | quote }}
   listeners:
-    # HTTP: https 리다이렉트 용
+    # HTTP: https 리다이렉트 용 (templates/http-route.yaml)
     - name: http
       protocol: HTTP
       port: 80
@@ -71,27 +49,3 @@ spec:
         namespaces:
           from: All
 {{- end }}
----
-# 80 포트 전역 https 리다이렉트
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: https-redirect
-  namespace: {{ .Release.Namespace }}
-spec:
-  parentRefs:
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: {{ .Values.gateway.name }}
-      namespace: {{ .Release.Namespace }}
-      sectionName: http
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      filters:
-        - type: RequestRedirect
-          requestRedirect:
-            scheme: https
-            statusCode: 301

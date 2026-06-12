@@ -1,0 +1,14 @@
+# wildcard 인증서 (DNS-01). 신규 서비스가 리스너/인증서 추가 없이 온보딩된다.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-kkamji-net
+  namespace: {{ .Release.Namespace }}
+spec:
+  secretName: wildcard-kkamji-net-tls
+  issuerRef:
+    name: {{ .Values.gateway.issuer }}
+    kind: ClusterIssuer
+    group: cert-manager.io
+  dnsNames:
+    - {{ .Values.gateway.wildcardHost | quote }}
