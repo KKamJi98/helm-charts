@@ -25,3 +25,14 @@ applications:
       helm:
         valueFiles:
           - kkamji_local_values.yaml
+    # 차트의 gateway.auth.generateSecret 은 lookup 기반인데 ArgoCD repo-server 는
+    # 클러스터 접근 없이 렌더하므로 매번 randAlphaNum 으로 새 토큰이 생성된다.
+    # data diff 를 무시해 sync 마다 토큰이 rotate 되는 것을 막는다.
+    syncPolicy:
+      syncOptions:
+        - RespectIgnoreDifferences=true
+    ignoreDifferences:
+      - kind: Secret
+        name: openclaw-gateway-auth
+        jsonPointers:
+          - /data
