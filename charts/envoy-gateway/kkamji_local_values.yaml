@@ -1,53 +1,33 @@
-# Envoy Gateway (Gateway API) - ingress-nginx 대체.
-# 전환 절차:
-#   Stage A: LB IP 10.0.1.101 로 기동, 모든 HTTPRoute/TLSRoute 준비 (트래픽 영향 없음)
-#   Stage B: ingress-nginx 와 IP 교환 (.101 <-> .100) -> portproxy 변경 없이 컷오버
-#   Stage C: ingress-nginx 및 차트별 Ingress 제거
+# Envoy Gateway (Gateway API) - 플랫폼 계층.
+#
+# 역할 분리 (Gateway API persona model):
+#   - 이 차트(플랫폼): GatewayClass, Gateway(wildcard listener/TLS/IP), redirect,
+#     wildcard Certificate. 신규 서비스는 리스너 변경 없이 HTTPRoute 만 붙인다.
+#   - 각 앱 차트: 자기 HTTPRoute 소유 (kube-prometheus-stack route.main,
+#     play-hub repo 의 chart 등)
+#   - 예외(플랫폼이 대신 보유): 소유 차트가 Gateway API 를 지원하지 않는 경우만
+#     (hubble-ui <- cilium chart 미지원, argocd TLSRoute <- argo-cd chart 미지원)
 
 gateway-helm: {}
 
 gateway:
   name: kkamji
   className: envoy
-  # Windows host portproxy(80/443) 타깃 - Stage B 컷오버로 nginx 에서 인계
+  # Windows host portproxy(80/443) 타깃
   lbIP: 10.0.1.100
   externalDNSTarget: 121.130.214.237
   issuer: letsencrypt-prod
+  wildcardHost: "*.kkamji.net"
 
-# HTTPRoute 는 각 앱 네임스페이스에 생성한다 (backendRef 가 same-ns 라
-# ReferenceGrant 불필요). basic auth 는 Envoy Gateway SecurityPolicy 로 적용
-# ({SHA} htpasswd 형식의 basic-auth secret 의 .htpasswd 키 참조).
-routes:
-  - name: grafana
-    namespace: monitoring
-    host: grafana.kkamji.net
-    backend: { name: kube-prometheus-stack-grafana, port: 80 }
-  - name: prometheus
-    namespace: monitoring
-    host: prometheus.kkamji.net
-    backend: { name: kube-prometheus-stack-prometheus, port: 9090 }
-    basicAuth: true
-  - name: alertmanager
-    namespace: monitoring
-    host: alertmanager.kkamji.net
-    backend: { name: kube-prometheus-stack-alertmanager, port: 9093 }
-    basicAuth: true
+# 소유 차트가 Gateway API 를 지원하지 않아 플랫폼이 보유하는 라우트
+platformRoutes:
   - name: hubble
     namespace: kube-system
     host: hubble.kkamji.net
     backend: { name: hubble-ui, port: 80 }
     basicAuth: true
-  - name: play-hub
-    namespace: play-hub
-    host: play-hub.kkamji.net
-    backend: { name: play-hub-frontend, port: 80 }
-    extraMatches:
-      - path: /api
-        backend: { name: play-hub-backend, port: 8080 }
-      - path: /ws
-        backend: { name: play-hub-backend, port: 8080 }
 
-# argocd 는 pod 가 직접 TLS 종료 (기존 ssl-passthrough 와 동일) -> TLSRoute
+# argocd 는 pod 가 직접 TLS 종료 -> TLSRoute (argo-cd chart 가 미지원이라 플랫폼 보유)
 tlsPassthrough:
   - name: argocd
     namespace: argocd
