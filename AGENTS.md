@@ -12,6 +12,7 @@
 - 모든 ArgoCD Application 은 이 repo 의 `targetRevision=main` 을 추적한다. `main` push -> GitHub webhook -> ArgoCD self-sync(`prune` + `selfHeal` + `ServerSideApply`). 즉 **`main` push = 즉시 클러스터 apply**.
 - 일상 변경은 `main` 에 직접 커밋한다. feature 브랜치는 배포되지 않으므로, 글로벌 "branch first" 기본값보다 이 정책을 우선한다.
 - push 전 변경 범위를 확정하고 무관한 WIP 는 커밋에서 제외한다. 한 파일에 관심사가 섞이면 `git add <file>` 대신 `git apply --cached` 로 해당 헝크만 staging 한다.
+- 사용자가 세션 중 같은 repo 에서 병렬로 커밋/푸시할 수 있다. commit/push 직전 `git fetch` + `git status` 로 재확인하고, 사용자 WIP 를 함께 쓸어담지 않도록 `git commit -- <paths>`(pathspec) 로 커밋한다.
 
 ## 2. 부트스트랩 정책 (중요)
 - **운영 중 `helm install/upgrade` 금지**: SSA 환경에서 helm 매니저가 필드 ownership 을 잡으면 ArgoCD self-sync 가 stale 필드(cert-manager annotation/tls 등)를 제거하지 못한다.
@@ -48,10 +49,22 @@
 - ClusterExternalSecret 파생 자식 ExternalSecret 은 `refreshInterval` 이 Go 표준형으로 정규화된다(`1h` -> `1h0m0s`). 직접 정의한 ExternalSecret 은 리터럴 문자열을 유지한다.
 - `creationPolicy: Owner` 는 ownerReference 를 설정한다 -> ExternalSecret 을 삭제하면 `deletionPolicy: Retain` 이어도 타깃 Secret 이 함께 GC 된다.
 - repo 에 정의가 없고 `kubectl.kubernetes.io/last-applied-configuration` 만 있는 ExternalSecret 은 수동 생성된 orphan 일 수 있다 (GitOps 관리 대상 아님 -> 정리 후보).
+- SSM ParameterStore 키 네이밍: `/kkamji/<component>/<purpose>` (예: `/kkamji/external-dns/aws-credentials`). 다중 키 자격증명은 SecureString JSON 1개 + `dataFrom.extract` 로 분해한다.
+- ExternalSecret/CES 가 부트스트랩 직후 webhook race 로 실패하면 refresh(1h)를 기다리지 말고 `kubectl annotate ... force-sync=$(date +%s)` 로 즉시 reconcile 한다.
+- argocd admin 비밀번호는 ESO Merge(argocd-admin-password-es)가 SSM bcrypt 해시(/kkamji/argocd/admin-password-bcrypt)로 고정한다. argocd-secret 의 admin.password 를 수동 수정하지 않는다.
 
 ## 7. 커밋 규칙
 - Conventional Commits: `feat|fix|refac|docs|chore|test|perf`. `Co-Authored-By` / AI attribution 추가 금지.
 - 출력물(파일/커밋/문서)에 비표준 타이포그래피(em/en dash, smart quote, ellipsis) 사용 금지. ASCII 로 대체한다.
+- `git commit -- <pathspec>` 는 untracked 신규 파일을 포함하지 않는다. 신규 템플릿 파일은 `git add` 후 커밋한다 (누락 시 ArgoCD 가 partial 로 sync 되어 조용히 깨진다).
 
 ## 8. CI/CD
 - GitHub Actions 는 `.github/workflows/build-openclaw-dev.yaml`(openclaw 이미지 빌드) 하나뿐이다. 차트 배포 CI 는 없고 ArgoCD self-sync 가 배포를 담당한다.
+
+## 9. Gateway API 라우팅
+- 플랫폼(charts/envoy-gateway)은 GatewayClass/Gateway(리스너)/https-redirect/wildcard Certificate 만 소유한다. HTTPRoute/TLSRoute 는 각 서비스의 umbrella 차트 templates/ 가 소유한다 (kps·cilium·argocd, play-hub 는 자기 repo).
+- 신규 서비스 온보딩: 자기 차트에 HTTPRoute 추가 - parentRef {name: kkamji, namespace: envoy-gateway-system, sectionName: https}. 리스너/인증서 변경 불필요.
+- ArgoCD SSA diff 방지: route 매니페스트에 API server defaulting 필드(parentRefs/backendRefs 의 group·kind·weight, filter-only rule 의 기본 match)를 명시한다.
+- external-dns 의 gateway 소스는 target annotation 을 HTTPRoute 가 아닌 **Gateway** 에서 읽는다. Gateway 의 target annotation 이 빠지면 A 레코드가 내부 LB IP 로 덮여 외부 접근이 끊긴다.
+- basic auth 는 Envoy SecurityPolicy 로 적용한다 ({SHA} htpasswd 만 지원 - basic-auth secret 의 .htpasswd 키 <- SSM /kkamji/monitoring/ingress/basic-auth-sha).
+- 인증서: letsencrypt-prod 는 DNS-01(route53, zone 한정 cert_manager IAM user) 단일 solver 다. wildcard(*.kkamji.net) 인증서는 DNS-01 로만 발급된다.
