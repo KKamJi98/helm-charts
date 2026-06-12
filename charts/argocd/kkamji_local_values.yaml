@@ -476,3 +476,15 @@ githubWebhook:
 # slack-token 키를 sync (SSM 경로는 alertmanager 와 통일해 slack-bot-token).
 slackToken:
   ssmKey: /kkamji/argocd/notifications/slack-bot-token
+
+# Gateway API TLSRoute (앱 차트 소유 - templates/gateway-route.yaml).
+# argocd-server pod 가 직접 TLS 종료하므로 플랫폼 Gateway 의 passthrough
+# 리스너(tls-argocd)에 붙는다.
+gatewayRoute:
+  enabled: true
+  host: argocd.kkamji.net
+  backend: { name: argocd-server, port: 443 }
+  parentRef:
+    name: kkamji
+    namespace: envoy-gateway-system
+    sectionName: tls-argocd

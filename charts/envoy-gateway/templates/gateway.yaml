@@ -58,8 +58,9 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
-{{- range .Values.tlsPassthrough }}
-    # SNI 가 정확히 일치하는 호스트는 wildcard 보다 우선 매칭된다 (passthrough)
+{{- range .Values.tlsPassthroughListeners }}
+    # SNI 가 정확히 일치하는 호스트는 wildcard 보다 우선 매칭된다 (passthrough).
+    # TLSRoute 는 해당 앱 차트가 sectionName: tls-{{ .name }} 으로 붙인다.
     - name: tls-{{ .name }}
       protocol: TLS
       port: 443

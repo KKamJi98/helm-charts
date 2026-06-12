@@ -130,3 +130,16 @@ cilium:
   dashboards:
     enabled: true
     namespace: monitoring
+
+# Gateway API 라우트 (앱 차트 소유 원칙 - templates/gateway-routes.yaml).
+# 플랫폼 Gateway 의 wildcard 리스너(sectionName: https)에 붙는다.
+gatewayRef:
+  name: kkamji
+  namespace: envoy-gateway-system
+  sectionName: https
+
+gatewayRoutes:
+  hubble:
+    host: hubble.kkamji.net
+    backend: { name: hubble-ui, port: 80 }
+    basicAuth: true

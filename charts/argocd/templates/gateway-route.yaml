@@ -1,0 +1,31 @@
+{{/*
+argocd-server 의 TLSRoute - 앱 차트(umbrella)가 자기 라우팅을 소유한다.
+TLS 종료는 argocd-server pod 가 직접 수행 (passthrough). upstream argo-cd
+chart 는 Gateway API route 를 지원하지 않으므로 wrapper 템플릿으로 정의한다.
+플랫폼 Gateway 의 전용 passthrough 리스너(sectionName)는 charts/envoy-gateway 가 소유.
+*/}}
+{{- with .Values.gatewayRoute }}
+{{- if .enabled }}
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: argocd
+  namespace: {{ $.Release.Namespace }}
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .parentRef.name }}
+      namespace: {{ .parentRef.namespace }}
+      sectionName: {{ .parentRef.sectionName }}
+  hostnames:
+    - {{ .host | quote }}
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: {{ .backend.name }}
+          port: {{ .backend.port }}
+          weight: 1
+{{- end }}
+{{- end }}

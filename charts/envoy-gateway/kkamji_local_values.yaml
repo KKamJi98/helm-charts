@@ -1,12 +1,15 @@
 # Envoy Gateway (Gateway API) - 플랫폼 계층.
 #
 # 역할 분리 (Gateway API persona model):
-#   - 이 차트(플랫폼): GatewayClass, Gateway(wildcard listener/TLS/IP), redirect,
-#     wildcard Certificate. 신규 서비스는 리스너 변경 없이 HTTPRoute 만 붙인다.
-#   - 각 앱 차트: 자기 HTTPRoute 소유 (kube-prometheus-stack route.main,
-#     play-hub repo 의 chart 등)
-#   - 예외(플랫폼이 대신 보유): 소유 차트가 Gateway API 를 지원하지 않는 경우만
-#     (hubble-ui <- cilium chart 미지원, argocd TLSRoute <- argo-cd chart 미지원)
+#   - 이 차트(플랫폼): GatewayClass, Gateway(wildcard listener/TLS/IP),
+#     https 리다이렉트, wildcard Certificate 만 소유한다.
+#   - HTTPRoute/TLSRoute 는 전부 각 앱 차트가 소유한다:
+#       kube-prometheus-stack: templates/gateway-routes.yaml (grafana/prom/am)
+#       cilium:                templates/gateway-routes.yaml (hubble)
+#       argocd:                templates/gateway-route.yaml  (TLSRoute)
+#       play-hub repo:         templates/httproute.yaml
+#   - 신규 서비스 온보딩 = 자기 차트에 HTTPRoute 추가
+#     (parentRef {name: kkamji, namespace: envoy-gateway-system, sectionName: https})
 
 gateway-helm: {}
 
@@ -19,17 +22,8 @@ gateway:
   issuer: letsencrypt-prod
   wildcardHost: "*.kkamji.net"
 
-# 소유 차트가 Gateway API 를 지원하지 않아 플랫폼이 보유하는 라우트
-platformRoutes:
-  - name: hubble
-    namespace: kube-system
-    host: hubble.kkamji.net
-    backend: { name: hubble-ui, port: 80 }
-    basicAuth: true
-
-# argocd 는 pod 가 직접 TLS 종료 -> TLSRoute (argo-cd chart 가 미지원이라 플랫폼 보유)
-tlsPassthrough:
+# TLS passthrough 전용 리스너 (pod 가 직접 TLS 종료하는 서비스).
+# 리스너는 플랫폼 소유, TLSRoute 는 해당 앱 차트 소유.
+tlsPassthroughListeners:
   - name: argocd
-    namespace: argocd
     host: argocd.kkamji.net
-    backend: { name: argocd-server, port: 443 }

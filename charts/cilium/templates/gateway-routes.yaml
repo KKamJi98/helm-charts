@@ -1,0 +1,53 @@
+{{/*
+hubble-ui 의 HTTPRoute - 앱 차트(umbrella)가 자기 라우팅을 소유한다.
+upstream cilium chart 는 Gateway API route 를 지원하지 않으므로 wrapper
+템플릿으로 정의한다 (kube-prometheus-stack 의 gateway-routes.yaml 과 동일 패턴).
+group/kind/weight 는 API server defaulting 과 일치시켜 ArgoCD diff 를 방지.
+*/}}
+{{- $root := . }}
+{{- range $name, $r := .Values.gatewayRoutes }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $name }}
+  namespace: {{ $root.Release.Namespace }}
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ $root.Values.gatewayRef.name }}
+      namespace: {{ $root.Values.gatewayRef.namespace }}
+      sectionName: {{ $root.Values.gatewayRef.sectionName }}
+  hostnames:
+    - {{ $r.host | quote }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: {{ $r.backend.name }}
+          port: {{ $r.backend.port }}
+          weight: 1
+{{- if $r.basicAuth }}
+---
+# Envoy Gateway basic auth ({SHA} htpasswd, basic-auth secret 의 .htpasswd 키 -
+# kube-prometheus-stack 의 basicAuth CES 가 kube-system 에 sync)
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: {{ $name }}-basic-auth
+  namespace: {{ $root.Release.Namespace }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: {{ $name }}
+  basicAuth:
+    users:
+      name: basic-auth
+{{- end }}
+{{- end }}
