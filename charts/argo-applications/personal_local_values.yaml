@@ -15,6 +15,9 @@ applications:
   play-hub:
     enabled: true
     name: play-hub
+    annotations:
+      # 전역 구독은 실패 계열만 받으므로, 배포 성공 알림은 워크로드 앱만 opt-in
+      notifications.argoproj.io/subscribe.on-deployed.slack: C0B8D959UQP
     project: personal
     destination:
       namespace: play-hub

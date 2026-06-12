@@ -89,10 +89,12 @@ argocd:
     subscriptions:
       # ArgoCD 전용 단일 채널. 채널 ID 로 지정해 rename 에 영향받지 않는다.
       # (00_monitor-critical / 00_monitor-warning 은 AlertManager 전용이므로 사용하지 않는다)
+      # 전역 구독은 실패 계열만 유지한다. 배포 성공(on-deployed) 알림은
+      # Application 별 notifications.argoproj.io/subscribe.on-deployed.slack
+      # annotation 으로 opt-in 한다 (monorepo 특성상 전역 구독 시 커밋마다 다발성 noise).
       - recipients:
           - slack:C0B8D959UQP  # 00_monitor-argocd
         triggers:
-          - on-deployed
           - on-sync-failed
           - on-health-degraded
           - on-sync-status-unknown
