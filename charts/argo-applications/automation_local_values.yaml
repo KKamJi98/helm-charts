@@ -21,7 +21,7 @@ applications:
     source:
       repoURL: https://github.com/KKamJi98/helm-charts.git
       targetRevision: main
-      path: n8n
+      path: charts/n8n
       helm:
         valueFiles:
           - kkamji_local_values.yaml
