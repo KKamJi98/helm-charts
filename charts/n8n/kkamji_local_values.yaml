@@ -64,10 +64,6 @@ secretRefs:
 config:
   timezone: Asia/Seoul
   extraEnv:
-    - name: N8N_EDITOR_BASE_URL
-      value: https://n8n.kkamji.net
-    - name: WEBHOOK_URL
-      value: https://n8n.kkamji.net
     - name: N8N_SECURE_COOKIE
       value: "true"
     # Keep n8n access credentials aligned with Grafana/basic-auth without reading values.
