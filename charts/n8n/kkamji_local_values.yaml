@@ -401,6 +401,27 @@ extraObjects:
           namespace: envoy-gateway-system
           sectionName: https
       rules:
+        # Production webhook/form traffic is handled by the dedicated webhook processor.
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /webhook
+            - path:
+                type: PathPrefix
+                value: /webhook-waiting
+            - path:
+                type: PathPrefix
+                value: /form
+            - path:
+                type: PathPrefix
+                value: /form-waiting
+          backendRefs:
+            - group: ""
+              kind: Service
+              name: n8n-webhook-processor
+              port: 5678
+              weight: 1
+        # UI/API/default traffic goes to the main n8n service.
         - matches:
             - path:
                 type: PathPrefix
