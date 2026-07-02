@@ -33,10 +33,15 @@ webhook:
 db:
   type: postgresdb
 
+externalPostgresql:
+  host: ""
+  existingSecret: n8n-postgresql-auth
+  existingSecretPasswordKey: password
+
 postgresql:
   enabled: true
   image:
-    tag: "18.4.0"
+    tag: "17"
   auth:
     username: n8n
     database: n8n
