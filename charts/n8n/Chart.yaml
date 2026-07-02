@@ -1,28 +1,29 @@
 apiVersion: v2
 name: n8n
-version: 1.10.1  # x-release-please-version
-kubeVersion: ">=1.25.0-0"
-icon: >-
-  https://raw.githubusercontent.com/n8n-io/n8n/master/packages/editor-ui/public/images/n8n-logo.png
-description: >-
-  Production-grade Helm chart for n8n, the workflow automation platform.
-  Supports queue mode, multi-main HA, webhook processors, task runners, HPA,
-  PDB, network policies, and S3 external storage.
-appVersion: "stable"
+description: KKamJi homelab umbrella chart for n8n with official n8n, PostgreSQL, Valkey, ESO, and Gateway API.
 type: application
-annotations:
-  artifacthub.io/license: MIT
+version: 0.1.0
+appVersion: "stable"
+home: https://n8n.io
+sources:
+  - https://github.com/n8n-io/n8n-hosting/tree/main/charts/n8n
+  - https://github.com/KKamJi98/helm-charts
 keywords:
   - n8n
   - workflow-automation
   - automation
   - queue
-  - redis
+  - valkey
   - postgres
-home: https://n8n.io
-sources:
-  - https://github.com/n8n-io/n8n-hosting
-  - https://github.com/n8n-io/n8n
-maintainers:
+dependencies:
   - name: n8n
-    url: https://github.com/n8n-io
+    repository: file://charts/n8n
+    version: 1.10.1
+  - name: postgresql
+    repository: https://charts.bitnami.com/bitnami
+    version: 18.7.10
+    condition: postgresql.enabled
+  - name: valkey
+    repository: https://charts.bitnami.com/bitnami
+    version: 6.1.14
+    condition: valkey.enabled

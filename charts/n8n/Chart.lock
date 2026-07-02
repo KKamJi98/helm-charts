@@ -1,0 +1,12 @@
+dependencies:
+- name: n8n
+  repository: file://charts/n8n
+  version: 1.10.1
+- name: postgresql
+  repository: https://charts.bitnami.com/bitnami
+  version: 18.7.10
+- name: valkey
+  repository: https://charts.bitnami.com/bitnami
+  version: 6.1.14
+digest: sha256:145487431958d677aae8f0b0c307c997aed979c070d80dd8ddbbf74a7481b305
+generated: "2026-07-03T04:40:46.374244308+09:00"

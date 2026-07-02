@@ -1,446 +1,166 @@
-# kkamji homelab override for official n8n chart.
-# Upstream: https://github.com/n8n-io/n8n-hosting/tree/main/charts/n8n
+# kkamji homelab override for the n8n umbrella chart.
+# Official n8n chart is vendored at charts/n8n/charts/n8n.
+# Secrets are synced from AWS SSM Parameter Store through ESO; no secret literals live in Git.
 
-image:
-  repository: docker.n8n.io/n8nio/n8n
-  tag: "stable"
-  pullPolicy: IfNotPresent
+secretStoreRef:
+  name: parameter-store
+  kind: ClusterSecretStore
 
-queueMode:
+ssm:
+  basePath: /kkamji/automation/n8n
+
+externalSecrets:
+  refreshInterval: 1h
+  coreSecretName: n8n-core-auth
+  postgresqlSecretName: n8n-postgresql-auth
+  valkeySecretName: n8n-valkey-auth
+
+gatewayRef:
+  name: kkamji
+  namespace: envoy-gateway-system
+  sectionName: https
+
+httpRoute:
   enabled: true
-  workerReplicaCount: 1
-  workerConcurrency: 10
+  name: n8n
+  host: n8n.kkamji.net
+  mainService:
+    name: n8n-main
+    port: 5678
+  webhookService:
+    name: n8n-webhook-processor
+    port: 5678
 
-webhookProcessor:
-  enabled: true
-  replicaCount: 1
-  disableProductionWebhooksOnMainProcess: true
-
-multiMain:
-  enabled: false
-
-replicaCount: 1
-
-service:
-  type: ClusterIP
-  port: 5678
-
-ingress:
-  enabled: false
-
-persistence:
-  enabled: true
-  accessModes:
-    - ReadWriteOnce
-  size: 8Gi
-  storageClassName: local-path
-
-resources:
-  main:
-    requests:
-      cpu: 100m
-      memory: 512Mi
-    limits:
-      cpu: 1000m
-      memory: 1Gi
-  worker:
-    requests:
-      cpu: 100m
-      memory: 512Mi
-    limits:
-      cpu: 1000m
-      memory: 1Gi
+n8n:
+  fullnameOverride: n8n
+  image:
+    repository: docker.n8n.io/n8nio/n8n
+    tag: "stable"
+    pullPolicy: IfNotPresent
+  queueMode:
+    enabled: true
+    workerReplicaCount: 1
+    workerConcurrency: 10
   webhookProcessor:
-    requests:
-      cpu: 100m
-      memory: 512Mi
-    limits:
-      cpu: 1000m
-      memory: 1Gi
-
-secretRefs:
-  existingSecret: n8n-core-auth
-
-config:
-  timezone: Asia/Seoul
-  extraEnv:
-    - name: N8N_SECURE_COOKIE
-      value: "true"
-    # Keep n8n access credentials aligned with Grafana/basic-auth without reading values.
-    - name: N8N_BASIC_AUTH_ACTIVE
-      value: "true"
-    - name: N8N_BASIC_AUTH_USER
-      valueFrom:
-        secretKeyRef:
-          name: n8n-login-auth
-          key: username
-    - name: N8N_BASIC_AUTH_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: n8n-login-auth
-          key: password
-
-webhook:
-  enabled: true
-  url: https://n8n.kkamji.net
-
-database:
-  type: postgresdb
-  useExternal: true
-  host: n8n-db
-  port: 5432
-  database: n8n
-  schema: public
-  user: n8n
-  passwordSecret:
-    name: n8n-postgresql-auth
-    key: password
-  ssl:
+    enabled: true
+    replicaCount: 1
+    disableProductionWebhooksOnMainProcess: true
+  multiMain:
     enabled: false
-
-redis:
-  enabled: true
-  useExternal: true
-  host: n8n-valkey
-  port: 6379
-  database: 0
-  timeout: 10000
-  tls: false
-  healthCheck:
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 5678
+  ingress:
     enabled: false
-
-extraObjects:
-  # Sync all n8n secrets from SSM Parameter Store via ESO.
-  # Values are referenced only; do not read or copy actual secret values into Git.
-  - apiVersion: external-secrets.io/v1
-    kind: ExternalSecret
-    metadata:
-      name: n8n-core-auth
-      annotations:
-        argocd.argoproj.io/sync-wave: "-3"
-    spec:
-      refreshInterval: 1h
-      secretStoreRef:
-        name: parameter-store
-        kind: ClusterSecretStore
-      target:
-        name: n8n-core-auth
-        creationPolicy: Owner
-        template:
-          data:
-            N8N_ENCRYPTION_KEY: '{{ "{{ .encryptionKey }}" }}'
-            N8N_HOST: n8n.kkamji.net
-            N8N_PORT: "5678"
-            N8N_PROTOCOL: https
-      data:
-        - secretKey: encryptionKey
-          remoteRef:
-            key: /kkamji/monitoring/grafana/admin-password
-  - apiVersion: external-secrets.io/v1
-    kind: ExternalSecret
-    metadata:
-      name: n8n-login-auth
-      annotations:
-        argocd.argoproj.io/sync-wave: "-3"
-    spec:
-      refreshInterval: 1h
-      secretStoreRef:
-        name: parameter-store
-        kind: ClusterSecretStore
-      target:
-        name: n8n-login-auth
-        creationPolicy: Owner
-      data:
-        - secretKey: username
-          remoteRef:
-            key: /kkamji/monitoring/grafana/admin-user
-        - secretKey: password
-          remoteRef:
-            key: /kkamji/monitoring/grafana/admin-password
-  - apiVersion: external-secrets.io/v1
-    kind: ExternalSecret
-    metadata:
+  persistence:
+    enabled: true
+    accessModes:
+      - ReadWriteOnce
+    size: 8Gi
+    storageClassName: local-path
+  resources:
+    main:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    worker:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    webhookProcessor:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+  secretRefs:
+    existingSecret: n8n-core-auth
+  config:
+    timezone: Asia/Seoul
+    extraEnv:
+      - name: N8N_SECURE_COOKIE
+        value: "true"
+  webhook:
+    enabled: true
+    url: https://n8n.kkamji.net
+  database:
+    type: postgresdb
+    useExternal: true
+    host: n8n-postgresql
+    port: 5432
+    database: n8n
+    schema: public
+    user: n8n
+    passwordSecret:
       name: n8n-postgresql-auth
-      annotations:
-        argocd.argoproj.io/sync-wave: "-3"
-    spec:
-      refreshInterval: 1h
-      secretStoreRef:
-        name: parameter-store
-        kind: ClusterSecretStore
-      target:
-        name: n8n-postgresql-auth
-        creationPolicy: Owner
-      data:
-        - secretKey: password
-          remoteRef:
-            key: /kkamji/monitoring/grafana/admin-password
-  - apiVersion: external-secrets.io/v1
-    kind: ExternalSecret
-    metadata:
-      name: basic-auth
-      annotations:
-        argocd.argoproj.io/sync-wave: "-3"
-    spec:
-      refreshInterval: 1h
-      secretStoreRef:
-        name: parameter-store
-        kind: ClusterSecretStore
-      target:
-        name: basic-auth
-        creationPolicy: Owner
-      data:
-        - secretKey: auth
-          remoteRef:
-            key: /kkamji/monitoring/ingress/basic-auth
-        - secretKey: .htpasswd
-          remoteRef:
-            key: /kkamji/monitoring/ingress/basic-auth-sha
+      key: password
+    ssl:
+      enabled: false
+  redis:
+    enabled: true
+    useExternal: true
+    host: n8n-valkey-primary
+    port: 6379
+    database: 0
+    timeout: 10000
+    tls: false
+    passwordSecret:
+      name: n8n-valkey-auth
+      key: password
+    healthCheck:
+      enabled: false
 
-  # Local PostgreSQL for n8n. Password comes from ESO-managed n8n-postgresql-auth.
-  - apiVersion: apps/v1
-    kind: StatefulSet
-    metadata:
-      name: n8n-db
-      annotations:
-        argocd.argoproj.io/sync-wave: "-1"
-      labels:
-        app.kubernetes.io/name: n8n-db
-        app.kubernetes.io/instance: n8n
-        app.kubernetes.io/component: database
-    spec:
-      serviceName: n8n-db
-      replicas: 1
-      selector:
-        matchLabels:
-          app.kubernetes.io/name: n8n-db
-          app.kubernetes.io/instance: n8n
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/name: n8n-db
-            app.kubernetes.io/instance: n8n
-            app.kubernetes.io/component: database
-        spec:
-          containers:
-            - name: postgres
-              image: postgres:17-alpine
-              imagePullPolicy: IfNotPresent
-              ports:
-                - name: postgres
-                  containerPort: 5432
-              env:
-                - name: POSTGRES_DB
-                  value: n8n
-                - name: POSTGRES_USER
-                  value: n8n
-                - name: POSTGRES_PASSWORD
-                  valueFrom:
-                    secretKeyRef:
-                      name: n8n-postgresql-auth
-                      key: password
-              resources:
-                requests:
-                  cpu: 100m
-                  memory: 256Mi
-                limits:
-                  cpu: 1000m
-                  memory: 1Gi
-              readinessProbe:
-                exec:
-                  command:
-                    - sh
-                    - -c
-                    - pg_isready -U n8n -d n8n
-                initialDelaySeconds: 10
-                periodSeconds: 10
-              livenessProbe:
-                exec:
-                  command:
-                    - sh
-                    - -c
-                    - pg_isready -U n8n -d n8n
-                initialDelaySeconds: 30
-                periodSeconds: 20
-              volumeMounts:
-                - name: data
-                  mountPath: /var/lib/postgresql/data
-                  subPath: pgdata
-      volumeClaimTemplates:
-        - metadata:
-            name: data
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            storageClassName: local-path
-            resources:
-              requests:
-                storage: 8Gi
-  - apiVersion: v1
-    kind: Service
-    metadata:
-      name: n8n-db
-      labels:
-        app.kubernetes.io/name: n8n-db
-        app.kubernetes.io/instance: n8n
-        app.kubernetes.io/component: database
-    spec:
-      type: ClusterIP
-      ports:
-        - name: postgres
-          port: 5432
-          targetPort: postgres
-      selector:
-        app.kubernetes.io/name: n8n-db
-        app.kubernetes.io/instance: n8n
+postgresql:
+  enabled: true
+  fullnameOverride: n8n-postgresql
+  architecture: standalone
+  auth:
+    username: n8n
+    database: n8n
+    existingSecret: n8n-postgresql-auth
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: password
+  primary:
+    persistence:
+      enabled: true
+      storageClass: local-path
+      size: 8Gi
+    resourcesPreset: "none"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
 
-  # Valkey is Redis-protocol compatible and backs n8n queue mode.
-  - apiVersion: apps/v1
-    kind: StatefulSet
-    metadata:
-      name: n8n-valkey
-      annotations:
-        argocd.argoproj.io/sync-wave: "-1"
-      labels:
-        app.kubernetes.io/name: n8n-valkey
-        app.kubernetes.io/instance: n8n
-        app.kubernetes.io/component: queue
-    spec:
-      serviceName: n8n-valkey
-      replicas: 1
-      selector:
-        matchLabels:
-          app.kubernetes.io/name: n8n-valkey
-          app.kubernetes.io/instance: n8n
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/name: n8n-valkey
-            app.kubernetes.io/instance: n8n
-            app.kubernetes.io/component: queue
-        spec:
-          containers:
-            - name: valkey
-              image: valkey/valkey:9.1-alpine
-              imagePullPolicy: IfNotPresent
-              args:
-                - valkey-server
-                - --appendonly
-                - "yes"
-                - --protected-mode
-                - "no"
-              ports:
-                - name: redis
-                  containerPort: 6379
-              resources:
-                requests:
-                  cpu: 50m
-                  memory: 128Mi
-                limits:
-                  cpu: 500m
-                  memory: 512Mi
-              readinessProbe:
-                exec:
-                  command:
-                    - sh
-                    - -c
-                    - valkey-cli ping | grep PONG
-                initialDelaySeconds: 5
-                periodSeconds: 10
-              livenessProbe:
-                exec:
-                  command:
-                    - sh
-                    - -c
-                    - valkey-cli ping | grep PONG
-                initialDelaySeconds: 20
-                periodSeconds: 20
-              volumeMounts:
-                - name: data
-                  mountPath: /data
-      volumeClaimTemplates:
-        - metadata:
-            name: data
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            storageClassName: local-path
-            resources:
-              requests:
-                storage: 2Gi
-  - apiVersion: v1
-    kind: Service
-    metadata:
-      name: n8n-valkey
-      labels:
-        app.kubernetes.io/name: n8n-valkey
-        app.kubernetes.io/instance: n8n
-        app.kubernetes.io/component: queue
-    spec:
-      type: ClusterIP
-      ports:
-        - name: redis
-          port: 6379
-          targetPort: redis
-      selector:
-        app.kubernetes.io/name: n8n-valkey
-        app.kubernetes.io/instance: n8n
-
-  # Envoy Gateway API route. No Kubernetes Ingress is rendered.
-  - apiVersion: gateway.networking.k8s.io/v1
-    kind: HTTPRoute
-    metadata:
-      name: n8n
-    spec:
-      hostnames:
-        - n8n.kkamji.net
-      parentRefs:
-        - group: gateway.networking.k8s.io
-          kind: Gateway
-          name: kkamji
-          namespace: envoy-gateway-system
-          sectionName: https
-      rules:
-        # Production webhook/form traffic is handled by the dedicated webhook processor.
-        - matches:
-            - path:
-                type: PathPrefix
-                value: /webhook
-            - path:
-                type: PathPrefix
-                value: /webhook-waiting
-            - path:
-                type: PathPrefix
-                value: /form
-            - path:
-                type: PathPrefix
-                value: /form-waiting
-          backendRefs:
-            - group: ""
-              kind: Service
-              name: n8n-webhook-processor
-              port: 5678
-              weight: 1
-        # UI/API/default traffic goes to the main n8n service.
-        - matches:
-            - path:
-                type: PathPrefix
-                value: /
-          backendRefs:
-            - group: ""
-              kind: Service
-              name: n8n-main
-              port: 5678
-              weight: 1
-  - apiVersion: gateway.envoyproxy.io/v1alpha1
-    kind: SecurityPolicy
-    metadata:
-      name: n8n-basic-auth
-    spec:
-      targetRefs:
-        - group: gateway.networking.k8s.io
-          kind: HTTPRoute
-          name: n8n
-      basicAuth:
-        users:
-          name: basic-auth
+valkey:
+  enabled: true
+  fullnameOverride: n8n-valkey
+  architecture: standalone
+  auth:
+    enabled: true
+    existingSecret: n8n-valkey-auth
+    existingSecretPasswordKey: password
+  primary:
+    persistence:
+      enabled: true
+      storageClass: local-path
+      size: 2Gi
+    resourcesPreset: "none"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
