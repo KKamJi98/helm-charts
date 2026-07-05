@@ -103,10 +103,6 @@ n8n:
         value: "true"
       - name: N8N_PROXY_HOPS
         value: "10"
-      # The chart can omit EXECUTIONS_DATA_PRUNE_MAX_COUNT when maxCount is 0;
-      # set it explicitly to match the company-tested n8n 2.x pattern.
-      - name: EXECUTIONS_DATA_PRUNE_MAX_COUNT
-        value: "0"
       - name: N8N_DIAGNOSTICS_ENABLED
         value: "false"
       - name: N8N_VERSION_NOTIFICATIONS_ENABLED
