@@ -76,3 +76,8 @@ applications:
         name: hermes-memory-qdrant-auth
         jsonPointers:
           - /data
+      - group: apps
+        kind: StatefulSet
+        name: hermes-memory-qdrant
+        jsonPointers:
+          - /metadata/annotations/argocd.argoproj.io~1tracking-id
