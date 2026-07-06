@@ -50,3 +50,29 @@ applications:
         name: openclaw-gateway-auth
         jsonPointers:
           - /data
+
+  hermes-memory:
+    enabled: true
+    name: hermes-memory
+    project: automation
+    destination:
+      namespace: hermes
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/hermes-memory
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+    # Temporary bootstrap mode: charts/hermes-memory generates the Qdrant API key
+    # because this Hermes session cannot write SSM SecureString parameters.
+    # Ignore Secret data drift so ArgoCD does not rotate the key every render.
+    # Target mode is ESO/SSM at /kkamji/hermes/mem0/qdrant-api-key.
+    syncPolicy:
+      syncOptions:
+        - RespectIgnoreDifferences=true
+    ignoreDifferences:
+      - kind: Secret
+        name: hermes-memory-qdrant-auth
+        jsonPointers:
+          - /data

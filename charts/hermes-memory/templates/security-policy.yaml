@@ -1,0 +1,25 @@
+{{- if .Values.securityPolicy.enabled }}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: {{ .Values.securityPolicy.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: {{ .Values.httpRoute.name }}
+  apiKeyAuth:
+    credentialRefs:
+      - group: ""
+        kind: Secret
+        name: {{ .Values.auth.secretName }}
+    extractFrom:
+      - headers:
+{{- range .Values.auth.requestHeaders }}
+          - {{ . | quote }}
+{{- end }}
+    sanitize: {{ .Values.securityPolicy.sanitize }}
+    forwardClientIDHeader: {{ .Values.securityPolicy.forwardClientIDHeader | quote }}
+{{- end }}
