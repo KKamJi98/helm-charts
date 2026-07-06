@@ -39,7 +39,7 @@ Each Hermes instance should use the same embedder model to avoid Qdrant collecti
     "vector_store": {
       "provider": "qdrant",
       "config": {
-        "url": "https://memory.kkamji.net",
+        "url": "https://memory.kkamji.net:443",
         "api_key": "<from hermes-memory-qdrant-auth>"
       }
     }
