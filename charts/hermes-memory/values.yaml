@@ -50,6 +50,8 @@ networkPolicy:
 qdrant:
   enabled: true
   fullnameOverride: hermes-memory-qdrant
+  additionalAnnotations:
+    argocd.argoproj.io/tracking-id: hermes-memory:apps/StatefulSet:hermes/hermes-memory-qdrant
   replicaCount: 1
   image:
     repository: docker.io/qdrant/qdrant
