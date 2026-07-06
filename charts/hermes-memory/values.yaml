@@ -18,7 +18,7 @@ auth:
     enabled: false
     refreshInterval: 1h
   secretName: hermes-memory-qdrant-auth
-  qdrantEnvKey: QDRANT__SERVICE__API_KEY
+  qdrantSecretKey: hermes
   securityPolicyClientID: hermes
   requestHeaders:
     - api-key
@@ -79,7 +79,7 @@ qdrant:
       valueFrom:
         secretKeyRef:
           name: hermes-memory-qdrant-auth
-          key: QDRANT__SERVICE__API_KEY
+          key: hermes
   config:
     cluster:
       enabled: false
