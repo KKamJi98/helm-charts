@@ -27,7 +27,7 @@ applications:
           - kkamji_local_values.yaml
 
   openclaw:
-    enabled: true
+    enabled: false
     name: openclaw
     project: automation
     destination:

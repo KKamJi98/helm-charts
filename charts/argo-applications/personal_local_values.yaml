@@ -13,7 +13,7 @@ syncPolicy:
 
 applications:
   play-hub:
-    enabled: true
+    enabled: false
     name: play-hub
     annotations:
       # 전역 구독은 실패 계열만 받으므로, 배포 성공 알림은 워크로드 앱만 opt-in
