@@ -12,6 +12,22 @@ syncPolicy:
     - ServerSideApply=true
 
 applications:
+  real-life-rpg:
+    enabled: true
+    name: real-life-rpg
+    annotations:
+      # 전역 구독은 실패 계열만 받으므로, 배포 성공 알림은 워크로드 앱만 opt-in
+      notifications.argoproj.io/subscribe.on-deployed.slack: C0B8D959UQP
+    project: personal
+    destination:
+      namespace: real-life-rpg
+    source:
+      repoURL: https://github.com/KKamJi98/real-life-rpg.git
+      targetRevision: main
+      path: helm/real-life-rpg
+      helm:
+        valueFiles:
+          - values.yaml
   play-hub:
     enabled: false
     name: play-hub
