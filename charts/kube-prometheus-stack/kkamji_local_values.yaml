@@ -2,6 +2,9 @@ kube-prometheus-stack:
   alertmanager:
     # 외부 노출은 Envoy Gateway HTTPRoute(charts/envoy-gateway)가 담당
     alertmanagerSpec:
+      # Prometheus Operator 기본 generated secret 대신 chart가 렌더한 Discord config secret을
+      # 명시적으로 사용한다. 지정하지 않으면 stale *-generated Slack config가 유지된다.
+      configSecret: alertmanager-kube-prometheus-stack-alertmanager
       # Discord 메시지의 Silence 링크(.ExternalURL)가 외부 도메인을 가리키도록 설정
       externalUrl: https://alertmanager.kkamji.net
       # ESO 가 SSM 의 Discord webhook URL 을 monitoring ns 의 alertmanager-discord
