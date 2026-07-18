@@ -18,15 +18,47 @@ spec:
       name: parameter-store
       kind: ClusterSecretStore
     target:
-      name: alertmanager-discord
+      # ESO renders this complete source config from SecureStrings in-cluster.
+      name: alertmanager-discord-config
       creationPolicy: Owner
+      template:
+        engineVersion: v2
+        data:
+          alertmanager.yaml: |
+            global:
+              resolve_timeout: 5m
+            route:
+              receiver: "null"
+              group_by: ["alertname", "namespace", "severity"]
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 12h
+              routes:
+                - receiver: "null"
+                  matchers: [alertname = "Watchdog"]
+                - receiver: "null"
+                  matchers: [alertname = "KubeVersionMismatch"]
+                - receiver: "discord-critical"
+                  matchers: [severity = "critical"]
+                  repeat_interval: 1h
+                - receiver: "discord-warning"
+                  matchers: [severity = "warning"]
+                  repeat_interval: 12h
+            receivers:
+              - name: "null"
+              - name: "discord-critical"
+                discord_configs:
+                  - webhook_url: "{{ `{{ .criticalWebhook }}` }}"
+                    send_resolved: true
+              - name: "discord-warning"
+                discord_configs:
+                  - webhook_url: "{{ `{{ .warningWebhook }}` }}"
+                    send_resolved: true
     data:
-      # severity 별 Discord webhook URL. alertmanagerSpec.secrets 로 mount 되어
-      # discord_configs.webhook_url_file 이 파일로 읽는다 (config 에 URL 노출 방지).
-      - secretKey: critical-webhook
+      - secretKey: criticalWebhook
         remoteRef:
           key: {{ .criticalSsmKey | quote }}
-      - secretKey: warning-webhook
+      - secretKey: warningWebhook
         remoteRef:
           key: {{ .warningSsmKey | quote }}
 {{- end }}

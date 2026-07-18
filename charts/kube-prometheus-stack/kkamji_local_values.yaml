@@ -2,12 +2,12 @@ kube-prometheus-stack:
   alertmanager:
     # 외부 노출은 Envoy Gateway HTTPRoute(charts/envoy-gateway)가 담당
     alertmanagerSpec:
+      # Prometheus Operator v0.83 validates Discord config before Alertmanager
+      # starts and cannot parse webhook_url_file. ESO renders the complete
+      # Alertmanager config with SSM values only inside the cluster.
+      configSecret: alertmanager-discord-config
       # Discord 메시지의 Silence 링크(.ExternalURL)가 외부 도메인을 가리키도록 설정
       externalUrl: https://alertmanager.kkamji.net
-      # ESO 가 SSM 의 Discord webhook URL 을 monitoring ns 의 alertmanager-discord
-      # Secret(key: critical-webhook / warning-webhook) 으로 sync → 아래 경로로 mount.
-      secrets:
-        - alertmanager-discord
     config:
       global:
         # 1m 은 Prometheus resend 주기와 너무 근접해 flap 시 resolved 누락 여지가 있어
