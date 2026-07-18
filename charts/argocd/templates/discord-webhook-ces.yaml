@@ -1,16 +1,16 @@
-{{- with .Values.alertmanagerSlack }}
+{{- with .Values.discordWebhook }}
 apiVersion: external-secrets.io/v1
 kind: ClusterExternalSecret
 metadata:
-  name: alertmanager-slack-ces
+  name: discord-webhook-ces
 spec:
-  externalSecretName: alertmanager-slack-es
+  externalSecretName: discord-webhook-es
   namespaceSelector:
     matchExpressions:
       - key: kubernetes.io/metadata.name
         operator: In
         values:
-          - monitoring
+          - argocd
   refreshTime: 1h
   externalSecretSpec:
     refreshInterval: 1h
@@ -18,10 +18,12 @@ spec:
       name: parameter-store
       kind: ClusterSecretStore
     target:
-      name: alertmanager-slack
+      name: argocd-notifications-secret
       creationPolicy: Owner
     data:
-      - secretKey: bot-token
+      # notifications-cm 의 service.webhook.discord.url 이 $argocd-notifications-webhook
+      # 변수로 이 키를 참조한다 (notifications-engine 이 secret 값으로 치환).
+      - secretKey: argocd-notifications-webhook
         remoteRef:
           key: {{ .ssmKey | quote }}
 {{- end }}

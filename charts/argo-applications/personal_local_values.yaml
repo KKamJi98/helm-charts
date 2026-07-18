@@ -35,8 +35,9 @@ applications:
     enabled: false
     name: play-hub
     annotations:
-      # 전역 구독은 실패 계열만 받으므로, 배포 성공 알림은 워크로드 앱만 opt-in
-      notifications.argoproj.io/subscribe.on-deployed.slack: C0B8D959UQP
+      # 전역 구독은 실패 계열만 받으므로, 배포 성공 알림은 워크로드 앱만 opt-in.
+      # Discord webhook service 는 url 이 채널을 고정하므로 recipient 값은 불필요("").
+      notifications.argoproj.io/subscribe.on-deployed.discord: ""
     project: personal
     destination:
       namespace: play-hub

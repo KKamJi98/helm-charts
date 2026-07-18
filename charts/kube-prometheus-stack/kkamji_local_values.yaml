@@ -2,12 +2,12 @@ kube-prometheus-stack:
   alertmanager:
     # 외부 노출은 Envoy Gateway HTTPRoute(charts/envoy-gateway)가 담당
     alertmanagerSpec:
-      # Slack 메시지의 Silence 링크(.ExternalURL)가 외부 도메인을 가리키도록 설정
+      # Discord 메시지의 Silence 링크(.ExternalURL)가 외부 도메인을 가리키도록 설정
       externalUrl: https://alertmanager.kkamji.net
-      # ESO 가 SSM 의 Slack bot token 을 monitoring ns 의
-      # alertmanager-slack Secret(key: bot-token) 으로 sync → 아래 경로로 mount.
+      # ESO 가 SSM 의 Discord webhook URL 을 monitoring ns 의 alertmanager-discord
+      # Secret(key: critical-webhook / warning-webhook) 으로 sync → 아래 경로로 mount.
       secrets:
-        - alertmanager-slack
+        - alertmanager-discord
     config:
       global:
         # 1m 은 Prometheus resend 주기와 너무 근접해 flap 시 resolved 누락 여지가 있어
@@ -35,11 +35,11 @@ kube-prometheus-stack:
               - alertname = "KubeVersionMismatch"
           # severity 기반 채널 분기. repeat 은 "리마인드 필요성" 기준으로 차등:
           # critical 1h(행동 촉구), warning 12h(기록 성격 - 15m 도배 방지)
-          - receiver: "slack-critical"
+          - receiver: "discord-critical"
             matchers:
               - severity = "critical"
             repeat_interval: 1h
-          - receiver: "slack-warning"
+          - receiver: "discord-warning"
             matchers:
               - severity = "warning"
             repeat_interval: 12h
@@ -64,45 +64,37 @@ kube-prometheus-stack:
           equal: ["alertname", "namespace"]
       receivers:
         - name: "null"
-        # bot token(chat.postMessage)으로 채널 분기. 봇이 각 채널에 초대돼 있어야 한다.
-        - name: "slack-critical"
-          slack_configs:
-            - api_url: "https://slack.com/api/chat.postMessage"
-              channel: "C0B8URUE5J6"  # 00_monitor-critical (채널 ID - rename 무관)
+        # Discord webhook 으로 채널 분기. 각 webhook 이 대상 채널에 바인딩돼 있다.
+        # webhook_url_file 은 alertmanagerSpec.secrets 로 mount 된 파일을 읽는다.
+        # embed 색상은 discord notifier 가 status(firing/resolved)로 자동 설정한다.
+        - name: "discord-critical"
+          discord_configs:
+            - webhook_url_file: /etc/alertmanager/secrets/alertmanager-discord/critical-webhook
               send_resolved: true
-              title: '{{ template "slack.kkamji.title" . }}'
-              text: '{{ template "slack.kkamji.text" . }}'
-              color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
-              http_config:
-                authorization:
-                  type: Bearer
-                  credentials_file: /etc/alertmanager/secrets/alertmanager-slack/bot-token
-        - name: "slack-warning"
-          slack_configs:
-            - api_url: "https://slack.com/api/chat.postMessage"
-              channel: "C0B8RBKCT45"  # 00_monitor-warning (채널 ID - rename 무관)
+              title: '{{ template "discord.kkamji.title" . }}'
+              message: '{{ template "discord.kkamji.message" . }}'
+        - name: "discord-warning"
+          discord_configs:
+            - webhook_url_file: /etc/alertmanager/secrets/alertmanager-discord/warning-webhook
               send_resolved: true
-              title: '{{ template "slack.kkamji.title" . }}'
-              text: '{{ template "slack.kkamji.text" . }}'
-              color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
-              http_config:
-                authorization:
-                  type: Bearer
-                  credentials_file: /etc/alertmanager/secrets/alertmanager-slack/bot-token
-    # Slack 메시지 커스텀 템플릿. secret 에 .tmpl 로 들어가 config.templates 가 로드한다.
-    # tz/since/humanizeDuration 은 Alertmanager >= 0.27 필요 (현재 v0.28.1).
+              title: '{{ template "discord.kkamji.title" . }}'
+              message: '{{ template "discord.kkamji.message" . }}'
+    # Discord 메시지 커스텀 템플릿. secret 에 .tmpl 로 들어가 config.templates 가 로드한다.
+    # discord_configs.title -> embed title, message -> embed description 로 매핑되며
+    # 링크는 Discord 마크다운([text](url))으로 렌더된다. tz/since/humanizeDuration 은
+    # Alertmanager >= 0.27 필요 (현재 v0.28.1). content 는 기본값(빈 값) 유지 - embed 만 표시.
     # 제목이 alertname 을 이미 보여주므로(group_by 에 alertname 포함) 본문은
     # summary + target + 시간 + 액션 링크(Query/Logs/Silence)에 집중한다.
     templateFiles:
-      kkamji-slack.tmpl: |-
-        {{ define "slack.kkamji.title" -}}
-        {{ if eq .Status "firing" }}:rotating_light: [FIRING:{{ .Alerts.Firing | len }}]{{ else }}:white_check_mark: [RESOLVED]{{ end }} {{ .CommonLabels.alertname }}{{ if .CommonLabels.namespace }} ({{ .CommonLabels.namespace }}){{ end }}
+      kkamji-discord.tmpl: |-
+        {{ define "discord.kkamji.title" -}}
+        {{ if eq .Status "firing" }}[FIRING:{{ .Alerts.Firing | len }}]{{ else }}[RESOLVED]{{ end }} {{ .CommonLabels.alertname }}{{ if .CommonLabels.namespace }} ({{ .CommonLabels.namespace }}){{ end }}
         {{- end }}
 
-        {{ define "slack.kkamji.text" -}}
+        {{ define "discord.kkamji.message" -}}
         {{ $ext := .ExternalURL -}}
         {{ range .Alerts -}}
-        {{ if eq .Status "firing" }}:small_red_triangle:{{ else }}:large_green_circle:{{ end }} `{{ .Labels.severity }}` {{ if .Annotations.summary }}{{ .Annotations.summary }}{{ else }}{{ .Labels.alertname }}{{ end }}
+        `{{ .Labels.severity }}` {{ if .Annotations.summary }}{{ .Annotations.summary }}{{ else }}{{ .Labels.alertname }}{{ end }}
         {{- if and .Annotations.description (ne .Annotations.description .Annotations.summary) }}
         {{ .Annotations.description }}{{ end }}
         {{- if .Labels.pod }}
@@ -118,7 +110,7 @@ kube-prometheus-stack:
         {{- else }}
         Duration: {{ humanizeDuration (.EndsAt.Sub .StartsAt).Seconds }} ({{ (.StartsAt | tz "Asia/Seoul").Format "01-02 15:04" }} ~ {{ (.EndsAt | tz "Asia/Seoul").Format "15:04" }} KST)
         {{- end }}
-        {{ if .Annotations.runbook_url }}<{{ .Annotations.runbook_url }}|Runbook> · {{ end }}<{{ .GeneratorURL }}|Query>{{ if .Labels.pod }} · <https://grafana.kkamji.net/explore?schemaVersion=1&orgId=1&panes={{ printf `{"a":{"datasource":"loki","queries":[{"refId":"A","expr":"{namespace=\"%s\", pod=\"%s\"}","datasource":{"type":"loki","uid":"loki"}}],"range":{"from":"now-3h","to":"now"}}}` .Labels.namespace .Labels.pod | urlquery }}|Logs>{{ end }} · <{{ $ext }}/#/silences/new?filter={{ printf "{alertname=%q}" .Labels.alertname | urlquery }}|Silence>
+        {{ if .Annotations.runbook_url }}[Runbook]({{ .Annotations.runbook_url }}) · {{ end }}[Query]({{ .GeneratorURL }}){{ if .Labels.pod }} · [Logs](https://grafana.kkamji.net/explore?schemaVersion=1&orgId=1&panes={{ printf `{"a":{"datasource":"loki","queries":[{"refId":"A","expr":"{namespace=\"%s\", pod=\"%s\"}","datasource":{"type":"loki","uid":"loki"}}],"range":{"from":"now-3h","to":"now"}}}` .Labels.namespace .Labels.pod | urlquery }}){{ end }} · [Silence]({{ $ext }}/#/silences/new?filter={{ printf "{alertname=%q}" .Labels.alertname | urlquery }})
 
         {{ end }}
         {{- end }}
@@ -130,7 +122,7 @@ kube-prometheus-stack:
     defaultDashboardsTimezone: browser # TimeZone 설정 (default: UTC)
     additionalDataSources:
       - name: Loki
-        # Slack 알림의 Logs explore 딥링크가 uid 를 참조하므로 고정한다
+        # Discord 알림의 Logs explore 딥링크가 uid 를 참조하므로 고정한다
         uid: loki
         type: loki
         access: proxy
@@ -277,10 +269,12 @@ grafanaAuth:
   adminUserSsmKey: /kkamji/monitoring/grafana/admin-user
   adminPasswordSsmKey: /kkamji/monitoring/grafana/admin-password
 
-# Alertmanager Slack bot token (personal workspace). severity 로 monitor-critical /
-# monitor-warning 채널 분기. ESO 가 SSM 토큰을 monitoring ns 의 alertmanager-slack Secret 으로 sync.
-alertmanagerSlack:
-  ssmKey: /kkamji/monitoring/alertmanager/slack-bot-token
+# Alertmanager Discord webhooks (personal server). severity 로 critical / warning
+# webhook 분기. ESO 가 SSM 의 webhook URL 을 monitoring ns 의 alertmanager-discord
+# Secret(critical-webhook / warning-webhook) 으로 sync → webhook_url_file 로 mount.
+alertmanagerDiscord:
+  criticalSsmKey: /kkamji/monitoring/discord/alertmanager-critical-webhook
+  warningSsmKey: /kkamji/monitoring/discord/alertmanager-warning-webhook
 
 # Gateway API 라우트 (앱 차트 소유 원칙 - templates/gateway-routes.yaml).
 # 플랫폼 Gateway 의 wildcard 리스너(sectionName: https)에 붙는다.

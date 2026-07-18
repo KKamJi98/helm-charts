@@ -1,0 +1,32 @@
+{{- with .Values.alertmanagerDiscord }}
+apiVersion: external-secrets.io/v1
+kind: ClusterExternalSecret
+metadata:
+  name: alertmanager-discord-ces
+spec:
+  externalSecretName: alertmanager-discord-es
+  namespaceSelector:
+    matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values:
+          - monitoring
+  refreshTime: 1h
+  externalSecretSpec:
+    refreshInterval: 1h
+    secretStoreRef:
+      name: parameter-store
+      kind: ClusterSecretStore
+    target:
+      name: alertmanager-discord
+      creationPolicy: Owner
+    data:
+      # severity 별 Discord webhook URL. alertmanagerSpec.secrets 로 mount 되어
+      # discord_configs.webhook_url_file 이 파일로 읽는다 (config 에 URL 노출 방지).
+      - secretKey: critical-webhook
+        remoteRef:
+          key: {{ .criticalSsmKey | quote }}
+      - secretKey: warning-webhook
+        remoteRef:
+          key: {{ .warningSsmKey | quote }}
+{{- end }}

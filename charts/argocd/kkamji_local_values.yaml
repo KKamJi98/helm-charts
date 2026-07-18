@@ -73,245 +73,187 @@ argocd:
     enabled: true
     secret:
       create: false
-      # Exteranl-Secrets에서 불러오도록 
+      # External-Secrets 에서 불러오도록
       name: argocd-notifications-secret
       # secret name: argocd-notifications-secret
-      # key: slack-token
-      # value: {token}
-  
-      # items:
-      #   slack-token: "My Token"
-  
+      # key: argocd-notifications-webhook
+      # value: {discord webhook url}
+
     notifiers:
-      service.slack: |
-        token: $slack-token
-  
+      # Discord 는 native notification service 가 없어 generic webhook service 로 전송한다.
+      # url 의 $argocd-notifications-webhook 는 argocd-notifications-secret 의 동명 key 로
+      # 치환된다 (notifications-engine 이 모든 scalar 필드에서 $var 를 secret 값으로 치환).
+      service.webhook.discord: |
+        url: $argocd-notifications-webhook
+        headers:
+          - name: Content-Type
+            value: application/json
+
     subscriptions:
-      # ArgoCD 전용 단일 채널. 채널 ID 로 지정해 rename 에 영향받지 않는다.
-      # (00_monitor-critical / 00_monitor-warning 은 AlertManager 전용이므로 사용하지 않는다)
+      # ArgoCD 전용 단일 Discord webhook(대상 채널에 바인딩). webhook 은 url 이 채널을
+      # 고정하므로 recipient 는 service 이름(discord)만 지정한다.
       # 전역 구독은 실패 계열만 유지한다. 배포 성공(on-deployed) 알림은
-      # Application 별 notifications.argoproj.io/subscribe.on-deployed.slack
+      # Application 별 notifications.argoproj.io/subscribe.on-deployed.discord
       # annotation 으로 opt-in 한다 (monorepo 특성상 전역 구독 시 커밋마다 다발성 noise).
       - recipients:
-          - slack:C0B8D959UQP  # 00_monitor-argocd
+          - discord
         triggers:
           - on-sync-failed
           - on-health-degraded
           - on-sync-status-unknown
     templates:
+      # Discord webhook 은 template 의 webhook.discord.body(JSON) 만 사용한다.
+      # 자유 텍스트(condition/error message)는 toJson 으로 escape, default 로 빈 값 방지
+      # (Discord embed field value 는 non-empty 필수), trunc 1000 으로 1024 자 상한 회피.
+      # color 는 hex 를 십진수로 변환한 embed color. email subject 는 참고용으로 유지.
       template.app-deployed: |
         email:
           subject: New version of an application {{.app.metadata.name}} is up and running.
-        message: |
-          {{if eq .serviceType "slack"}}:white_check_mark:{{end}} Application {{.app.metadata.name}} is now running new version of deployments manifests.
-        slack:
-          attachments: |
-            [{
-              "title": "{{ .app.metadata.name}}",
-              "title_link":"{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
-              "color": "#18be52",
-              "fields": [
+        webhook:
+          discord:
+            method: POST
+            body: |
               {
-                "title": "Sync Status",
-                "value": "{{.app.status.sync.status}}",
-                "short": true
-              },
-              {
-                "title": "Repository",
-                "value": "{{.app.spec.source.repoURL}}",
-                "short": true
-              },
-              {
-                "title": "Revision",
-                "value": "{{.app.status.sync.revision}}",
-                "short": true
+                "content": {{ printf "New version of `%s` is up and running." .app.metadata.name | toJson }},
+                "embeds": [
+                  {
+                    "title": {{ .app.metadata.name | toJson }},
+                    "url": "{{ .context.argocdUrl }}/applications/{{ .app.metadata.name }}",
+                    "color": 1621586,
+                    "fields": [
+                      { "name": "Sync Status", "value": {{ .app.status.sync.status | default "-" | toJson }}, "inline": true },
+                      { "name": "Repository", "value": {{ .app.spec.source.repoURL | default "-" | toJson }}, "inline": true },
+                      { "name": "Revision", "value": {{ .app.status.sync.revision | default "-" | trunc 1000 | toJson }}, "inline": false }
+                      {{- range $c := .app.status.conditions }},
+                      { "name": {{ $c.type | toJson }}, "value": {{ $c.message | default "-" | trunc 1000 | toJson }}, "inline": false }
+                      {{- end }}
+                    ]
+                  }
+                ]
               }
-              {{range $index, $c := .app.status.conditions}}
-              {{if not $index}},{{end}}
-              {{if $index}},{{end}}
-              {
-                "title": "{{$c.type}}",
-                "value": "{{$c.message}}",
-                "short": true
-              }
-              {{end}}
-              ]
-            }]
       template.app-health-degraded: |
         email:
           subject: Application {{.app.metadata.name}} has degraded.
-        message: |
-          {{if eq .serviceType "slack"}}<!here> :exclamation:{{end}} Application {{.app.metadata.name}} has degraded.
-          Application details: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}.
-        slack:
-          attachments: |-
-            [{
-              "title": "{{ .app.metadata.name}}",
-              "title_link": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
-              "color": "#f4c030",
-              "fields": [
+        webhook:
+          discord:
+            method: POST
+            body: |
               {
-                "title": "Sync Status",
-                "value": "{{.app.status.sync.status}}",
-                "short": true
-              },
-              {
-                "title": "Repository",
-                "value": "{{.app.spec.source.repoURL}}",
-                "short": true
+                "content": {{ printf "@here Application `%s` has degraded." .app.metadata.name | toJson }},
+                "allowed_mentions": { "parse": ["everyone"] },
+                "embeds": [
+                  {
+                    "title": {{ .app.metadata.name | toJson }},
+                    "url": "{{ .context.argocdUrl }}/applications/{{ .app.metadata.name }}",
+                    "color": 16039984,
+                    "fields": [
+                      { "name": "Sync Status", "value": {{ .app.status.sync.status | default "-" | toJson }}, "inline": true },
+                      { "name": "Repository", "value": {{ .app.spec.source.repoURL | default "-" | toJson }}, "inline": true }
+                      {{- range $c := .app.status.conditions }},
+                      { "name": {{ $c.type | toJson }}, "value": {{ $c.message | default "-" | trunc 1000 | toJson }}, "inline": false }
+                      {{- end }}
+                    ]
+                  }
+                ]
               }
-              {{range $index, $c := .app.status.conditions}}
-              {{if not $index}},{{end}}
-              {{if $index}},{{end}}
-              {
-                "title": "{{$c.type}}",
-                "value": "{{$c.message}}",
-                "short": true
-              }
-              {{end}}
-              ]
-            }]
       template.app-sync-failed: |
         email:
           subject: Failed to sync application {{.app.metadata.name}}.
-        message: |
-          {{if eq .serviceType "slack"}}<!here> :exclamation:{{end}}  The sync operation of application {{.app.metadata.name}} has failed at {{.app.status.operationState.finishedAt}} with the following error: {{.app.status.operationState.message}}
-          Sync operation details are available at: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true .
-        slack:
-          attachments: |-
-            [{
-              "title": "{{ .app.metadata.name}}",
-              "title_link":"{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
-              "color": "#E96D76",
-              "fields": [
+        webhook:
+          discord:
+            method: POST
+            body: |
               {
-                "title": "Sync Status",
-                "value": "{{.app.status.sync.status}}",
-                "short": true
-              },
-              {
-                "title": "Repository",
-                "value": "{{.app.spec.source.repoURL}}",
-                "short": true
+                "content": {{ printf "@here Sync failed for `%s`." .app.metadata.name | toJson }},
+                "allowed_mentions": { "parse": ["everyone"] },
+                "embeds": [
+                  {
+                    "title": {{ .app.metadata.name | toJson }},
+                    "url": "{{ .context.argocdUrl }}/applications/{{ .app.metadata.name }}?operation=true",
+                    "color": 15297910,
+                    "fields": [
+                      { "name": "Sync Status", "value": {{ .app.status.sync.status | default "-" | toJson }}, "inline": true },
+                      { "name": "Repository", "value": {{ .app.spec.source.repoURL | default "-" | toJson }}, "inline": true },
+                      { "name": "Error", "value": {{ .app.status.operationState.message | default "-" | trunc 1000 | toJson }}, "inline": false }
+                      {{- range $c := .app.status.conditions }},
+                      { "name": {{ $c.type | toJson }}, "value": {{ $c.message | default "-" | trunc 1000 | toJson }}, "inline": false }
+                      {{- end }}
+                    ]
+                  }
+                ]
               }
-              {{range $index, $c := .app.status.conditions}}
-              {{if not $index}},{{end}}
-              {{if $index}},{{end}}
-              {
-                "title": "{{$c.type}}",
-                "value": "{{$c.message}}",
-                "short": true
-              }
-              {{end}}
-              ]
-            }]
       template.app-sync-running: |
         email:
           subject: Start syncing application {{.app.metadata.name}}.
-        message: |
-          The sync operation of application {{.app.metadata.name}} has started at {{.app.status.operationState.startedAt}}.
-          Sync operation details are available at: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true .
-        slack:
-          attachments: |-
-            [{
-              "title": "{{ .app.metadata.name}}",
-              "title_link":"{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
-              "color": "#0DADEA",
-              "fields": [
+        webhook:
+          discord:
+            method: POST
+            body: |
               {
-                "title": "Sync Status",
-                "value": "{{.app.status.sync.status}}",
-                "short": true
-              },
-              {
-                "title": "Repository",
-                "value": "{{.app.spec.source.repoURL}}",
-                "short": true
+                "content": {{ printf "Syncing `%s`..." .app.metadata.name | toJson }},
+                "embeds": [
+                  {
+                    "title": {{ .app.metadata.name | toJson }},
+                    "url": "{{ .context.argocdUrl }}/applications/{{ .app.metadata.name }}?operation=true",
+                    "color": 896490,
+                    "fields": [
+                      { "name": "Sync Status", "value": {{ .app.status.sync.status | default "-" | toJson }}, "inline": true },
+                      { "name": "Repository", "value": {{ .app.spec.source.repoURL | default "-" | toJson }}, "inline": true }
+                      {{- range $c := .app.status.conditions }},
+                      { "name": {{ $c.type | toJson }}, "value": {{ $c.message | default "-" | trunc 1000 | toJson }}, "inline": false }
+                      {{- end }}
+                    ]
+                  }
+                ]
               }
-              {{range $index, $c := .app.status.conditions}}
-              {{if not $index}},{{end}}
-              {{if $index}},{{end}}
-              {
-                "title": "{{$c.type}}",
-                "value": "{{$c.message}}",
-                "short": true
-              }
-              {{end}}
-              ]
-            }]
       template.app-sync-status-unknown: |
         email:
           subject: Application {{.app.metadata.name}} sync status is 'Unknown'
-        message: |
-          {{if eq .serviceType "slack"}}:exclamation:{{end}} Application {{.app.metadata.name}} sync is 'Unknown'.
-          Application details: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}.
-          {{if ne .serviceType "slack"}}
-          {{range $c := .app.status.conditions}}
-              * {{$c.message}}
-          {{end}}
-          {{end}}
-        slack:
-          attachments: |-
-            [{
-              "title": "{{ .app.metadata.name}}",
-              "title_link":"{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
-              "color": "#E96D76",
-              "fields": [
+        webhook:
+          discord:
+            method: POST
+            body: |
               {
-                "title": "Sync Status",
-                "value": "{{.app.status.sync.status}}",
-                "short": true
-              },
-              {
-                "title": "Repository",
-                "value": "{{.app.spec.source.repoURL}}",
-                "short": true
+                "content": {{ printf "Application `%s` sync status is Unknown." .app.metadata.name | toJson }},
+                "embeds": [
+                  {
+                    "title": {{ .app.metadata.name | toJson }},
+                    "url": "{{ .context.argocdUrl }}/applications/{{ .app.metadata.name }}",
+                    "color": 15297910,
+                    "fields": [
+                      { "name": "Sync Status", "value": {{ .app.status.sync.status | default "-" | toJson }}, "inline": true },
+                      { "name": "Repository", "value": {{ .app.spec.source.repoURL | default "-" | toJson }}, "inline": true }
+                      {{- range $c := .app.status.conditions }},
+                      { "name": {{ $c.type | toJson }}, "value": {{ $c.message | default "-" | trunc 1000 | toJson }}, "inline": false }
+                      {{- end }}
+                    ]
+                  }
+                ]
               }
-              {{range $index, $c := .app.status.conditions}}
-              {{if not $index}},{{end}}
-              {{if $index}},{{end}}
-              {
-                "title": "{{$c.type}}",
-                "value": "{{$c.message}}",
-                "short": true
-              }
-              {{end}}
-              ]
-            }]
       template.app-sync-succeeded: |
         email:
           subject: Application {{.app.metadata.name}} has been successfully synced.
-        message: |
-          {{if eq .serviceType "slack"}}:white_check_mark:{{end}} Application {{.app.metadata.name}} has been successfully synced at {{.app.status.operationState.finishedAt}}.
-          Sync operation details are available at: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true .
-        slack:
-          attachments: |-
-            [{
-              "title": "{{ .app.metadata.name}}",
-              "title_link":"{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
-              "color": "#18be52",
-              "fields": [
+        webhook:
+          discord:
+            method: POST
+            body: |
               {
-                "title": "Sync Status",
-                "value": "{{.app.status.sync.status}}",
-                "short": true
-              },
-              {
-                "title": "Repository",
-                "value": "{{.app.spec.source.repoURL}}",
-                "short": true
+                "content": {{ printf "Application `%s` has been successfully synced." .app.metadata.name | toJson }},
+                "embeds": [
+                  {
+                    "title": {{ .app.metadata.name | toJson }},
+                    "url": "{{ .context.argocdUrl }}/applications/{{ .app.metadata.name }}?operation=true",
+                    "color": 1621586,
+                    "fields": [
+                      { "name": "Sync Status", "value": {{ .app.status.sync.status | default "-" | toJson }}, "inline": true },
+                      { "name": "Repository", "value": {{ .app.spec.source.repoURL | default "-" | toJson }}, "inline": true }
+                      {{- range $c := .app.status.conditions }},
+                      { "name": {{ $c.type | toJson }}, "value": {{ $c.message | default "-" | trunc 1000 | toJson }}, "inline": false }
+                      {{- end }}
+                    ]
+                  }
+                ]
               }
-              {{range $index, $c := .app.status.conditions}}
-              {{if not $index}},{{end}}
-              {{if $index}},{{end}}
-              {
-                "title": "{{$c.type}}",
-                "value": "{{$c.message}}",
-                "short": true
-              }
-              {{end}}
-              ]
-            }]
     triggers:
       trigger.on-deployed: |
         - description: Application is synced and healthy. Triggered once per commit.
@@ -474,10 +416,10 @@ githubWebhook:
     kind: ClusterSecretStore
   ssmKey: /kkamji/argocd/github-webhook/secret
 
-# Slack bot token for argocd-notifications. ESO 가 argocd-notifications-secret 에
-# slack-token 키를 sync (SSM 경로는 alertmanager 와 통일해 slack-bot-token).
-slackToken:
-  ssmKey: /kkamji/argocd/notifications/slack-bot-token
+# Discord webhook for argocd-notifications. ESO 가 argocd-notifications-secret 에
+# argocd-notifications-webhook 키를 sync → service.webhook.discord.url 이 $변수로 참조.
+discordWebhook:
+  ssmKey: /kkamji/monitoring/discord/argocd-notifications-webhook
 
 # Gateway API TLSRoute (앱 차트 소유 - templates/gateway-route.yaml).
 # argocd-server pod 가 직접 TLS 종료하므로 플랫폼 Gateway 의 passthrough
