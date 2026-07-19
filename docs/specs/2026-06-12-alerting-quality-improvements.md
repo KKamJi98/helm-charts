@@ -1,5 +1,7 @@
 # Alerting Quality Improvements (2026-06-12)
 
+> Historical Slack-era record. Its routing, inhibition, and template quality goals are now implemented through Discord configuration in `charts/kube-prometheus-stack`; do not use Slack receiver instructions from this document.
+
 Slack 알림의 노이즈(15분 도배)와 식별 불가 문제(TargetDown 에 pod 미표기)를 해소한
 변경 기록과, 신규 알람 룰 추가 시 적용할 품질 기준.
 

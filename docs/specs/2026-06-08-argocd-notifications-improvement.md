@@ -1,5 +1,7 @@
 # ArgoCD Notifications 점검 & 개선
 
+> Historical Slack-era record. Discord replaced the live Argo CD notification route on 2026-07-19. Current configuration and validation are in `charts/argocd/kkamji_local_values.yaml` and the Discord migration runbook.
+
 **Date**: 2026-06-08
 **Status**: values 적용 완료, 배포(push/sync) 대기
 **Scope**: `charts/argocd/kkamji_local_values.yaml` 의 `notifications` 섹션 (-> `argocd-notifications-cm`)
