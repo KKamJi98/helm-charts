@@ -18,7 +18,7 @@ spec:
       name: parameter-store
       kind: ClusterSecretStore
     target:
-      # ESO renders the complete source config and its Alertmanager template.
+      # ESO renders this complete source config from SecureStrings in-cluster.
       name: alertmanager-discord-config
       creationPolicy: Owner
       template:
@@ -62,42 +62,14 @@ spec:
                 discord_configs:
                   - webhook_url: "{{ `{{ .criticalWebhook }}` }}"
                     send_resolved: true
-                    title: '{{ "{{" }} template "discord.kkamji.title" . }}'
-                    message: '{{ "{{" }} template "discord.kkamji.message" . }}'
+                    title: '{{ `{{ printf "{{" }} template "discord.kkamji.title" . }}` }}'
+                    message: '{{ `{{ printf "{{" }} template "discord.kkamji.message" . }}` }}'
               - name: "discord-warning"
                 discord_configs:
                   - webhook_url: "{{ `{{ .warningWebhook }}` }}"
                     send_resolved: true
-                    title: '{{ "{{" }} template "discord.kkamji.title" . }}'
-                    message: '{{ "{{" }} template "discord.kkamji.message" . }}'
-          kkamji-discord.tmpl: |-
-            {{ "{{" }} define "discord.kkamji.title" -}}
-            {{ "{{" }} if eq .Status "firing" }}[FIRING:{{ "{{" }} .Alerts.Firing | len }}{{ "{{" }} else }}[RESOLVED]{{ "{{" }} end }} {{ "{{" }} .CommonLabels.alertname }}{{ "{{" }} if .CommonLabels.namespace }} ({{ "{{" }} .CommonLabels.namespace }}){{ "{{" }} end }}
-            {{ "{{" }}- end }}
-
-            {{ "{{" }} define "discord.kkamji.message" -}}
-            {{ "{{" }} $ext := .ExternalURL -}}
-            {{ "{{" }} range .Alerts -}}
-            `{{ "{{" }} .Labels.severity }}` {{ "{{" }} if .Annotations.summary }}{{ "{{" }} .Annotations.summary }}{{ "{{" }} else }}{{ "{{" }} .Labels.alertname }}{{ "{{" }} end }}
-            {{ "{{" }}- if and .Annotations.description (ne .Annotations.description .Annotations.summary) }}
-            {{ "{{" }} .Annotations.description }}{{ "{{" }} end }}
-            {{ "{{" }}- if .Labels.pod }}
-            Target: `{{ "{{" }} .Labels.namespace }}/{{ "{{" }} .Labels.pod }}`
-            {{ "{{" }}- else if .Labels.instance }}
-            Target: `{{ "{{" }} .Labels.instance }}`{{ "{{" }} if .Labels.job }} (job `{{ "{{" }} .Labels.job }}`){{ "{{" }} end }}
-            {{ "{{" }}- else if .Labels.job }}
-            Target: job `{{ "{{" }} .Labels.job }}`{{ "{{" }} if .Labels.service }} / svc `{{ "{{" }} .Labels.service }}`{{ "{{" }} end }}{{ "{{" }} if .Labels.namespace }} in `{{ "{{" }} .Labels.namespace }}`{{ "{{" }} end }}
-            {{ "{{" }}- else if .Labels.namespace }}
-            Namespace: `{{ "{{" }} .Labels.namespace }}`{{ "{{" }} end }}
-            {{ "{{" }}- if eq .Status "firing" }}
-            Started: {{ "{{" }} (.StartsAt | tz "Asia/Seoul").Format "01-02 15:04" }} KST ({{ "{{" }} humanizeDuration (since .StartsAt).Seconds }} ago)
-            {{ "{{" }}- else }}
-            Duration: {{ "{{" }} humanizeDuration (.EndsAt.Sub .StartsAt).Seconds }} ({{ "{{" }} (.StartsAt | tz "Asia/Seoul").Format "01-02 15:04" }} ~ {{ "{{" }} (.EndsAt | tz "Asia/Seoul").Format "15:04" }} KST)
-            {{ "{{" }}- end }}
-            {{ "{{" }} if .Annotations.runbook_url }}[Runbook]({{ "{{" }} .Annotations.runbook_url }}) · {{ "{{" }} end }}[Query]({{ "{{" }} .GeneratorURL }}){{ "{{" }} if .Labels.pod }} · [Logs](https://grafana.kkamji.net/explore?schemaVersion=1&orgId=1&panes={{ "{{" }} printf `{"a":{"datasource":"loki","queries":[{"refId":"A","expr":"{namespace=\"%s\", pod=\"%s\"}","datasource":{"type":"loki","uid":"loki"}}],"range":{"from":"now-3h","to":"now"}}}` .Labels.namespace .Labels.pod | urlquery }}){{ "{{" }} end }} · [Silence]({{ "{{" }} $ext }}/#/silences/new?filter={{ "{{" }} printf "{alertname=%q}" .Labels.alertname | urlquery }})
-
-            {{ "{{" }} end }}
-            {{ "{{" }}- end }}
+                    title: '{{ `{{ printf "{{" }} template "discord.kkamji.title" . }}` }}'
+                    message: '{{ `{{ printf "{{" }} template "discord.kkamji.message" . }}` }}'
     data:
       - secretKey: criticalWebhook
         remoteRef:

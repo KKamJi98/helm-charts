@@ -1,0 +1,9 @@
+{{- with .Values.alertmanagerDiscord }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-discord-template
+data:
+  kkamji-discord.tmpl: |-
+{{ .template | nindent 4 }}
+{{- end }}

@@ -6,6 +6,8 @@ kube-prometheus-stack:
       # starts and cannot parse webhook_url_file. ESO renders the complete
       # Alertmanager config with SSM values only inside the cluster.
       configSecret: alertmanager-discord-config
+      configMaps:
+        - alertmanager-discord-template
       # Discord 메시지의 Silence 링크(.ExternalURL)가 외부 도메인을 가리키도록 설정
       externalUrl: https://alertmanager.kkamji.net
     # Runtime Alertmanager configuration and templates are rendered only by
@@ -166,11 +168,39 @@ grafanaAuth:
   adminPasswordSsmKey: /kkamji/monitoring/grafana/admin-password
 
 # Alertmanager Discord webhooks (personal server). severity 로 critical / warning
-# webhook 분기. ESO 가 SSM 의 webhook URL 을 monitoring ns 의 alertmanager-discord
-# Secret(critical-webhook / warning-webhook) 으로 sync → webhook_url_file 로 mount.
+# webhook 분기. ESO 가 SSM webhook URL을 complete config Secret으로 렌더하고,
+# Alertmanager template는 ConfigMap으로 mount한다. Secret 값은 Git에 저장하지 않는다.
 alertmanagerDiscord:
   criticalSsmKey: /kkamji/monitoring/discord/alertmanager-critical-webhook
   warningSsmKey: /kkamji/monitoring/discord/alertmanager-warning-webhook
+  template: |-
+    {{ define "discord.kkamji.title" -}}
+    {{ if eq .Status "firing" }}[FIRING:{{ .Alerts.Firing | len }}]{{ else }}[RESOLVED]{{ end }} {{ .CommonLabels.alertname }}{{ if .CommonLabels.namespace }} ({{ .CommonLabels.namespace }}){{ end }}
+    {{- end }}
+
+    {{ define "discord.kkamji.message" -}}
+    {{ $ext := .ExternalURL -}}
+    {{ range .Alerts -}}
+    `{{ .Labels.severity }}` {{ if .Annotations.summary }}{{ .Annotations.summary }}{{ else }}{{ .Labels.alertname }}{{ end }}
+    {{- if and .Annotations.description (ne .Annotations.description .Annotations.summary) }}
+    {{ .Annotations.description }}{{ end }}
+    {{- if .Labels.pod }}
+    Target: `{{ .Labels.namespace }}/{{ .Labels.pod }}`
+    {{- else if .Labels.instance }}
+    Target: `{{ .Labels.instance }}`{{ if .Labels.job }} (job `{{ .Labels.job }}`){{ end }}
+    {{- else if .Labels.job }}
+    Target: job `{{ .Labels.job }}`{{ if .Labels.service }} / svc `{{ .Labels.service }}`{{ end }}{{ if .Labels.namespace }} in `{{ .Labels.namespace }}`{{ end }}
+    {{- else if .Labels.namespace }}
+    Namespace: `{{ .Labels.namespace }}`{{ end }}
+    {{- if eq .Status "firing" }}
+    Started: {{ (.StartsAt | tz "Asia/Seoul").Format "01-02 15:04" }} KST ({{ humanizeDuration (since .StartsAt).Seconds }} ago)
+    {{- else }}
+    Duration: {{ humanizeDuration (.EndsAt.Sub .StartsAt).Seconds }} ({{ (.StartsAt | tz "Asia/Seoul").Format "01-02 15:04" }} ~ {{ (.EndsAt | tz "Asia/Seoul").Format "15:04" }} KST)
+    {{- end }}
+    {{ if .Annotations.runbook_url }}[Runbook]({{ .Annotations.runbook_url }}) · {{ end }}[Query]({{ .GeneratorURL }}){{ if .Labels.pod }} · [Logs](https://grafana.kkamji.net/explore?schemaVersion=1&orgId=1&panes={{ printf `{"a":{"datasource":"loki","queries":[{"refId":"A","expr":"{namespace=\"%s\", pod=\"%s\"}","datasource":{"type":"loki","uid":"loki"}}],"range":{"from":"now-3h","to":"now"}}}` .Labels.namespace .Labels.pod | urlquery }}){{ end }} · [Silence]({{ $ext }}/#/silences/new?filter={{ printf "{alertname=%q}" .Labels.alertname | urlquery }})
+
+    {{ end }}
+    {{- end }}
 
 # Gateway API 라우트 (앱 차트 소유 원칙 - templates/gateway-routes.yaml).
 # 플랫폼 Gateway 의 wildcard 리스너(sectionName: https)에 붙는다.
