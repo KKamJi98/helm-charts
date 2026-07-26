@@ -379,8 +379,16 @@ adminPassword:
   ssmKey: /kkamji/argocd/admin-password-bcrypt
 
 # Repo credentials via ESO. SSM parameters must be pre-populated.
-# Single GitHub App registered with two installations (KKamJi98 + kube-rca).
-# App ID + private key are shared; only installationID differs per prefix.
+#
+# The prefix is /kkamji/github-app/kkamji-app rather than /kkamji/argocd, because
+# the App is no longer only ArgoCD's: terraform-lab's github/repositories stack
+# authenticates to the GitHub API with the same key. Naming the path after ArgoCD
+# would have hidden that second consumer. Values are byte identical to the old
+# path, verified by hash before the move.
+#
+# The kube-rca installation was removed on 2026-07-27. Nothing referenced a
+# kube-rca repository, and its installationID parameter was already absent from
+# SSM, so ESO was serving a cached value that nothing could have rebuilt.
 repoCredentials:
   github-app-creds-personal:
     enabled: true
@@ -390,21 +398,9 @@ repoCredentials:
       name: parameter-store
       kind: ClusterSecretStore
     ssm:
-      appID: /kkamji/argocd/github-app/app-id
-      installationID: /kkamji/argocd/github-app/installation-id-personal
-      privateKey: /kkamji/argocd/github-app/private-key
-
-  github-app-creds-kuberca:
-    enabled: true
-    url: "https://github.com/kube-rca/"
-    refreshInterval: 1h0m0s
-    secretStoreRef:
-      name: parameter-store
-      kind: ClusterSecretStore
-    ssm:
-      appID: /kkamji/argocd/github-app/app-id
-      installationID: /kkamji/argocd/github-app/installation-id-kuberca
-      privateKey: /kkamji/argocd/github-app/private-key
+      appID: /kkamji/github-app/kkamji-app/app-id
+      installationID: /kkamji/github-app/kkamji-app/installation-id-personal
+      privateKey: /kkamji/github-app/kkamji-app/private-key
 
 # GitHub webhook secret. ESO 가 argocd-secret 에 webhook.github.secret 키만
 # merge 로 추가 → repo push 즉시 ArgoCD sync 트리거 가능.
