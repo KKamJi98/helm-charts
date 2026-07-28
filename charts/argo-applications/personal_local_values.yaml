@@ -32,6 +32,21 @@ applications:
       helm:
         valueFiles:
           - values.yaml
+  sokcho-planner:
+    enabled: true
+    name: sokcho-planner
+    annotations:
+      notifications.argoproj.io/subscribe.on-deployed.discord: ""
+    project: personal
+    destination:
+      namespace: sokcho-planner
+    source:
+      repoURL: https://github.com/KKamJi98/sokcho-planner.git
+      targetRevision: main
+      path: helm/sokcho-planner
+      helm:
+        valueFiles:
+          - values.yaml
   play-hub:
     enabled: false
     name: play-hub
