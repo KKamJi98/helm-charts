@@ -10,7 +10,7 @@ ssm:
   basePath: /kkamji/automation/n8n
 
 externalSecrets:
-  refreshInterval: 1h
+  refreshInterval: 6h
   coreSecretName: n8n-core-auth
   postgresqlSecretName: n8n-postgresql-auth
   valkeySecretName: n8n-valkey-auth

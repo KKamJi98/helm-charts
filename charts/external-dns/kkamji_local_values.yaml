@@ -35,7 +35,7 @@ externalSecret:
   enabled: true
   targetSecretName: external-dns-aws
   ssmKey: /kkamji/external-dns/aws-credentials
-  refreshInterval: 1h
+  refreshInterval: 6h
   secretStoreRef:
     name: parameter-store
     kind: ClusterSecretStore

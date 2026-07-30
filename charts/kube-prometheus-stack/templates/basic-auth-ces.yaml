@@ -13,9 +13,9 @@ spec:
 {{- range .namespaces }}
           - {{ . | quote }}
 {{- end }}
-  refreshTime: 1h
+  refreshTime: 6h
   externalSecretSpec:
-    refreshInterval: 1h
+    refreshInterval: 6h
     secretStoreRef:
       name: parameter-store
       kind: ClusterSecretStore

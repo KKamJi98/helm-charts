@@ -377,6 +377,7 @@ rootApplications:
 adminPassword:
   enabled: true
   ssmKey: /kkamji/argocd/admin-password-bcrypt
+  refreshInterval: 6h
 
 # Repo credentials via ESO. SSM parameters must be pre-populated.
 #
@@ -393,7 +394,7 @@ repoCredentials:
   github-app-creds-personal:
     enabled: true
     url: "https://github.com/KKamJi98/"
-    refreshInterval: 1h0m0s
+    refreshInterval: 6h
     secretStoreRef:
       name: parameter-store
       kind: ClusterSecretStore
@@ -406,7 +407,7 @@ repoCredentials:
 # merge 로 추가 → repo push 즉시 ArgoCD sync 트리거 가능.
 githubWebhook:
   enabled: true
-  refreshInterval: 1h0m0s
+  refreshInterval: 6h
   secretStoreRef:
     name: parameter-store
     kind: ClusterSecretStore

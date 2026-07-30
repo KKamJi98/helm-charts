@@ -22,3 +22,4 @@ issuer:
 awsCredentials:
   enabled: true
   ssmKey: /kkamji/cert-manager/aws-credentials
+  refreshInterval: 6h

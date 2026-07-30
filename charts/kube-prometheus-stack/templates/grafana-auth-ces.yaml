@@ -11,9 +11,9 @@ spec:
         operator: In
         values:
           - monitoring
-  refreshTime: 1h
+  refreshTime: 6h
   externalSecretSpec:
-    refreshInterval: 1h
+    refreshInterval: 6h
     secretStoreRef:
       name: parameter-store
       kind: ClusterSecretStore
