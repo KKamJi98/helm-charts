@@ -56,7 +56,7 @@ applications:
     destination:
       namespace: news-reader
     source:
-      repoURL: https://github.com/KKamJi98/news-reader.git
+      repoURL: https://github.com/KKamJi98/kkamji-reader.git
       targetRevision: main
       path: helm/news-reader
       helm:
