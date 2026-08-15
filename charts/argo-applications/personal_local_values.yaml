@@ -49,18 +49,18 @@ applications:
       helm:
         valueFiles:
           - values.yaml
-  news-reader:
+  kkamji-reader:
     enabled: true
-    name: news-reader
+    name: kkamji-reader
     annotations:
       notifications.argoproj.io/subscribe.on-deployed.discord: ""
     project: personal
     destination:
-      namespace: news-reader
+      namespace: kkamji-reader
     source:
       repoURL: https://github.com/KKamJi98/kkamji-reader.git
       targetRevision: main
-      path: helm/news-reader
+      path: helm/kkamji-reader
       helm:
         valueFiles:
           - values.yaml
