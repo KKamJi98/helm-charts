@@ -33,7 +33,9 @@ applications:
         valueFiles:
           - values.yaml
   sokcho-planner:
-    enabled: true
+    # Retired 2026-08-15: hosting stopped (user request), code preserved in
+    # KKamJi98/sokcho-planner. Flip to true and sync personal-root to restore.
+    enabled: false
     name: sokcho-planner
     annotations:
       notifications.argoproj.io/subscribe.on-deployed.discord: ""
