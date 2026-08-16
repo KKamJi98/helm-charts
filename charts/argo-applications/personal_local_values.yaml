@@ -58,7 +58,7 @@ applications:
     destination:
       namespace: kkamji-reader
     source:
-      repoURL: https://github.com/KKamJi98/kkamji-reader.git
+      repoURL: https://github.com/KKamJi98/kkamji-platform.git
       targetRevision: main
       path: helm/kkamji-reader
       helm:
