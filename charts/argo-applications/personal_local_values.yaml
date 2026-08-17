@@ -49,20 +49,6 @@ applications:
       helm:
         valueFiles:
           - values.yaml
-  kkamji-reader:
-    enabled: true
-    name: kkamji-reader
-    project: personal
-    destination:
-      namespace: kkamji-reader
-    source:
-      repoURL: https://github.com/KKamJi98/kkamji-platform.git
-      targetRevision: main
-      path: helm/kkamji-reader
-      helm:
-        valueFiles:
-          - values.yaml
-          - migration-route-off.yaml
   kkamji-platform:
     enabled: true
     name: kkamji-platform
