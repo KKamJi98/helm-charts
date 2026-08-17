@@ -62,6 +62,7 @@ applications:
       helm:
         valueFiles:
           - values.yaml
+          - migration-route-off.yaml
   kkamji-platform:
     enabled: true
     name: kkamji-platform
