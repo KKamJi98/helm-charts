@@ -62,6 +62,20 @@ applications:
       helm:
         valueFiles:
           - values.yaml
+  kkamji-platform:
+    enabled: true
+    name: kkamji-platform
+    project: personal
+    destination:
+      namespace: kkamji-platform
+    source:
+      repoURL: https://github.com/KKamJi98/kkamji-platform.git
+      targetRevision: main
+      path: helm/kkamji-platform
+      helm:
+        valueFiles:
+          - values.yaml
+          - migration-staging.yaml
   play-hub:
     enabled: false
     name: play-hub
