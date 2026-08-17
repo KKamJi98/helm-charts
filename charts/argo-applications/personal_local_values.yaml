@@ -52,8 +52,6 @@ applications:
   kkamji-reader:
     enabled: true
     name: kkamji-reader
-    annotations:
-      notifications.argoproj.io/subscribe.on-deployed.discord: ""
     project: personal
     destination:
       namespace: kkamji-reader
