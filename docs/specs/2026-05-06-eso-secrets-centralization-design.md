@@ -1,3 +1,10 @@
+---
+title: ESO secrets centralization design
+updated: 2026-05-06
+type: decision
+status: current
+---
+
 # ESO Secrets Centralization & Path Convention Migration
 
 > Historical design record. Slack token paths and `slack-token-ces.yaml` references are retired; Discord webhook ESO resources are the current notification implementation.

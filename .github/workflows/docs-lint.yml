@@ -1,0 +1,46 @@
+name: "Docs lint"
+
+# 이 repo 의 유일한 기존 워크플로는 openclaw 이미지 빌드이고 차트 배포 CI 는 없다.
+# docs wiki 게이트는 pull_request 트리거가 필요하다. coupling 과 freshness 는 diff 기준
+# base 가 있어야 하고, 이 repo 에서 그 base 가 의미를 갖는 곳은 pull request 뿐이다.
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "Makefile"
+      - "scripts/**"
+      - "charts/external-secrets/templates/**"
+      - "charts/*/templates/external-secret.yaml"
+      - "charts/envoy-gateway/templates/**"
+      - ".github/workflows/docs-lint.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs-lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Lint repo docs wiki
+        env:
+          DOCS_BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || '' }}
+        run: |
+          if [ -n "$DOCS_BASE_REF" ]; then
+            git fetch --no-tags origin "$DOCS_BASE_REF"
+            python3 docs/_meta/docs_lint.py --root . --base "origin/$DOCS_BASE_REF"
+          else
+            python3 docs/_meta/docs_lint.py --root .
+          fi

@@ -1,0 +1,19 @@
+{
+  "$comment": [
+    "파일 경로가 바뀐 PR 에서 짝지어진 문서도 바뀌어야 한다는 매핑이다.",
+    "값은 fnmatch 글로브이고 repo 루트 기준 상대경로에 맞춘다.",
+    "_archived/ 는 폐기 자산이고 수정 대상이 아니므로 매핑하지 않는다.",
+    "docs/specs/ 는 시점 설계 기록이라 코드 변경에 따라 갱신되지 않는다. 매핑하지 않는다."
+  ],
+  "docs/operations.md": [
+    "Makefile",
+    "scripts/*.sh"
+  ],
+  "docs/rules/external-secrets.md": [
+    "charts/external-secrets/templates/*.yaml",
+    "charts/*/templates/external-secret.yaml"
+  ],
+  "docs/rules/gateway-api-routing.md": [
+    "charts/envoy-gateway/templates/*.yaml"
+  ]
+}
