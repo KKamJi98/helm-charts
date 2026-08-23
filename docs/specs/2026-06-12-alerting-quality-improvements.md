@@ -1,3 +1,10 @@
+---
+title: Alerting quality improvements
+updated: 2026-06-12
+type: decision
+status: current
+---
+
 # Alerting Quality Improvements (2026-06-12)
 
 > Historical Slack-era record. Its routing, inhibition, and template quality goals are now implemented through Discord configuration in `charts/kube-prometheus-stack`; do not use Slack receiver instructions from this document.

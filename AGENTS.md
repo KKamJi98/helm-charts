@@ -3,6 +3,15 @@
 > 이 저장소에서 작업하는 AI 에이전트를 위한 운영 프로토콜.
 > 아키텍처 / AppProject / 디렉터리 구조는 README.md 를 참조한다 (여기서 중복 기록하지 않는다).
 
+## Knowledge Layout
+- **현재 구조, 결정, 규칙**: `docs/`. 카탈로그는 `docs/index.md` 다. 차트나 Makefile 을 고치기 전에 읽는다.
+- **작업 일지, 백로그**: vault `workspaces/`.
+- **교차 repo 지식**: vault `wiki/`, `shapes/`, `runbooks/`.
+- frontmatter 필수 키 네 개: `title`, `updated`, `type`, `status`. 새 문서는 `docs/index.md` 에 등록한다.
+- `docs/_meta/coupling.json` 에 매핑된 파일을 바꾸면 같은 PR 에서 해당 문서도 바꾼다.
+- `docs/_meta/docs_lint.py` 는 손으로 고치지 않는다. 정본은 `kkamji-settings/agents/docs-wiki/docs_lint.py` 다.
+- 검증: `python3 docs/_meta/docs_lint.py --root .`
+
 ## 0. 프로젝트 개요
 - KKamJi homelab 의 ArgoCD GitOps 단일 source of truth. KubeADM bare-metal 클러스터(`k8s-m1` control-plane, `k8s-w1`/`k8s-w2` worker; Cilium + MetalLB)를 단일 ArgoCD 가 관리.
 - 기술 스택: Helm(`charts/`), Shell(`Makefile`, `scripts/`), Docker(openclaw 이미지).
@@ -19,19 +28,8 @@
 - 신규 클러스터 일회성: `make setup`(= `make deps` + `make bootstrap`). bootstrap 은 `helm template | kubectl apply --server-side --field-manager=argocd-controller --force-conflicts` 한 번이면 충분하다.
 - 이후 변경은 git push -> self-sync. Makefile 재실행은 불필요하다.
 
-## 3. 주요 명령어 (Makefile)
-| 작업 | 명령 |
-|---|---|
-| 매니페스트 검증 (apply 없이) | `make template` |
-| helm lint (`charts/*` 전체) | `make lint` |
-| AppProject/Application 현황 | `make status` |
-| root Application hard refresh | `make refresh` |
-| `argocd-cm`/`argocd-secret` 유실 복구 | `make recover-secrets` |
-| AppProject stuck(Pending deletion) 해소 | `make unstick-projects` |
-| stale `manager=helm` 잔재 진단 | `make detect-helm-ownership` |
-
-- Makefile 기본 변수: `RELEASE=argocd`, `NAMESPACE=argocd`, `UMBRELLA_CHART=charts/argocd`, `VALUES=charts/argocd/kkamji_local_values.yaml`, `FIELD_MANAGER=argocd-controller`.
-- 단일 차트 부분 검증: `helm template <chart> -f charts/<chart>/kkamji_local_values.yaml --show-only templates/<file>`.
+## 3. 주요 명령어
+- Makefile 타깃 표와 기본 변수는 `docs/operations.md` 가 정본이다.
 
 ## 4. Helm 컨벤션
 - 차트별 환경 값 파일은 `charts/<chart>/kkamji_local_values.yaml` 이다 (`values.yaml` 아님). template/lint 에 항상 `-f` 로 넘긴다.
@@ -45,13 +43,8 @@
 - pod 내부 확인은 `kubectl exec` 대신 `kubectl port-forward` + HTTP API 를 사용한다 (exec 는 권한 차단됨; Alertmanager `/api/v2/alerts·status`, Prometheus `/api/v1/rules·targets·query`).
 - amtool/promtool 은 로컬 미설치 - `helm template --show-only` 로 secret 추출 후 docker(`quay.io/prometheus/alertmanager`, `quay.io/prometheus/prometheus`)의 `amtool check-config`/`amtool template render`/`promtool check rules` 로 검증한다.
 
-## 6. External Secrets (ESO) gotcha
-- ClusterExternalSecret 파생 자식 ExternalSecret 은 `refreshInterval` 이 Go 표준형으로 정규화된다(`1h` -> `1h0m0s`). 직접 정의한 ExternalSecret 은 리터럴 문자열을 유지한다.
-- `creationPolicy: Owner` 는 ownerReference 를 설정한다 -> ExternalSecret 을 삭제하면 `deletionPolicy: Retain` 이어도 타깃 Secret 이 함께 GC 된다.
-- repo 에 정의가 없고 `kubectl.kubernetes.io/last-applied-configuration` 만 있는 ExternalSecret 은 수동 생성된 orphan 일 수 있다 (GitOps 관리 대상 아님 -> 정리 후보).
-- SSM ParameterStore 키 네이밍: `/kkamji/<component>/<purpose>` (예: `/kkamji/external-dns/aws-credentials`). 다중 키 자격증명은 SecureString JSON 1개 + `dataFrom.extract` 로 분해한다.
-- ExternalSecret/CES 가 부트스트랩 직후 webhook race 로 실패하면 refresh(1h)를 기다리지 말고 `kubectl annotate ... force-sync=$(date +%s)` 로 즉시 reconcile 한다.
-- argocd admin 비밀번호는 ESO Merge(argocd-admin-password-es)가 SSM bcrypt 해시(/kkamji/argocd/admin-password-bcrypt)로 고정한다. argocd-secret 의 admin.password 를 수동 수정하지 않는다.
+## 6. External Secrets (ESO)
+- ESO 함정과 SSM 키 네이밍은 `docs/rules/external-secrets.md` 가 정본이다.
 
 ## 7. 커밋 규칙
 - Conventional Commits: `feat|fix|refac|docs|chore|test|perf`. `Co-Authored-By` / AI attribution 추가 금지.
@@ -62,9 +55,4 @@
 - GitHub Actions 는 `.github/workflows/build-openclaw-dev.yaml`(openclaw 이미지 빌드) 하나뿐이다. 차트 배포 CI 는 없고 ArgoCD self-sync 가 배포를 담당한다.
 
 ## 9. Gateway API 라우팅
-- 플랫폼(charts/envoy-gateway)은 GatewayClass/Gateway(리스너)/https-redirect/wildcard Certificate 만 소유한다. HTTPRoute/TLSRoute 는 각 서비스의 umbrella 차트 templates/ 가 소유한다 (kps·cilium·argocd, play-hub 는 자기 repo).
-- 신규 서비스 온보딩: 자기 차트에 HTTPRoute 추가 - parentRef {name: kkamji, namespace: envoy-gateway-system, sectionName: https}. 리스너/인증서 변경 불필요.
-- ArgoCD SSA diff 방지: route 매니페스트에 API server defaulting 필드(parentRefs/backendRefs 의 group·kind·weight, filter-only rule 의 기본 match)를 명시한다.
-- external-dns 의 gateway 소스는 target annotation 을 HTTPRoute 가 아닌 **Gateway** 에서 읽는다. Gateway 의 target annotation 이 빠지면 A 레코드가 내부 LB IP 로 덮여 외부 접근이 끊긴다.
-- basic auth 는 Envoy SecurityPolicy 로 적용한다 ({SHA} htpasswd 만 지원 - basic-auth secret 의 .htpasswd 키 <- SSM /kkamji/monitoring/ingress/basic-auth-sha).
-- 인증서: letsencrypt-prod 는 DNS-01(route53, zone 한정 cert_manager IAM user) 단일 solver 다. wildcard(*.kkamji.net) 인증서는 DNS-01 로만 발급된다.
+- 소유 경계, 신규 서비스 온보딩, SSA diff 방지, 인증서 규칙은 `docs/rules/gateway-api-routing.md` 가 정본이다.
