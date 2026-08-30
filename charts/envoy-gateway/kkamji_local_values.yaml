@@ -3,10 +3,10 @@
 # 역할 분리 (Gateway API persona model):
 #   - 이 차트(플랫폼): GatewayClass, Gateway(wildcard listener/TLS/IP),
 #     https 리다이렉트, wildcard Certificate 만 소유한다.
-#   - HTTPRoute/TLSRoute 는 전부 각 앱 차트가 소유한다:
+#   - HTTPRoute 는 전부 각 앱 차트가 소유한다:
 #       kube-prometheus-stack: templates/gateway-routes.yaml (grafana/prom/am)
 #       cilium:                templates/gateway-routes.yaml (hubble)
-#       argocd:                templates/gateway-route.yaml  (TLSRoute)
+#       argocd:                upstream server.httproute (Terminate 통일, 2026-08-31)
 #       play-hub repo:         templates/httproute.yaml
 #   - 신규 서비스 온보딩 = 자기 차트에 HTTPRoute 추가
 #     (parentRef {name: kkamji, namespace: envoy-gateway-system, sectionName: https})
@@ -22,8 +22,6 @@ gateway:
   issuer: letsencrypt-prod
   wildcardHost: "*.kkamji.net"
 
-# TLS passthrough 전용 리스너 (pod 가 직접 TLS 종료하는 서비스).
-# 리스너는 플랫폼 소유, TLSRoute 는 해당 앱 차트 소유.
-tlsPassthroughListeners:
-  - name: argocd
-    host: argocd.kkamji.net
+# TLS passthrough 리스너는 폐지(2026-08-31). 443 단일 Terminate 리스너로 통일 -
+# 다중 443 리스너 잔존 시 EG hostname intersection 이 깨져 신규 HTTPRoute 가
+# NoMatchingListenerHostname 로 탈락한다. argocd 는 server.insecure + HTTPRoute.
