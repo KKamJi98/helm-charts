@@ -1,5 +1,10 @@
 argocd:
   configs:
+    # server.insecure=true: TLS 종료를 플랫폼 Gateway(wildcard Terminate)가
+    # 수행하고 argocd-server 는 plain HTTP 로 서빙한다. cmd-params 체크섬
+    # annotation 때문에 server pod 가 자동 롤링 재시작된다.
+    params:
+      "server.insecure": "true"
     cm:
       # ESO controller 가 admission/defaulting 으로 채워 ArgoCD diff 에서 OutOfSync 로 보이는
       # remoteRef/extract/find 의 default 필드들을 ignore. ClusterExternalSecret 은 spec 안에
@@ -46,9 +51,24 @@ argocd:
         name: letsencrypt-prod
     metrics:
       enabled: true
-    # 외부 노출은 Envoy Gateway TLSRoute(charts/envoy-gateway)가 담당.
-    # TLS 종료는 기존 ssl-passthrough 와 동일하게 argocd-server pod 가 직접 수행
-    # (Certificate/argocd-server 는 server.certificate 가 계속 관리).
+    # 외부 노출은 플랫폼 Gateway 의 wildcard Terminate 리스너(sectionName: https)가
+    # 담당한다. argocd-server 는 plain HTTP 로 서빙 (configs.params.server.insecure).
+    # 기존 passthrough TLSRoute 는 잔여 HTTP/2 연결 coalescing 404 사유로 제거.
+    httproute:
+      enabled: true
+      # 컨트롤러 재번역 트리거 겸 식별 라벨.
+      labels:
+        gateway-route: https-terminate
+      parentRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: kkamji
+          namespace: envoy-gateway-system
+          sectionName: https
+      hostnames:
+        - argocd.kkamji.net
+      # matches/rules 는 upstream 기본값(PathPrefix /) 사용. backend 포트는
+      # httproute 템플릿이 server.insecure=true 를 읽어 http(80)로 자동 선택.
     extensions:
       enabled: true
       extensionList:
@@ -418,14 +438,7 @@ githubWebhook:
 discordWebhook:
   ssmKey: /kkamji/monitoring/discord/argocd-notifications-webhook
 
-# Gateway API TLSRoute (앱 차트 소유 - templates/gateway-route.yaml).
-# argocd-server pod 가 직접 TLS 종료하므로 플랫폼 Gateway 의 passthrough
-# 리스너(tls-argocd)에 붙는다.
-gatewayRoute:
-  enabled: true
-  host: argocd.kkamji.net
-  backend: { name: argocd-server, port: 443 }
-  parentRef:
-    name: kkamji
-    namespace: envoy-gateway-system
-    sectionName: tls-argocd
+# Gateway API 라우팅: 플랫폼 Gateway wildcard Terminate 리스너 + HTTPRoute
+# (server.httproute) 로 통일. passthrough TLSRoute 는 잔여 HTTP/2 연결
+# coalescing 404 사유로 2026-08-31 제거.
+# gatewayRoute: { enabled: false } (제거됨)
