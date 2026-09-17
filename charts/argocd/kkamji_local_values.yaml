@@ -42,7 +42,7 @@ argocd:
     domain: argocd.kkamji.net
   
   server:
-    replicas: 2
+    replicas: 1
     certificate:
       enabled: true
       issuer:
