@@ -1,13 +1,28 @@
 kube-prometheus-stack:
+  # Argo CD maps the upstream Helm pre-upgrade hooks to PreSync. Upgrade the
+  # Prometheus Operator CRDs before applying v0.94 custom resources.
+  crds:
+    upgradeJob:
+      enabled: true
   alertmanager:
     # 외부 노출은 Envoy Gateway HTTPRoute(charts/envoy-gateway)가 담당
     alertmanagerSpec:
-      # Prometheus Operator v0.83 validates Discord config before Alertmanager
+      # Prometheus Operator v0.94 validates Discord config before Alertmanager
       # starts and cannot parse webhook_url_file. ESO renders the complete
       # Alertmanager config with SSM values only inside the cluster.
       configSecret: alertmanager-discord-config
       configMaps:
         - alertmanager-discord-template
+      # Persist silences and notification state across pod replacements.
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: local-path
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
       # Discord 메시지의 Silence 링크(.ExternalURL)가 외부 도메인을 가리키도록 설정
       externalUrl: https://alertmanager.kkamji.net
     # Runtime Alertmanager configuration and templates are rendered only by
@@ -56,6 +71,17 @@ kube-prometheus-stack:
       # 알림의 Query 링크(.GeneratorURL)가 외부 도메인을 가리키도록 설정
       externalUrl: https://prometheus.kkamji.net
       enableRemoteWriteReceiver: true
+      # Persist the 14-day local TSDB across pod replacements. The current
+      # emptyDir data is intentionally not migrated during this cutover.
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: local-path
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 30Gi
       additionalScrapeConfigs:
         # Hubble & Cilium Metric 수집을 위한 설정
         - job_name: "kubernetes-pods" ## Cilium
