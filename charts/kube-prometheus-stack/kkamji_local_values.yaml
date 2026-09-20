@@ -1,9 +1,4 @@
 kube-prometheus-stack:
-  # Argo CD maps the upstream Helm pre-upgrade hooks to PreSync. Upgrade the
-  # Prometheus Operator CRDs before applying v0.94 custom resources.
-  crds:
-    upgradeJob:
-      enabled: true
   alertmanager:
     # 외부 노출은 Envoy Gateway HTTPRoute(charts/envoy-gateway)가 담당
     alertmanagerSpec:
