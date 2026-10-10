@@ -3,8 +3,8 @@ name: kube-prometheus-stack-bundle
 description: kube-prometheus-stack umbrella for kkamji clusters
 type: application
 version: 0.1.0
-appVersion: "v0.94.0"
+appVersion: "v0.94.1"
 dependencies:
   - name: kube-prometheus-stack
-    version: 91.4.1
+    version: 92.3.0
     repository: https://prometheus-community.github.io/helm-charts
