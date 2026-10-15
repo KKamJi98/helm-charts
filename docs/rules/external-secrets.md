@@ -1,6 +1,6 @@
 ---
 title: External Secrets rules
-updated: 2026-10-15T21:43:48+09:00
+updated: 2026-10-15T23:14:00+09:00
 type: rule
 status: current
 ---
@@ -19,3 +19,4 @@ ESO 매니페스트를 고칠 때 함께 확인한다. 아래 항목은 전부 �
 ## ARC candidate
 
 The disabled ARC foundation references two separate paths, `/kkamji/arc/platform-auth` and `/kkamji/arc/bql-auth`, through `parameter-store`. No credential value is committed or created. See [ARC rollout](../arc-ci.md) for the required grant and rotation approval.
+- ARC foundation의 `githubAuth.enabled`는 기본 false입니다. 인증 승인/안전한 SSM 입력/ESO의 정확한 경로와 KMS 권한 확인 전에 ExternalSecret을 생성하지 않습니다. controller 단계와 등록 단계를 분리하며, 값은 조회하지 않습니다.

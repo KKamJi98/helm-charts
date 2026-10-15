@@ -1,15 +1,34 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-15
+updated: 2026-10-15T23:14:00+09:00
 type: runbook
 status: current
 ---
 
 # Repository-scoped ARC rollout
 
-This candidate is disabled. It prepares ARC for KKamJi98/kkamji-platform and
-KKamJi98/binance-quant-lab on kkamji-lab. Neither canary nor full CI has run on ARC.
+This revision prepares the owner-approved initial controller rollout. The first
+GitOps step enables only the arc-ci project and pre-authentication foundation;
+controller activation follows namespace/policy verification. Both repository
+scale sets remain disabled. Neither canary nor full CI has run on ARC.
 Do not replace this statement with an operating-success claim until evidence exists.
+
+## Controller-first phase, not yet applied
+
+The actual Argo CD umbrella must carry `argo-projects.projects.arc-ci`; the
+standalone argo-projects local values are not imported automatically. The
+umbrella project is enabled under the explicit initial CRD/RBAC/network/GitOps
+approval. Existing projects and Argo CD
+version/vendor remain unchanged.
+
+Foundation now defaults `githubAuth.enabled=false`, so namespace/policy/quota and
+controller preparation creates no ExternalSecret and cannot start a new SSM
+read for ARC. After explicit credential grants, secure owner input and ESO
+principal/path/KMS approval, enable githubAuth and then repository scale sets.
+This separates control-plane activation from authentication/registration.
+Only foundation is initially enabled; controller and repository scale sets stay
+disabled until their respective next stages. This source change is not evidence
+of a successful runner registration or CI run.
 
 ## Exact configuration
 
@@ -92,8 +111,12 @@ if Kubernetes job hooks are later introduced, auxiliary Pods need a new quota de
 ## Staged activation and rollback
 
 1. Review exact CRDs/RBAC/PSS/Cilium policies and two credential grants with owner.
-2. Through approved GitOps commits enable foundation, verify both ESO Secrets and
-   CNI rules; then controller; then each scale set. No direct helm install/upgrade.
+2. With the initial controller-only approval, wire/enable the actual umbrella arc-ci
+   project and enable foundation with githubAuth=false, then controller. Verify
+   namespaces, policies, quotas, CRDs and controller readiness; create no auth
+   ExternalSecrets or runner registrations in this phase. After explicit secure
+   authentication/registration approval and owner input, enable githubAuth,
+   verify ESO metadata/Ready, and then enable each repository scale set.
 3. Merge/enable separate manual canary workflows only after registration approval.
    Verify nonroot/no API token/no Docker socket and record runner identity/cgroups.
    Dispatch both and demonstrate only one non-terminal runner Pod, then cancellation
