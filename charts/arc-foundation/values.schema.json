@@ -9,6 +9,14 @@
       },
       "required": ["enabled"],
       "additionalProperties": false
+    },
+    "priorityClass": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"}
+      },
+      "required": ["enabled"],
+      "additionalProperties": false
     }
   }
 }

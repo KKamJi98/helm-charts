@@ -1,6 +1,6 @@
 ---
 title: Docs index
-updated: 2026-10-15T23:38:52+09:00
+updated: 2026-10-16T01:39:48+09:00
 type: architecture
 status: current
 ---
@@ -25,5 +25,5 @@ status: current
 - [ArgoCD notifications improvement](specs/2026-06-08-argocd-notifications-improvement.md) - 알림 개선 설계.
 - [Alerting quality improvements](specs/2026-06-12-alerting-quality-improvements.md) - 알림 품질 개선 설계.
 
-- [ARC rollout](arc-ci.md) - Pre-auth controller rollout, separate registration approvals and full-CI evidence gates.
-- [ARC GitHub App](arc-github-app.md) - Review-only App permissions, shared authority, secure key input, rotation and recovery.
+- [ARC rollout](arc-ci.md) - Pre-auth controller rollout, nonpreempting admission and separate diagnostic/CI evidence gates.
+- [ARC GitHub App](arc-github-app.md) - Approved App installation, shared authority, separately approved secure input, rotation and recovery.

@@ -1,0 +1,10 @@
+# {{- if .Values.priorityClass.enabled }}
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: arc-ci-nonpreempting
+value: 0
+globalDefault: false
+preemptionPolicy: Never
+description: ARC-only opt-in priority class; never preempt existing workloads.
+# {{- end }}
