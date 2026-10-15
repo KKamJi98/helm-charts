@@ -52,7 +52,7 @@ applications:
           - /data
 
   arc-foundation:
-    enabled: false
+    enabled: true
     name: arc-foundation
     project: arc-ci
     destination:

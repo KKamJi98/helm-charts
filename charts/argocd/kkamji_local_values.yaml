@@ -368,6 +368,40 @@ argo-projects:
         - group: "*"
           kind: "*"
 
+    arc-ci:
+      enabled: true
+      description: Repository-scoped light CI, no Docker or deployment credentials
+      sourceRepos:
+      - https://github.com/KKamJi98/helm-charts.git
+      destinations:
+      - server: https://kubernetes.default.svc
+        namespace: arc-system
+      - server: https://kubernetes.default.svc
+        namespace: ci-pr
+      clusterResourceWhitelist:
+      - group: ''
+        kind: Namespace
+      - group: apiextensions.k8s.io
+        kind: CustomResourceDefinition
+      namespaceResourceWhitelist:
+      - group: ''
+        kind: ServiceAccount
+      - group: ''
+        kind: ResourceQuota
+      - group: rbac.authorization.k8s.io
+        kind: Role
+      - group: rbac.authorization.k8s.io
+        kind: RoleBinding
+      - group: apps
+        kind: Deployment
+      - group: actions.github.com
+        kind: AutoscalingRunnerSet
+      - group: external-secrets.io
+        kind: ExternalSecret
+      - group: networking.k8s.io
+        kind: NetworkPolicy
+      - group: cilium.io
+        kind: CiliumNetworkPolicy
 rootApplications:
   enabled: true
   namespace: argocd
