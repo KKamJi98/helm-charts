@@ -1,19 +1,19 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-15T23:14:00+09:00
+updated: 2026-10-15T23:38:52+09:00
 type: runbook
 status: current
 ---
 
 # Repository-scoped ARC rollout
 
-This revision prepares the owner-approved initial controller rollout. The first
-GitOps step enables only the arc-ci project and pre-authentication foundation;
-controller activation follows namespace/policy verification. Both repository
-scale sets remain disabled. Neither canary nor full CI has run on ARC.
+The approved foundation/project stage was observed Synced/Healthy at revision
+30401e13df849ce222ac63876baa6f2dcd2e0f3f. This revision enables the controller
+after namespace/policy preparation. Both repository scale sets and authentication
+remain disabled. Neither canary nor full CI has run on ARC.
 Do not replace this statement with an operating-success claim until evidence exists.
 
-## Controller-first phase, not yet applied
+## Controller-first staging
 
 The actual Argo CD umbrella must carry `argo-projects.projects.arc-ci`; the
 standalone argo-projects local values are not imported automatically. The
@@ -26,9 +26,9 @@ controller preparation creates no ExternalSecret and cannot start a new SSM
 read for ARC. After explicit credential grants, secure owner input and ESO
 principal/path/KMS approval, enable githubAuth and then repository scale sets.
 This separates control-plane activation from authentication/registration.
-Only foundation is initially enabled; controller and repository scale sets stay
-disabled until their respective next stages. This source change is not evidence
-of a successful runner registration or CI run.
+Foundation is already enabled. Controller activation is covered by the explicit
+initial approval; both repository scale sets remain disabled. A source change is
+not evidence of successful runner registration or CI execution.
 
 ## Exact configuration
 
@@ -65,15 +65,17 @@ No VM changes are included. Heavy compilation requires a separately measured bud
 
 ## Credentials and network approval
 
-Two distinct fine-grained PAT candidates: each selects only its matching repository,
-Administration read/write + Metadata read, expiry30days. Registration Secrets are
-ci-pr/arc-platform-auth and ci-pr/arc-bql-auth, sourced by existing ESO
-parameter-store from /kkamji/arc/platform-auth and /kkamji/arc/bql-auth in
-ap-northeast-2. Values must be entered directly through the approved secure SSM
-flow as SecureString JSON with github_token. Never paste values in chat, PRs or
-command arguments. No token/SSM write was performed. Existing ESO IAM/KMS rights
-for these exact paths must be verified; no implicit IAM expansion is authorized.
-Owner ExternalSecrets can garbage-collect target Secrets despite deletionPolicy Retain.
+The user selected a dedicated GitHub App for long-term operation, restricted to
+exactly the two repositories. This is review/preparation intent, not App creation,
+installation, private-key input, registration or canary approval. Follow the
+[GitHub App security review](arc-github-app.md) for the precise proposed grant,
+shared-key authority, secure storage, rotation and recovery.
+
+The two disabled legacy PAT-shaped references are not instructions to create
+PATs. Authentication remains off; update the source wiring only after the exact
+App/security/input confirmation. No credential value was created or read.
+ESO principal/path/KMS permission expansion is not implied. Owner ExternalSecrets
+can garbage-collect target Secrets despite deletionPolicy Retain.
 
 Policies default-deny both namespaces; DNS/GitHub/Actions/log-artifact destinations
 are explicit Cilium FQDN rules. Only management Pods reach kube-apiserver; job
@@ -260,23 +262,20 @@ but cannot be substituted for the sandbox-dependent test gates.
 
 ### Credential input and metadata-only verification
 
-After approval, owner creates two fine-grained PATs through GitHub's secure UI:
-resource owner KKamJi98, select exactly one corresponding repo, Administration
-read/write and Metadata read, expiry30days. No organization grant, Contents write
-or Actions write is needed for registration. Owner then enters each value directly
-in AWS console Parameter Store, personal account/ap-northeast-2, SecureString,
-exact paths /kkamji/arc/platform-auth and /kkamji/arc/bql-auth, JSON property
-github_token. Confirm names/type/version/key metadata only in chat. Never paste
-the value, screenshots containing it, access keys or token-bearing command lines.
+GitHub App input is specified in the [security review](arc-github-app.md).
+App creation/installation and private-key input require precise separate security
+confirmation. Keep only metadata in chat and evidence. One App on both repositories
+shares private-key authority; copied Secrets do not provide credential isolation.
+Do not paste values, screenshots containing them or credential-bearing argv.
 
 Read-only live ClusterSecretStore metadata confirms parameter-store uses
 external-secrets/awssm-secret keys access-key and secret-access-key, not a declared
 role ARN. Those Secret values were not read. This reference alone cannot identify
 the IAM principal or prove either new path is allowed. Existing store Ready is
 also not proof of new-path authorization.
-The Windows AWS CLI has no personal profile in this session, and no AWS CLI was
-found on the WSL PATH. No AWS login or credential extraction was attempted;
-IAM/KMS and SSM parameter metadata remain unverified.
+The earlier preparation host's CLI/profile observation is historical, not a
+claim about the current executor. No AWS login or credential extraction is
+authorized by this document; IAM/KMS and new-path metadata remain unverified.
 
 With an authorized personal AWS metadata session, verify the actual ESO principal
 from owner-provided identity or matching audit metadata, its inline/attached policy

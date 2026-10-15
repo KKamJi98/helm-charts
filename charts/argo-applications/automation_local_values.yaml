@@ -65,7 +65,7 @@ applications:
         valueFiles:
         - kkamji_local_values.yaml
   arc-controller:
-    enabled: false
+    enabled: true
     name: arc-controller
     project: arc-ci
     destination:
