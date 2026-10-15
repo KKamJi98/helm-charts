@@ -1,352 +1,150 @@
 # helm-charts
 
-KKamJi homelab의 ArgoCD GitOps 단일 source of truth. KubeADM bare-metal 클러스터 (`k8s-m1`/`k8s-w1`/`k8s-w2`)를 단일 ArgoCD가 관리한다.
+Windows PC의 Hyper-V VM 위에 kubeadm으로 구축한 개인 Kubernetes 홈랩을 관리하는 Helm/GitOps 저장소입니다. Argo CD의 구성, AppProject, root Application과 서비스별 배포 선언을 보관합니다.
 
-## 아키텍처 한눈에
+이 저장소는 VM 생성, OS 설치나 kubeadm 클러스터 구축을 대신하지 않습니다. 이미 준비한 클러스터 위의 애플리케이션 구성을 관리합니다. 차트가 존재하거나 Application이 선언되어 있다는 사실만으로 설치와 정상 운영이 검증된 것은 아닙니다.
 
+바로 가기: [동기화 구조](#gitops-동기화-구조) | [디렉터리](#디렉터리-안내) | [최초 부트스트랩](#사전-준비와-최초-부트스트랩) | [일반 변경](#일반-변경-흐름) | [검증](#검증과-명령의-범위) | [복구](#복구와-트러블슈팅) | [보안](#보안과-secret-경계)
+
+## 먼저 읽을 문서
+
+| 확인할 내용 | 정본 |
+|---|---|
+| 전체 문서 목록 | [docs/index.md](docs/index.md) |
+| 명령, 부트스트랩, 검증과 복구 | [Makefile operations](docs/operations.md) |
+| Argo CD 버전 핀, renderer 호환성, 업그레이드와 롤백 | [Argo CD upgrades](docs/argocd-upgrades.md) |
+| ESO와 Secret 수명주기 | [External Secrets rules](docs/rules/external-secrets.md) |
+| Gateway/서비스 라우팅 소유 경계 | [Gateway API routing rules](docs/rules/gateway-api-routing.md) |
+| 저장소 작업 규칙 | [AGENTS.md](AGENTS.md) |
+
+이 README는 진입점입니다. 상세 절차와 시점별 운영 증적은 위 문서를 따릅니다. 버전은 README의 고정 숫자가 아니라 각 `Chart.yaml`, `Chart.lock`과 vendored 패키지에서 확인합니다.
+
+## GitOps 동기화 구조
+
+```text
+검토한 변경을 main에 반영
+  -> GitHub webhook 또는 Argo CD polling으로 감지
+  -> Argo CD가 root Application을 reconcile
+  -> charts/argo-applications + root별 values
+  -> 자식 Application의 repository/path/chart
+  -> Kubernetes 리소스에 반영
 ```
-charts/argocd/                              ← 우산 차트 (SSA 1회 부트스트랩)
-  ├── 의존성: upstream argo-cd v10.10.5
-  ├── 의존성: argo-projects (file://)       ← AppProject 5개
-  └── templates/
-      ├── root-applications.yaml            ← 4개 root Application 생성
-      └── repo-credentials.yaml             ← ESO ExternalSecret (GitHub App)
-                ↓
-   ┌─────────────┬──────────────┬──────────────┬──────────────┐
-management-root automation-root personal-root  kuberca-root
-   ↓               ↓                ↓               ↓
-charts/argo-applications + 각 *_local_values.yaml
-   ↓               ↓                ↓               ↓
-14 Application   1 Application   2 Application  6 Application
-(cilium, …)      (openclaw)      (play-hub, …)  (bookinfo, …)
-```
 
-### AppProject
+[charts/argocd](charts/argocd)는 upstream Argo CD, 로컬 AppProject와 root Application을 묶는 umbrella chart입니다. 최초 부트스트랩 뒤에는 `management-root`의 `argocd` Application이 이 umbrella를 다시 관리합니다.
 
-| project | 용도 | Application |
+AppProject는 `argocd`, `management`, `automation`, `personal`로 역할을 나눕니다. 정의는 umbrella의 [argo-projects 설정](charts/argocd/kkamji_local_values.yaml), 생성 템플릿은 [charts/argo-projects](charts/argo-projects)에서 관리합니다. 이 역할 구분이 보안 격리를 보장하지는 않습니다.
+
+현재 root 선언의 정본은 [rootApplications](charts/argocd/kkamji_local_values.yaml), 생성 규칙은 [root-applications.yaml](charts/argocd/templates/root-applications.yaml)입니다.
+
+| Root Application | 자식 선언 파일 | 선언 대상 예시 |
 |---|---|---|
-| `argocd` | self-management | `argocd`(self) + 4 root Applications |
-| `management` | 클러스터 인프라 | cilium, metallb, ingress-nginx, external-dns, external-secrets, cert-manager(+issuer), metrics-server, istio-base/istiod, kiali-operator, kube-prometheus-stack, alloy, loki, tempo |
-| `automation` | 자동화 도구 | openclaw |
-| `personal` | 개인 토이 프로젝트 | play-hub, lf-oss-na-2026 |
-| `kuberca` | kube-rca 데모 자산 | bookinfo, load-generator, chaos-mesh, kuberca-monitoring, k8s-resources, kube-rca |
+| `management-root` | [management_local_values.yaml](charts/argo-applications/management_local_values.yaml) | Argo CD, Cilium, MetalLB, Envoy Gateway, ESO, 관측 도구 |
+| `automation-root` | [automation_local_values.yaml](charts/argo-applications/automation_local_values.yaml) | n8n과 자동화 도구 |
+| `personal-root` | [personal_local_values.yaml](charts/argo-applications/personal_local_values.yaml) | 별도 저장소에서 관리하는 개인 애플리케이션 |
 
-> 모든 AppProject는 `sourceRepos: ["*"]` (홈랩 단순화). 운영급으로 좁히려면 `KKamJi98/*`, `kube-rca/*`, 외부 차트 repo 화이트리스트.
+이 저장소의 GitOps 기준 branch는 `main`입니다. 자식 Application은 다른 Git 저장소나 버전이 고정된 외부 Helm chart를 사용할 수도 있습니다. 실제 소스와 revision은 각 Application 선언에서 확인합니다.
 
-## 디렉터리 구조
+root 동기화 정책에는 자동 동기화, `prune`, `selfHeal`, `ServerSideApply`가 설정되어 있습니다. 따라서 `main` 반영은 배포 경계입니다. 삭제한 선언이 실제 리소스 삭제로 이어질 수 있으므로 문서 변경 승인과 인프라 변경 승인을 혼동하지 않습니다. 작업 branch에만 push하거나 PR을 여는 것은 클러스터 배포가 아닙니다.
 
-```
+`enabled: false`인 항목은 생성 대상에서 제외됩니다. 반대로 `enabled: true`라도 runtime의 중단 상태나 실패가 있을 수 있습니다. `skip-reconcile`로 중단한 앱은 임의로 재개하지 않으며, 과거의 `Synced/Healthy`를 최신 실행 증적으로 보지 않습니다.
+
+예를 들어 OpenClaw는 선언상 비활성입니다. n8n은 선언상 활성이나, [2026-10-15 운영 기록](docs/argocd-upgrades.md#적용-결과)에서는 reconciliation 중단 상태였습니다. 이 기록은 확인 시점의 증거이며 실시간 상태판이 아닙니다.
+
+## 디렉터리 안내
+
+```text
 charts/
-├── argocd/                  # 우산 (upstream argo-cd 10.10.5 + projects + roots + repo-creds)
-├── argo-projects/           # AppProject CR 5개를 만드는 라이브러리 차트
-├── argo-applications/       # 자식 Application CR을 찍어내는 generic iterator
-│   ├── management_local_values.yaml
-│   ├── automation_local_values.yaml
-│   ├── personal_local_values.yaml
-│   └── kuberca_local_values.yaml
-│
-├── kuberca-monitoring/      # kube-rca 전용 PrometheusRule + bookinfo dashboards
-│
-├── alloy/, loki/, tempo/    # LGTM observability stack
-├── istio-base/, istio-istiod/, kiali-operator/
-├── cilium/, metallb/, ingress-nginx/, external-dns/, external-secrets/, metrics-server/
-├── cert-manager-issuer/, kube-prometheus-stack/
-├── bookinfo/, chaos-mesh/, load-generator/
-├── openclaw/
-└── harbor/, keycloak/, minio/   # 보유만 (Application 미연결)
+  argocd/                 Argo CD umbrella, root Application, ESO 연동
+  argo-projects/          AppProject 정의
+  argo-applications/      root별 values에서 자식 Application 생성
+  cilium/, metallb/       클러스터 네트워크 구성
+  envoy-gateway/          Gateway API 플랫폼 구성
+  external-secrets/       ESO 구성
+  cert-manager/           인증서 구성
+  n8n/, openclaw/         자동화 서비스 차트
+  alloy/, loki/, tempo/   관측 도구 차트
+  ...                     나머지 인프라와 서비스 차트
 
-eks-charts/                  # EKS 전용 차트 (현재 미사용)
-├── aws-load-balancer-controller/, eks-1.34/, karpenter/
-
-_archived/                   # legacy (참고용 보관)
+eks-charts/               별도 EKS 환경용 구성
+_archived/                운영 대상이 아닌 과거 자산
+docs/                     운영 정본, 규칙과 결정 기록
+scripts/                  상태 확인과 보조 스크립트
+.github/workflows/        문서 검사와 OpenClaw 이미지 CI
+Makefile                  검증, 상태 확인, bootstrap/복구 진입점
 ```
 
-## values 파일 컨벤션
+`charts/`의 모든 디렉터리가 활성 Application에 연결되는 것은 아닙니다. 반대로 외부 저장소의 Application에는 이 저장소 안의 서비스 차트가 없을 수 있습니다. 활성화 여부는 디렉터리 목록 대신 root별 values와 실제 Application 상태를 함께 확인합니다.
 
-로컬 저장소는 `~/code/helm-charts/{.bare,main,<branch>}` 구조를 사용한다. `main`은 운영 기준 worktree이며 변경은 별도 branch worktree에서 검증한다. Argo CD 업그레이드 절차는 [runbook](docs/argocd-upgrades.md)을 따른다.
+### Values와 의존성
 
-| 위치 | 파일명 | 용도 |
+- 서비스별 홈랩 override는 `charts/<chart>/kkamji_local_values.yaml`입니다. lint/render에도 해당 파일을 전달합니다.
+- root별 Application 목록은 `charts/argo-applications/<root>_local_values.yaml`입니다.
+- upstream 차트는 vendored 형태로 보관합니다. 의존성이 있는 차트의 `Chart.lock`과 패키지도 버전 핀의 일부입니다.
+- 버전 변경이 없다면 검증을 위해 `make deps`나 dependency update를 반복하지 않습니다. 해당 명령은 로컬 lock/vendor를 바꿀 수 있습니다.
+- release, Application 이름과 chart 경로를 바꾸는 작업은 단순 파일명 정리가 아닙니다. 리소스 identity와 삭제 영향을 먼저 검토합니다.
+
+## 사전 준비와 최초 부트스트랩
+
+필요한 준비물은 다음과 같습니다.
+
+- 접근 가능한 kubeadm 클러스터와 정상 동작하는 CNI.
+- 개인 홈랩의 `kkamji-lab` context와 필요한 namespace/권한. 회사나 다른 클러스터 context를 대상으로 실행하지 않습니다.
+- Git, Make, kubectl, Helm. 배포 renderer와 Helm 버전은 [업그레이드 runbook](docs/argocd-upgrades.md)의 호환성 기준을 따릅니다.
+- 문서 검사에 필요한 Python 3. `jq`는 일부 진단 명령에서 사용합니다.
+- 저장소 접근용 GitHub App, SSM `SecureString`, ESO/SecretStore, 인증서와 Gateway 경로의 사전 준비. Secret 값은 저장소나 셸 명령 인자로 전달하지 않습니다.
+- 배포할 서비스가 요구하는 DNS/LoadBalancer와 storage/PVC 준비. 이 저장소의 애플리케이션 선언만으로 외부 의존성이 준비되지는 않습니다.
+
+먼저 `kubectl config current-context`로 대상을 확인하고 [bootstrap 절차](docs/operations.md#bootstrap)를 읽습니다. `make setup`은 dependency 갱신과 실제 클러스터 apply를 포함하는 신규 환경용 명령입니다. 이미 운영 중인 클러스터에서 동기화를 재촉하려고 재실행하는 명령이 아닙니다.
+
+이 저장소는 `helm install/upgrade/rollback`을 일상 배포 경로로 사용하지 않습니다. 최초 bootstrap은 Argo CD와 같은 field manager를 쓰는 server-side apply 경로이며, 이후에는 검토한 Git 변경을 Argo CD가 반영합니다. 이는 무조건 안전한 복구나 필드 소유권 충돌의 자동 해결을 보장하지 않습니다.
+
+## 일반 변경 흐름
+
+1. 최신 원격과 작업 상태를 확인합니다. 격리된 작업 branch/worktree에서 관련 chart, values와 연결 문서만 수정합니다. 다른 사람의 변경을 stash/reset하거나 함께 stage하지 않습니다.
+2. [검증 절차](docs/operations.md#validation)에 따라 전체 render, 대상 chart lint, 문서 검사와 diff를 확인합니다. 버전, API, 라우팅, Secret/PVC와 권한 변경의 영향을 검토합니다.
+3. 검토한 범위만 commit/push합니다. `main`에 반영할 권한이 있는 변경만 배포 경계를 넘깁니다.
+4. 반영 후 source revision, sync/health, workload와 요청한 서비스 동작을 확인합니다. PR 생성, push 성공이나 render 성공만으로 배포 완료를 선언하지 않습니다.
+
+서비스의 HTTPRoute는 해당 서비스 차트가 소유하고, Gateway와 공용 TLS listener는 플랫폼 차트가 소유합니다. 신규 라우팅은 [Gateway API 규칙](docs/rules/gateway-api-routing.md)을 따르며 과거 nginx/SSL-passthrough 절차를 복사하지 않습니다.
+
+## 검증과 명령의 범위
+
+| 종류 | 예시 | 주의점 |
 |---|---|---|
-| chart-level (cilium, alloy 등) | `kkamji_local_values.yaml` | 홈랩 환경 override |
-| `argo-applications/` | `<root>_local_values.yaml` | 각 root별 자식 Application 정의 |
-| 미래 EKS 환경 시 | `kkamji_eks_values.yaml` | 일부 차트엔 이미 존재 |
+| 로컬 확인 | `make help`, 대상 chart의 `helm lint`, 전체 `helm template` | 클러스터 apply와 별개입니다. 전체 출력에 Secret 데이터가 포함될 수 있어 출력/보관하지 않습니다. |
+| 문서 검사 | `python3 docs/_meta/docs_lint.py --root . --base origin/main` | 같은 날 본문을 고치면 `updated`도 실제 갱신 시각으로 올립니다. |
+| 클러스터 조회 | context/namespace를 명시한 Application, workload, ESO 상태 확인 | Secret 값은 조회하지 않습니다. |
+| 상태 변경 | `make setup`, `make bootstrap`, `make refresh`, 복구 target | apply, annotation 변경 또는 workload 재시작을 포함할 수 있어 별도 검토가 필요합니다. |
 
-## 부트스트랩 정책 (중요)
+현재 `make template`은 출력 일부를 보여주는 preview이고, `make lint`는 개별 chart의 실패를 무시합니다. 두 target의 종료 코드만으로 검증 완료를 판정하지 않습니다. 전체 render와 대상 values를 적용한 직접 lint 명령은 [검증 정본](docs/operations.md#validation)에 있습니다.
 
-> **`helm install`/`helm upgrade` 는 사용하지 않는다.** 신규 클러스터에서도 `make bootstrap`(= `helm template | kubectl apply --server-side --field-manager=argocd-controller`) **1회**만 실행한다. 이후 모든 변경은 `git push` → ArgoCD self-sync.
+[docs-lint workflow](.github/workflows/docs-lint.yml)는 문서를 검사하고, [OpenClaw workflow](.github/workflows/build-openclaw-dev.yaml)는 이미지를 빌드합니다. 차트 배포 경로는 CI의 수동 Helm 설치가 아니라 Argo CD입니다.
 
-**Why**: helm CLI 는 모든 필드의 managedFields manager 를 `helm` 으로 잡는다. 이후 ArgoCD self-sync(SSA, manager=`argocd-controller`)가 stale 필드(예: 제거된 cert-manager annotation, tls 블록)를 못 빼는 ownership drift 발생. 처음부터 manager 를 `argocd-controller` 로 통일하면 원천 차단된다.
+ARC는 [별도 준비 PR #9](https://github.com/KKamJi98/helm-charts/pull/9)의 후보이며, 이 문서 갱신 시점에는 설치되지 않았습니다. runner 등록이나 실제 ARC CI 성공을 검증한 운영 구성으로 소개하지 않습니다.
 
-진단: `make detect-helm-ownership` — argocd 네임스페이스에서 `manager: helm` 잔존 리소스 탐지. 결과가 비어있어야 정상.
+## 복구와 트러블슈팅
 
-## 부트스트랩 (신규/재설치 클러스터)
+먼저 Git의 의도와 현재 runtime 상태를 분리합니다. 복구 전에는 대상, 변경 영향, 마지막 정상 revision, 데이터 백업과 사후 확인 방법을 정합니다.
 
-> ArgoCD 본체 + AppProjects + Root Applications를 한 번에 띄움.
-> 이후엔 git push만 하면 ArgoCD가 self-sync.
+| 증상 | 먼저 확인할 내용 | 안내 |
+|---|---|---|
+| 변경이 반영되지 않음 | branch/revision, root와 자식 diff, sync 오류, 중단 여부 | [일반 변경](docs/operations.md#normal-changes) |
+| repository 인증 또는 ESO 오류 | ExternalSecret/SecretStore 상태, 접근 권한과 참조 | [Secret 규칙](docs/rules/external-secrets.md) |
+| HTTP/TLS 접근 실패 | Service, HTTPRoute 조건, Gateway/TLS 소유 경계 | [라우팅 규칙](docs/rules/gateway-api-routing.md) |
+| 버전 변경 후 비교/기동 실패 | 고정 버전, renderer, CRD 호환성과 이전 Git revision | [업그레이드/롤백](docs/argocd-upgrades.md) |
+| 제어면 유실, 삭제 대기, ownership 문제 | 리소스 소유자, finalizer와 실제 영향 | [복구 정본](docs/operations.md#recovery) |
 
-### 1. 사전 준비
+Git 역변경은 원하는 리소스 구성을 되돌리는 경로이지 DB/PVC 데이터 복구가 아닙니다. `make recover-secrets`는 재apply와 workload 재시작을 포함합니다. finalizer 제거, Namespace/Secret/PVC/CRD 삭제와 강제 ownership 변경을 일반 해결책으로 실행하지 않습니다.
 
-- KubeADM 클러스터 + cilium CNI 동작
-- external-secrets Operator + `parameter-store` ClusterSecretStore (AWS SSM 연결) 사전 설치
-- cert-manager + ClusterIssuer `letsencrypt-prod` 사전 설치
-- AWS SSM에 GitHub App 자격증명 저장:
-  ```bash
-  aws ssm put-parameter --name "/kkamji/argocd/github-app/app-id" --type SecureString --value "<APP_ID>" --overwrite
-  aws ssm put-parameter --name "/kkamji/argocd/github-app/installation-id-personal" --type SecureString --value "<INST_PERSONAL>" --overwrite
-  aws ssm put-parameter --name "/kkamji/argocd/github-app/installation-id-kuberca"  --type SecureString --value "<INST_KUBERCA>"  --overwrite
-  aws ssm put-parameter --name "/kkamji/argocd/github-app/private-key" --type SecureString --value "$(cat ~/path/to/argocd-app.pem)" --overwrite
-  ```
-- (선택) AWS SSM 에 GitHub webhook shared secret 저장 — push 즉시 sync 용:
-  ```bash
-  aws ssm put-parameter \
-    --name /kkamji/argocd/github-webhook/secret \
-    --type SecureString \
-    --value "$(openssl rand -hex 32)" --overwrite
-  ```
+## 보안과 Secret 경계
 
-### 2. 부트스트랩 (Makefile 기반)
+- 외부 관리 자격증명은 AWS SSM `SecureString`에 두고, ESO가 참조를 Kubernetes Secret으로 연결합니다. Git에는 참조와 선언만 둡니다. 차트나 controller가 생성하는 Secret까지 모두 SSM에서 복원된다고 가정하지 않습니다. 삭제/회전은 [ESO 수명주기 규칙](docs/rules/external-secrets.md)을 먼저 확인합니다.
+- 토큰, private key, 비밀번호, kubeconfig 인증 데이터와 Secret 값을 문서/로그/커밋에 넣지 않습니다. `.gitignore`는 이미 추적한 값이나 로그 노출을 막아주지 않습니다.
+- 렌더 결과나 진단 출력도 Secret을 포함할 수 있습니다. 값 전체를 출력하지 않고 상태와 참조만 확인합니다.
+- 현재 AppProject에는 source repository, namespace와 리소스 허용 범위의 `*` 설정이 남아 있습니다. 엄격한 멀티테넌트 격리나 최소 권한을 보장하는 구성으로 소개하지 않습니다. Namespace는 VM 수준의 격리가 아닙니다.
+- 권한, 네트워크, 외부 인증/등록과 GitOps 활성화는 문서/PR 게시 승인에 포함되지 않습니다.
 
-```bash
-cd ~/code/helm-charts/main
-
-make setup        # = make deps + make bootstrap
-                  # 내부: helm dependency update
-                  #     + helm template | kubectl apply --server-side
-                  #         --field-manager=argocd-controller --force-conflicts
-                  # → helm release secret 미생성, 처음부터 ArgoCD 와 동일 manager
-
-# 다른 namespace/release로 띄우려면:
-make setup RELEASE=argocd NAMESPACE=argocd
-```
-
-부트스트랩 후 root Application 들이 즉시 생성되고, `argocd` self-Application (charts/argo-applications/management_local_values.yaml 정의)이 자기 자신을 self-manage 시작한다. 이후 `make bootstrap` 재실행은 불필요(원하면 idempotent SSA 라 안전하지만, 일상 변경은 git push 만 사용).
-
-### 3. (선택) GitHub webhook 등록
-
-3분 polling 대신 push 즉시 sync 하려면, GitHub repo Settings → Webhooks 에 등록:
-
-| 필드 | 값 |
-|---|---|
-| Payload URL | `https://argocd.kkamji.net/api/webhook` |
-| Content type | `application/json` |
-| Secret | (위 SSM 에 저장한 hex 값) |
-| Events | Just the push event |
-
-> ESO 가 `/kkamji/argocd/github-webhook/secret` SSM 값을 `argocd-secret` 의 `webhook.github.secret` 키로 merge 한다 (`charts/argocd/templates/webhook-secret.yaml`). ArgoCD 는 secret 변경 자동 감지 → pod 재시작 불필요.
-
-### 4. 자동 propagation 확인
-
-```bash
-make status       # AppProject 5개 + Application 4 root + 23 children + ExternalSecret 한눈에
-
-# 또는 raw kubectl
-kubectl -n argocd get appproject
-kubectl -n argocd get app -o wide
-kubectl -n argocd get externalsecret
-```
-
-## 일상 운영
-
-> **변경 흐름은 `git push` 하나만**.
-
-```bash
-# 1) 차트/values 수정
-$EDITOR charts/<chart>/kkamji_local_values.yaml
-
-# 2) commit + push
-git add -A && git commit -m "fix(<chart>): <change>" && git push
-
-# 3) ArgoCD가 webhook 또는 polling(3분)으로 자동 감지·동기화
-#    즉시 트리거하고 싶으면:
-make refresh       # 모든 root에 hard refresh
-# 또는 단일:
-kubectl -n argocd annotate app <name> argocd.argoproj.io/refresh=hard --overwrite
-```
-
-수동 helm 명령(`helm install`/`helm upgrade`) 절대 금지. 부트스트랩에도 SSA 만 사용. 자세한 이유는 상단 [부트스트랩 정책](#부트스트랩-정책-중요) 참조.
-
-### Make targets
-
-```
-make help                  # 전체 target 도움말
-make setup                 # deps + bootstrap (부트스트랩)
-make deps                  # helm dependency update
-make bootstrap             # helm template | kubectl apply --server-side (SSA)
-make refresh               # 모든 root hard refresh
-make status                # 현재 상태 스냅샷
-make template              # helm template 검증 (apply 없이)
-make lint                  # helm lint 전 차트
-make recover-secrets       # argocd-cm/secret 등 사라졌을 때 재apply + rollout restart
-make unstick-projects      # AppProject Pending deletion stuck 해소
-make detect-helm-ownership # (진단) argocd ns 에 manager=helm 잔존 리소스 탐지
-```
-
-## 시크릿 관리
-
-### Source of truth: AWS SSM Parameter Store
-- 모든 secret은 SSM `SecureString` (KMS 암호화)
-- `/kkamji/<scope>/<resource>/<key>` 네이밍
-
-### 주입 방식: External Secrets Operator
-- argocd 자체 credential: `charts/argocd/templates/repo-credentials.yaml`이 ExternalSecret 생성 → ESO가 SSM에서 fetch → `argocd` ns Secret 생성
-- 그 외 ExternalSecret은 `kube-rca/k8s-resources` repo에서 별도 관리
-
-### GitHub App 인증 (private repo fetch)
-- 단일 GitHub App, KKamJi98 + kube-rca 두 곳에 install
-- App ID + Private key는 공유, Installation ID만 다름
-- ArgoCD repo-creds Secret 2개를 ESO가 자동 생성:
-  - `github-app-creds-personal` → `https://github.com/KKamJi98/`
-  - `github-app-creds-kuberca` → `https://github.com/kube-rca/`
-
-회전 시 `aws ssm put-parameter --overwrite`만 하면 ESO가 1시간 내 자동 sync.
-
-## 이름 규칙 (renaming 금지)
-
-부트스트랩 후 다음은 **rename 시 ouroboros 충돌**로 서비스 영향 가능. 절대 변경 금지:
-
-| 항목 | 고정 이름 |
-|---|---|
-| Helm release name | `argocd` |
-| Umbrella chart 폴더/이름 | `charts/argocd` |
-| Self-managed Application name | `argocd` |
-| Root Application names | `<project>-root` (management-root, …) |
-| values 파일 패턴 | `kkamji_local_values.yaml`, `<root>_local_values.yaml` |
-
-신규 chart 추가는 자유, 기존 rename은 별도 PR로 신중히 (cluster 측 마이그레이션 동반 필요).
-
-## 복구 / 트러블슈팅
-
-### 1. argocd-cm/argocd-secret이 사라짐
-ArgoCD 자체 ConfigMap/Secret이 cascade로 지워진 경우. SSA 로 재apply + rollout:
-```bash
-make recover-secrets
-# 내부: make bootstrap (재apply) + rollout restart deploy/statefulset
-```
-
-### 2. AppProject가 `Pending deletion`으로 stuck
-deletionTimestamp가 박힌 채 finalizer로 멈춤. K8s는 `deletionTimestamp` 해제 불가:
-```bash
-for proj in argocd kuberca management; do
-  kubectl -n argocd patch appproject $proj --type=json \
-    -p='[{"op":"remove","path":"/metadata/finalizers"}]'
-done
-# 5초~30초 후 ArgoCD self-sync로 재생성
-```
-
-### 3. Application이 `default` project에 박혀있음
-옛 부모 Application이 spec을 default로 덮어쓰는 중:
-```bash
-NS=argocd
-orphan_del() {
-  kubectl -n $NS patch app "$1" --type=json -p='[{"op":"remove","path":"/metadata/finalizers"}]' 2>/dev/null
-  kubectl -n $NS delete app "$1" --cascade=orphan
-}
-# 옛 부모 제거 (자식 리소스는 보존)
-orphan_del argo-applications
-orphan_del argocd     # 옛 self-managed
-# 새 root이 spec 갱신
-for r in management-root automation-root personal-root kuberca-root; do
-  kubectl -n $NS annotate app "$r" argocd.argoproj.io/refresh=hard --overwrite
-done
-```
-
-### 4. cilium-operator CrashLoopBackOff
-`k8sServiceHost: auto`는 agent만 지원, operator는 거부. 명시 endpoint 필수:
-```yaml
-# charts/cilium/kkamji_local_values.yaml
-k8sServiceHost: 10.0.0.101   # 단일 master IP
-k8sServicePort: 6443
-```
-HA로 전환 시 VIP/LB로 변경.
-
-### 5. cert-manager HTTP-01 challenge가 nginx-ingress에 거부
-ingress-nginx v1.10+가 `pathType: Exact`를 거부. ClusterIssuer에서:
-```yaml
-solvers:
-  - http01:
-      ingress:
-        ingressClassName: nginx   # ← 'class' (deprecated)이 아닌 ingressClassName
-```
-
-### 6. ExternalSecret CRD apiVersion 미스매치
-ESO 0.10 미만이면 `external-secrets.io/v1` 미지원, `v1beta1` 사용:
-```bash
-kubectl api-resources --api-group=external-secrets.io
-# 클러스터 등록 버전 확인 후 템플릿 apiVersion 일치
-```
-
-### 7. Certificate가 동일 secretName 두고 다툼 (ssl-passthrough 환경)
-`Secret was issued for "argocd-server"` 경고가 반복. 원인은 두 가지가 동시에 같은 Secret 발급을 요구하는 것:
-- `server.certificate.enabled: true` → `Certificate/argocd-server`
-- Ingress 의 `cert-manager.io/cluster-issuer` annotation + `tls: true` → ingress-shim 이 `Certificate/<secretName>` 자동 생성
-
-ssl-passthrough 환경에서는 TLS 종료를 argocd-server pod 가 직접 하므로 명시적 Certificate 하나만 필요. Ingress 측 auto-issue 를 끄는 것이 정답:
-
-```yaml
-# charts/argocd/kkamji_local_values.yaml
-argocd:
-  server:
-    ingress:
-      tls: false      # ingress-shim 이 Certificate 안 만들게
-      annotations:
-        # cert-manager.io/cluster-issuer: 제거
-        nginx.ingress.kubernetes.io/ssl-passthrough: "true"
-        # ...
-```
-
-> **선결조건**: `nginx.ingress.kubernetes.io/ssl-passthrough` annotation 은 ingress-nginx 컨트롤러에 `--enable-ssl-passthrough` flag 가 **명시적으로** 켜져 있어야 해석된다. 안 켜져 있으면 annotation 이 무시되고 nginx 가 fake default 인증서로 응답한다 (브라우저 `NET::ERR_CERT_AUTHORITY_INVALID`). `charts/ingress-nginx/kkamji_local_values.yaml` 에서 `controller.extraArgs.enable-ssl-passthrough: "true"` 로 활성화. 이 flag 는 컨트롤러 전역이지만 passthrough annotation 이 없는 다른 호스트는 영향 없음.
-
-기존에 만들어진 잔여 Certificate 수동 삭제:
-```bash
-kubectl -n argocd delete certificate argocd-server-tls
-```
-
-### 8. SSA ownership drift — Helm 잔존 manager 가 ArgoCD self-sync 를 무력화
-증상: values 에서 annotation/필드를 제거했는데 클러스터 객체에서는 그대로 살아있음. ArgoCD 는 "Synced" 라고 보고. 원인: 옛 `helm install/upgrade` 가 박은 `manager: helm` 이 SSA 로 못 빠지고 잔존.
-
-진단:
-```bash
-make detect-helm-ownership
-# 결과 비어있어야 정상
-```
-
-청소:
-```bash
-NS=argocd
-for resource in $(make detect-helm-ownership 2>/dev/null | grep -v '==>' | grep -v '결과'); do
-  kubectl -n $NS get "$resource" --show-managed-fields -o json \
-    | jq 'del(.metadata.managedFields[] | select(.manager == "helm"))' \
-    | kubectl replace -f -
-done
-# helm release secret 도 함께 삭제 (ArgoCD 가 모든 리소스 관리하므로 안전)
-kubectl -n $NS delete secret -l owner=helm
-```
-
-청소 후 ArgoCD sync 트리거하면 stale 필드가 자동 제거됨. **재발 방지**: `helm install/upgrade` 사용 금지, `make bootstrap` (SSA) 만 사용.
-
-### 9. ESO ExternalSecret 영구 OutOfSync
-ESO CRD가 `conversionStrategy/decodingStrategy/metadataPolicy` 등을 default로 주입. git에도 동일하게 명시해야 drift 안 남:
-```yaml
-data:
-  - secretKey: ...
-    remoteRef:
-      key: ...
-      conversionStrategy: Default
-      decodingStrategy: None
-      metadataPolicy: None
-```
-
-## 핵심 교훈
-
-이 repo는 다음 함정을 모두 한 번씩 밟고 정리된 상태이다.
-
-1. **이름은 부트스트랩 전에 결정, 이후 rename 금지** — release name / chart name / Application name 불일치는 라벨 충돌의 근원.
-2. **`helm install/upgrade` 금지, SSA-only 부트스트랩** — helm CLI 가 박는 `manager: helm` 이 ArgoCD self-sync 의 stale 필드 제거를 영구히 차단함. `make bootstrap` (= `helm template | kubectl apply --server-side --field-manager=argocd-controller`) 으로 처음부터 manager 를 통일. 과거 `--take-ownership` 패턴은 self-perpetuating cycle 이라 폐기됨.
-3. **ESO CRD default 필드는 git에도 명시** — 안 쓰면 영구 OutOfSync.
-4. **AppProject deletionTimestamp는 K8s가 unset 못함** — finalizer 제거 후 ArgoCD가 재생성하도록.
-5. **secret은 SSM/ESO에 두고 git에는 절대 안 둠** — `secret-values.yaml`은 `.gitignore`에.
-6. **ssl-passthrough Ingress 와 `server.certificate` 는 둘 중 하나만** — 동시 활성화 시 같은 Secret 을 두 Certificate 가 다툼 (#7 참조).
 
 ## 라이선스
 
-MIT (LICENSE 참고).
+[MIT License](LICENSE).
