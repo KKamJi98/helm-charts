@@ -25,13 +25,20 @@ status: current
 
 ## 검증 순서
 
-1. `kkamji-lab` context와 `argocd` namespace를 명시하고 source revision, 앱 상태, workload images/readiness, CRD storedVersions, ESO 상태를 기록합니다. Secret 값은 조회하지 않습니다.
+1. `kkamji-lab` context와 `argocd` namespace를 명시하고 source revision, 앱 상태, workload images/readiness, CRD storedVersions, ESO 상태를 기록합니다. `argocd.argoproj.io/skip-reconcile=true` 앱은 사전 목록을 보존합니다. Secret 값은 조회하지 않습니다.
 2. 작업 worktree에서 dependency pin과 vendor/lock을 함께 갱신합니다. 공식 chart index digest와 다운로드한 패키지 SHA-256을 비교합니다. 변경하지 않은 argo-projects 패키지의 bytes는 보존합니다.
 3. 같은 release/namespace/Kubernetes API capabilities/values로 기존과 후보를 렌더합니다. Secret 데이터는 출력하거나 증거에 저장하지 않습니다. 객체 제거, 중복 identity, immutable selector, Service/route, PVC, AppProject/root Application, ESO target/ownership 변경을 검사합니다.
 4. CRD를 먼저 server-side dry-run하고 나머지 비밀이 아닌 리소스를 검증합니다. 기존 hook Job은 before-hook-creation 재생성 정책을 따릅니다. dry-run의 field-manager label 충돌과 실제 schema/immutable 오류를 구분합니다. force-conflicts를 쓴 dry-run은 실제 ownership 변경이 아닙니다.
 5. 배포된 revision 및 실제 values로 관리 중인 Helm 앱들을 Helm 4.2.1에서 렌더합니다. 다른 저장소의 dirty checkout을 수정하거나 pull하지 않습니다.
 6. 영향 요약 후 검증한 commit만 main에 반영하고 push합니다. Argo CD의 CRD 우선 적용 및 workload rollout을 관찰합니다. 실패 시 임의의 Secret 초기화/CRD 삭제/강제 rollout을 하지 않습니다.
-7. 새 revision의 Synced/Healthy, 최종 image 및 init container 완료, CRD Established/storedVersions, ESO Ready, HTTPS UI/health/version, 확장 JS를 확인합니다. 이후 정규 reconciliation에서도 모든 앱 상태가 유지되는지 확인합니다. 실제 인증을 수행하지 않았으면 로그인/SSO 검증으로 표현하지 않습니다.
+7. 새 revision의 Synced/Healthy, 최종 image 및 init container 완료, CRD Established/storedVersions, ESO Ready, HTTPS UI/health/version, 확장 JS를 확인합니다. 활성 앱은 이후 정규 reconciliation의 timestamp 진행과 정상 상태를 확인합니다. 기존 skip-reconcile 앱은 재개하지 않으며 과거 Healthy 상태를 최신 runtime 검증으로 세지 않습니다. 실제 인증을 수행하지 않았으면 로그인/SSO 검증으로 표현하지 않습니다.
+
+## 적용 결과
+
+- release commit `c380fa5229575061000d34582853d489fa188e6d`를 main에 push한 뒤 Argo CD self-sync가 Succeeded로 완료되었습니다.
+- 2026-10-15 19:51 KST 확인: 제어면 workload 7개 ready, 활성 앱 19개 Synced/Healthy 및 후속 정규 reconciliation 진행, CRD 3개 Established=True/storedVersions=[v1alpha1], ESO 4개 Ready=True입니다.
+- kiali-operator, n8n, real-life-rpg는 배포 전부터 skip-reconcile=true였습니다. 중단 상태와 과거 status를 보존했으며 재개하거나 runtime 재검증 완료로 표현하지 않습니다.
+- HTTPS의 UI/health/version/확장 JS가 HTTP 200이었고 version API는 v3.5.5였습니다. 제공된 확장 JS의 host ReactDOM 사용과 구 ReactDOM bundle 부재를 확인했습니다. 실제 사용자 로그인/SSO와 인증 후 Rollouts 화면 조작은 검증하지 않았습니다.
 
 ## 이번 후보의 preflight 근거
 
