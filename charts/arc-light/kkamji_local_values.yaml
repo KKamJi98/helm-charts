@@ -13,6 +13,7 @@ listenerTemplate:
   spec:
     nodeSelector:
       kubernetes.io/hostname: k8s-w2
+    priorityClassName: arc-ci-nonpreempting
     preemptionPolicy: Never
     securityContext:
       runAsNonRoot: true
@@ -45,6 +46,7 @@ template:
     serviceAccountName: arc-light-job
     nodeSelector:
       kubernetes.io/hostname: k8s-w2
+    priorityClassName: arc-ci-nonpreempting
     preemptionPolicy: Never
     terminationGracePeriodSeconds: 30
     securityContext:

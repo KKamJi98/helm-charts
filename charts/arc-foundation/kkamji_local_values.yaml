@@ -1,3 +1,5 @@
 # Enable only after the exact credential grants and secure ESO delivery are approved.
 githubAuth:
   enabled: false
+priorityClass:
+  enabled: true

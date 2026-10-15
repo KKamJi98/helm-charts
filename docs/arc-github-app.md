@@ -1,6 +1,6 @@
 ---
 title: ARC GitHub App authentication security review
-updated: 2026-10-15T23:38:52+09:00
+updated: 2026-10-16T01:39:48+09:00
 type: runbook
 status: current
 ---
@@ -13,6 +13,9 @@ GitHub App is the user-selected long-term direction. This document is preparatio
 and security review only. No App creation, installation, private-key input,
 credential access, runner registration or CI execution is authorized by this text.
 The independently approved controller/foundation rollout does not authorize them.
+A separate explicit approval has since covered App creation/installation only.
+The private App and exact two-repository installation were read back successfully;
+no private key was generated/read/input and no runner or CI has executed.
 
 Keep the ARC App separate from the existing Argo CD repository-access App. Do not
 change that App's permissions, key or installation. Never print, request in chat,
@@ -20,8 +23,9 @@ copy into reports, or hash private-key/PAT/SSM/Secret values.
 
 ## Precise proposed grant
 
-- Owner: the personal account KKamJi98. Proposed ARC-specific name: kkamji-lab-arc.
-  Name availability has not been verified and no App has been created.
+- Owner: the personal account KKamJi98. The dedicated private ARC App was created
+  only after the exact separate approval and a duplicate-name check. Real App and
+  installation identifiers are kept out of this public runbook.
 - Installation restricted to exactly KKamJi98/kkamji-platform and
   KKamJi98/binance-quant-lab, never all repositories or an organization-wide pool.
 - Repository Administration read/write, required by repository runner registration,
@@ -29,9 +33,9 @@ copy into reports, or hash private-key/PAT/SSM/Secret values.
   organization Self-hosted runners permission is proposed for registration.
 - Private installation on the owner account. No webhook/callback endpoint or
   general user OAuth flow is needed for the proposed server-to-server ARC use.
-- App creation/installation, the private-key delivery path and registration/light
-  canary each remain subject to the exact security confirmation. A review intent
-  or a successful render is not that confirmation.
+- App creation/installation approval is complete. The private-key delivery path
+  and registration/light canary still need their exact security confirmation.
+  A review intent, App installation or successful render is not that confirmation.
 
 Personal-account GitHub Apps and repository registration using App installation
 access tokens are documented. The current ARC walkthrough uses organization

@@ -1,2 +1,4 @@
 githubAuth:
   enabled: false
+priorityClass:
+  enabled: false

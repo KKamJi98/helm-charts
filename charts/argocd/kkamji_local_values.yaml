@@ -383,6 +383,8 @@ argo-projects:
         kind: Namespace
       - group: apiextensions.k8s.io
         kind: CustomResourceDefinition
+      - group: scheduling.k8s.io
+        kind: PriorityClass
       namespaceResourceWhitelist:
       - group: ''
         kind: ServiceAccount

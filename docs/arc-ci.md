@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-15T23:38:52+09:00
+updated: 2026-10-16T01:39:48+09:00
 type: runbook
 status: current
 ---
@@ -57,7 +57,13 @@ concurrency groups do not coordinate repositories. Heavy CI is not routed here y
 All components initially select k8s-w2. Controller request128Mi/limit256Mi,
 each listener64Mi/128Mi, sole job256Mi/512Mi. Aggregate request512Mi/limit1024Mi,
 CPU request450m/limit2. Job disk-backed emptyDir1536Mi, ephemeral-storage limit2Gi.
-Job preemptionPolicy Never; restricted/v1.36 namespace PSS; no workload eviction.
+Jobs and listeners select arc-ci-nonpreempting with preemptionPolicy Never.
+This opt-in PriorityClass has value0 and globalDefault=false; it cannot preempt
+existing workloads and changes no other Pod priority. Restricted/v1.36 PSS remains.
+The class is default-off in the reusable foundation chart and enabled only in
+its local values. The arc-ci project adds only scheduling.k8s.io/PriorityClass.
+Without the matching class, actual Priority admission rejected a standalone
+Pod declaring Never; Helm rendering alone did not validate scheduling admission.
 2026-10-15 observed w2 usage3010Mi/59%, allocatable5057Mi, requests2537Mi/50%.
 Using aggregate limits leaves roughly1023Mi in that snapshot, not a peak guarantee.
 Recheck MemoryPressure, peak service/host usage, and disk headroom before activation.
@@ -65,9 +71,11 @@ No VM changes are included. Heavy compilation requires a separately measured bud
 
 ## Credentials and network approval
 
-The user selected a dedicated GitHub App for long-term operation, restricted to
-exactly the two repositories. This is review/preparation intent, not App creation,
-installation, private-key input, registration or canary approval. Follow the
+The user separately approved creation/installation of a private ARC GitHub App
+on exactly the two repositories; saved permissions and selected repositories
+were read back successfully. Administration read/write and Metadata read are
+the only grants. No key generation/input, registration or CI was performed.
+This completed approval does not authorize those later steps. Follow the
 [GitHub App security review](arc-github-app.md) for the precise proposed grant,
 shared-key authority, secure storage, rotation and recovery.
 
@@ -141,10 +149,21 @@ failure fixes and cleanup readback. Record light canary and full workflows
 separately. GitHub-hosted success is not ARC success. No successful run exists yet.
 Provide verified records to the separate blog owner; this change does not edit it.
 
-## Approval-wait verification, 2026-10-15
+## Historical preparation and limited diagnostic approval
 
-No live application, credential creation, workflow dispatch or full CI execution
-has occurred. The following is a migration plan, not measured capacity or success.
+The following capacity/queue notes originated before controller activation.
+Subsequent controller and App installation evidence is recorded above; neither
+is proof of ARC job execution. Full CI remains unexecuted.
+
+A separate approval covers the opt-in class/project grant and one unregistered
+ci-pr diagnostic Pod on the selected worker, at most180seconds/500mCPU/512Mi.
+It overrides the runner command, uses the pinned official public base image,
+mounts no API token/host path/socket or credential, and retains RuntimeDefault,
+nonroot, drop ALL and no privilege escalation. Collect its exact exit/logs and
+delete only that owned Pod. No registry publish, key creation/input, registration,
+full CI, VM change or security-profile relaxation is included. Revalidate after
+class synchronization; the old no-class server dry-run was correctly rejected.
+A namespace primitive pass still does not qualify Docker, bwrap projection or CI.
 
 ### Shared quota behavior and recovery
 
@@ -249,6 +268,16 @@ comment and commands disable host AppArmor userns restriction and container
 seccomp/AppArmor/masked proc paths so nested unprivileged namespaces and a fresh
 proc mount work. Nonroot UID alone does not grant those kernel operations.
 The existing restricted Pod with RuntimeDefault is not demonstrated compatible.
+
+An independent local Docker diagnosis identified builtin seccomp as the immediate
+namespace blocker: unshare(0) and namespace clone fail, while ordinary clone and
+/proc/self/exe re-exec succeed, matching the actual engine-commit profile. Local
+AppArmor is disabled; userns support, positive limits, subuid/subgid and mapping
+helpers exist. The NNP/zero-capability multi-ID mapping helper barrier is a
+predicted later failure, not an observed helper-stage failure. Do not copy these
+Docker results to Kubernetes RuntimeDefault. The user prefers Kubernetes: obtain
+actual node evidence before any explicit decision about an unvalidated VM design.
+Custom seccomp comparisons are prepared-only and remain unauthorized.
 
 A native ephemeral unprivileged Ubuntu26.04 VM with supported user namespaces
 avoids nested Docker restrictions while retaining bwrap and no-network assertions,
