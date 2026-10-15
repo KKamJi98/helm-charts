@@ -10,16 +10,16 @@
 - frontmatter 필수 키 네 개: `title`, `updated`, `type`, `status`. 새 문서는 `docs/index.md` 에 등록한다.
 - `docs/_meta/coupling.json` 에 매핑된 파일을 바꾸면 같은 PR 에서 해당 문서도 바꾼다.
 - `docs/_meta/docs_lint.py` 는 손으로 고치지 않는다. 정본은 `kkamji-settings/agents/docs-wiki/docs_lint.py` 다.
-- 검증: `python3 docs/_meta/docs_lint.py --root .`
+- 검증: PR 대상 최종 커밋에서 `python3 docs/_meta/docs_lint.py --root . --base origin/main`. 미커밋 초안에서는 freshness/coupling 검증을 완료로 표시하지 않는다. 링크/anchor 보완 검사는 `docs/operations.md`를 따른다.
 
 ## 0. 프로젝트 개요
-- KKamJi homelab 의 ArgoCD GitOps 단일 source of truth. KubeADM bare-metal 클러스터(`k8s-m1` control-plane, `k8s-w1`/`k8s-w2` worker; Cilium + MetalLB)를 단일 ArgoCD 가 관리.
+- Windows PC의 Hyper-V VM에 kubeadm으로 구축한 개인 Kubernetes 홈랩의 Argo CD GitOps 정본이다. VM/OS/클러스터 구축과 애플리케이션 GitOps 관리를 구분한다.
 - 기술 스택: Helm(`charts/`), Shell(`Makefile`, `scripts/`), Docker(openclaw 이미지).
 - 활성 차트는 `charts/`, 폐기 자산은 `_archived/`(수정/배포 대상 아님), EKS 전용은 `eks-charts/`.
 
 ## 1. GitOps 배포 흐름 (커밋 전 필독)
-- 모든 ArgoCD Application 은 이 repo 의 `targetRevision=main` 을 추적한다. `main` push -> GitHub webhook -> ArgoCD self-sync(`prune` + `selfHeal` + `ServerSideApply`). 즉 **`main` push = 즉시 클러스터 apply**.
-- 일상 변경은 `main` 에 직접 커밋한다. feature 브랜치는 배포되지 않으므로, 글로벌 "branch first" 기본값보다 이 정책을 우선한다.
+- 이 repo를 추적하는 GitOps 경로의 기준은 `main`이다. 자식 Application의 외부 repository/chart revision은 각 선언을 확인한다. webhook/polling 뒤 자동 sync(`prune` + `selfHeal` + `ServerSideApply`)가 설정되어 있으므로 `main` push는 실제 배포 경계다.
+- 변경은 격리 branch/worktree에서 검증한다. 승인된 범위만 `main`에 반영하며, branch push/PR 게시와 자동 배포를 구분한다. 작업 위치와 버전 변경은 `docs/argocd-upgrades.md`를 따른다.
 - push 전 변경 범위를 확정하고 무관한 WIP 는 커밋에서 제외한다. 한 파일에 관심사가 섞이면 `git add <file>` 대신 `git apply --cached` 로 해당 헝크만 staging 한다.
 - 사용자가 세션 중 같은 repo 에서 병렬로 커밋/푸시할 수 있다. commit/push 직전 `git fetch` + `git status` 로 재확인하고, 사용자 WIP 를 함께 쓸어담지 않도록 `git commit -- <paths>`(pathspec) 로 커밋한다.
 
@@ -52,7 +52,7 @@
 - `git commit -- <pathspec>` 는 untracked 신규 파일을 포함하지 않는다. 신규 템플릿 파일은 `git add` 후 커밋한다 (누락 시 ArgoCD 가 partial 로 sync 되어 조용히 깨진다).
 
 ## 8. CI/CD
-- GitHub Actions 는 `.github/workflows/build-openclaw-dev.yaml`(openclaw 이미지 빌드) 하나뿐이다. 차트 배포 CI 는 없고 ArgoCD self-sync 가 배포를 담당한다.
+- GitHub Actions의 문서 검사는 `.github/workflows/docs-lint.yml`, OpenClaw 이미지 빌드는 `.github/workflows/build-openclaw-dev.yaml`이다. 차트 배포는 Argo CD self-sync가 담당한다.
 
 ## 9. Gateway API 라우팅
 - 소유 경계, 신규 서비스 온보딩, SSA diff 방지, 인증서 규칙은 `docs/rules/gateway-api-routing.md` 가 정본이다.
