@@ -50,3 +50,57 @@ applications:
         name: openclaw-gateway-auth
         jsonPointers:
           - /data
+
+  arc-foundation:
+    enabled: false
+    name: arc-foundation
+    project: arc-ci
+    destination:
+      namespace: arc-system
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/arc-foundation
+      helm:
+        valueFiles:
+        - kkamji_local_values.yaml
+  arc-controller:
+    enabled: false
+    name: arc-controller
+    project: arc-ci
+    destination:
+      namespace: arc-system
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/arc-controller
+      helm:
+        valueFiles:
+        - kkamji_local_values.yaml
+        skipCrds: false
+  arc-light:
+    enabled: false
+    name: arc-light
+    project: arc-ci
+    destination:
+      namespace: ci-pr
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/arc-light
+      helm:
+        valueFiles:
+        - kkamji_local_values.yaml
+  arc-bql-light:
+    enabled: false
+    name: arc-bql-light
+    project: arc-ci
+    destination:
+      namespace: ci-pr
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/arc-bql-light
+      helm:
+        valueFiles:
+        - kkamji_local_values.yaml

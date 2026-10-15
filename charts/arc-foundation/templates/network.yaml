@@ -1,0 +1,78 @@
+{{- range $ns := list "arc-system" "ci-pr" }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: {{ $ns }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: arc-dns
+  namespace: {{ $ns }}
+spec:
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s:k8s-app: kube-dns
+      toPorts:
+        - ports: [{port: "53", protocol: ANY}]
+          rules:
+            dns:
+              - {matchName: github.com}
+              - {matchName: api.github.com}
+              - {matchName: codeload.github.com}
+              - {matchPattern: "*.blob.core.windows.net"}
+              - {matchPattern: "*.actions.githubusercontent.com"}
+              - {matchPattern: "*.githubusercontent.com"}
+              - {matchName: kubernetes.default.svc.cluster.local}
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: arc-github-egress
+  namespace: {{ $ns }}
+spec:
+  endpointSelector: {}
+  egress:
+    - toFQDNs:
+        - {matchName: codeload.github.com}
+        - {matchPattern: "*.blob.core.windows.net"}
+        - {matchName: github.com}
+        - {matchName: api.github.com}
+        - {matchPattern: "*.actions.githubusercontent.com"}
+        - {matchPattern: "*.githubusercontent.com"}
+      toPorts:
+        - ports: [{port: "443", protocol: TCP}]
+---
+{{- end }}
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: arc-control-api
+  namespace: arc-system
+spec:
+  endpointSelector:
+    matchLabels:
+      arc.kkamji.net/role: control
+  egress:
+    - toEntities: [kube-apiserver]
+      toPorts:
+        - ports: [{port: "6443", protocol: TCP}, {port: "443", protocol: TCP}]
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: arc-job-deny-host
+  namespace: ci-pr
+spec:
+  endpointSelector:
+    matchLabels:
+      arc.kkamji.net/role: job
+  egressDeny:
+    - toEntities: [host, remote-node, kube-apiserver]

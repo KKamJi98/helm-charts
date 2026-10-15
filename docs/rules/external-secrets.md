@@ -1,6 +1,6 @@
 ---
 title: External Secrets rules
-updated: 2026-08-24
+updated: 2026-10-15T21:43:48+09:00
 type: rule
 status: current
 ---
@@ -15,3 +15,7 @@ ESO 매니페스트를 고칠 때 함께 확인한다. 아래 항목은 전부 �
 - SSM ParameterStore 키 네이밍: `/kkamji/<component>/<purpose>` (예: `/kkamji/external-dns/aws-credentials`). 다중 키 자격증명은 SecureString JSON 1개 + `dataFrom.extract` 로 분해한다.
 - ExternalSecret/CES 가 부트스트랩 직후 webhook race 로 실패하면 refresh(1h)를 기다리지 말고 `kubectl annotate ... force-sync=$(date +%s)` 로 즉시 reconcile 한다.
 - argocd admin 비밀번호는 ESO Merge(argocd-admin-password-es)가 SSM bcrypt 해시(/kkamji/argocd/admin-password-bcrypt)로 고정한다. argocd-secret 의 admin.password 를 수동 수정하지 않는다.
+
+## ARC candidate
+
+The disabled ARC foundation references two separate paths, `/kkamji/arc/platform-auth` and `/kkamji/arc/bql-auth`, through `parameter-store`. No credential value is committed or created. See [ARC rollout](../arc-ci.md) for the required grant and rotation approval.
