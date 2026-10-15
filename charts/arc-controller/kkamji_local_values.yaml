@@ -1,0 +1,42 @@
+fullnameOverride: arc-controller
+replicaCount: 1
+image:
+  repository: ghcr.io/actions/gha-runner-scale-set-controller
+  tag: 0.15.0@sha256:162dfb5bfbda9e7e49fbed67d428994c9ced55b41a37a18b75b46dab0aa98d37
+  pullPolicy: Always
+serviceAccount:
+  create: true
+  name: arc-controller
+flags:
+  watchSingleNamespace: ci-pr
+  logLevel: info
+  logFormat: json
+  healthProbeBindAddress: :8081
+  autoscalingRunnerSetMaxConcurrentReconciles: 1
+  autoscalingListenerMaxConcurrentReconciles: 1
+  ephemeralRunnerSetMaxConcurrentReconciles: 1
+  ephemeralRunnerMaxConcurrentReconciles: 1
+podLabels:
+  arc.kkamji.net/role: control
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+    - ALL
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+    ephemeral-storage: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+    ephemeral-storage: 128Mi
+nodeSelector:
+  kubernetes.io/hostname: k8s-w2

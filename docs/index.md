@@ -23,3 +23,5 @@ status: current
 - [ESO secrets centralization design](specs/2026-05-06-eso-secrets-centralization-design.md) - 시크릿 중앙화 설계.
 - [ArgoCD notifications improvement](specs/2026-06-08-argocd-notifications-improvement.md) - 알림 개선 설계.
 - [Alerting quality improvements](specs/2026-06-12-alerting-quality-improvements.md) - 알림 품질 개선 설계.
+
+- [ARC rollout](arc-ci.md) - Two-repository disabled preparation, isolation, approval and full-CI evidence gates.

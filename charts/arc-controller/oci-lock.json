@@ -1,0 +1,28 @@
+[
+  {
+    "repository": "ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller",
+    "tag": "0.15.0",
+    "digest": "sha256:20a369215b8c2ed981c4c0c75e56e6009564d51fffcbbd314d5da0ef82de253a",
+    "mediaType": null,
+    "chartLayerDigest": "sha256:102dd3634358aa39cfa45583e8c4f8f3ec9410c1966c9c8c5d3d46750dde0c77"
+  },
+  {
+    "repository": "ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set",
+    "tag": "0.15.0",
+    "digest": "sha256:bdfdad17cf8e45ae064c73ed6764f0c75d4bf71a6e2912e6363a43d6dfc787de",
+    "mediaType": null,
+    "chartLayerDigest": "sha256:bab4a9ca41730b52cc4aec46dd5623b3d148ca24b4766b9bc25bf5a91f7bfdfe"
+  },
+  {
+    "repository": "ghcr.io/actions/gha-runner-scale-set-controller",
+    "tag": "0.15.0",
+    "digest": "sha256:162dfb5bfbda9e7e49fbed67d428994c9ced55b41a37a18b75b46dab0aa98d37",
+    "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json"
+  },
+  {
+    "repository": "ghcr.io/actions/actions-runner",
+    "tag": "2.338.0",
+    "digest": "sha256:4ffadc0002b2581327e06101fc8c06cd189232baf79fe561fac9caeb76f5e807",
+    "mediaType": "application/vnd.oci.image.index.v1+json"
+  }
+]

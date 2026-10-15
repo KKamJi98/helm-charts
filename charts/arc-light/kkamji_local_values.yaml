@@ -1,0 +1,86 @@
+githubConfigUrl: https://github.com/KKamJi98/kkamji-platform
+githubConfigSecret: arc-platform-auth
+runnerScaleSetName: kkamji-platform-light
+minRunners: 0
+maxRunners: 1
+controllerServiceAccount:
+  namespace: arc-system
+  name: arc-controller
+listenerTemplate:
+  metadata:
+    labels:
+      arc.kkamji.net/role: control
+  spec:
+    nodeSelector:
+      kubernetes.io/hostname: k8s-w2
+    preemptionPolicy: Never
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 65532
+      seccompProfile:
+        type: RuntimeDefault
+    containers:
+    - name: listener
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+          - ALL
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+          ephemeral-storage: 64Mi
+        limits:
+          cpu: 250m
+          memory: 128Mi
+          ephemeral-storage: 128Mi
+template:
+  metadata:
+    labels:
+      arc.kkamji.net/role: job
+  spec:
+    automountServiceAccountToken: false
+    serviceAccountName: arc-light-job
+    nodeSelector:
+      kubernetes.io/hostname: k8s-w2
+    preemptionPolicy: Never
+    terminationGracePeriodSeconds: 30
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1001
+      runAsGroup: 1001
+      fsGroup: 1001
+      seccompProfile:
+        type: RuntimeDefault
+    containers:
+    - name: runner
+      image: ghcr.io/actions/actions-runner@sha256:4ffadc0002b2581327e06101fc8c06cd189232baf79fe561fac9caeb76f5e807
+      imagePullPolicy: Always
+      command:
+      - /home/runner/run.sh
+      env:
+      - name: DISABLE_RUNNER_UPDATE
+        value: 'true'
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+      resources:
+        requests:
+          cpu: 250m
+          memory: 256Mi
+          ephemeral-storage: 512Mi
+        limits:
+          cpu: '1'
+          memory: 512Mi
+          ephemeral-storage: 2Gi
+      volumeMounts:
+      - name: work
+        mountPath: /home/runner/_work
+    volumes:
+    - name: work
+      emptyDir:
+        sizeLimit: 1536Mi
