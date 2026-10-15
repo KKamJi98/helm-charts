@@ -3,13 +3,13 @@ name: argocd
 description: KKamJi homelab ArgoCD umbrella (upstream argo-cd + AppProjects + root applications)
 type: application
 version: 0.1.0
-appVersion: v3.4.3
+appVersion: v3.5.5
 
 dependencies:
   - name: argo-cd
     alias: argocd
     repository: https://argoproj.github.io/argo-helm
-    version: 9.5.19
+    version: 10.10.5
   - name: argo-projects
     repository: file://../argo-projects
     version: 0.1.0

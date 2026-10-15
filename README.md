@@ -6,7 +6,7 @@ KKamJi homelab의 ArgoCD GitOps 단일 source of truth. KubeADM bare-metal 클�
 
 ```
 charts/argocd/                              ← 우산 차트 (SSA 1회 부트스트랩)
-  ├── 의존성: upstream argo-cd v9.1.4
+  ├── 의존성: upstream argo-cd v10.10.5
   ├── 의존성: argo-projects (file://)       ← AppProject 5개
   └── templates/
       ├── root-applications.yaml            ← 4개 root Application 생성
@@ -37,7 +37,7 @@ charts/argo-applications + 각 *_local_values.yaml
 
 ```
 charts/
-├── argocd/                  # 우산 (upstream argo-cd 9.1.4 + projects + roots + repo-creds)
+├── argocd/                  # 우산 (upstream argo-cd 10.10.5 + projects + roots + repo-creds)
 ├── argo-projects/           # AppProject CR 5개를 만드는 라이브러리 차트
 ├── argo-applications/       # 자식 Application CR을 찍어내는 generic iterator
 │   ├── management_local_values.yaml
@@ -62,6 +62,8 @@ _archived/                   # legacy (참고용 보관)
 ```
 
 ## values 파일 컨벤션
+
+로컬 저장소는 `~/code/helm-charts/{.bare,main,<branch>}` 구조를 사용한다. `main`은 운영 기준 worktree이며 변경은 별도 branch worktree에서 검증한다. Argo CD 업그레이드 절차는 [runbook](docs/argocd-upgrades.md)을 따른다.
 
 | 위치 | 파일명 | 용도 |
 |---|---|---|
@@ -105,7 +107,7 @@ _archived/                   # legacy (참고용 보관)
 ### 2. 부트스트랩 (Makefile 기반)
 
 ```bash
-cd ~/code/code-personal/helm-charts
+cd ~/code/helm-charts/main
 
 make setup        # = make deps + make bootstrap
                   # 내부: helm dependency update

@@ -1,6 +1,6 @@
 ---
 title: Docs index
-updated: 2026-08-24
+updated: 2026-10-15
 type: architecture
 status: current
 ---
@@ -12,6 +12,7 @@ status: current
 ## Operations
 
 - [Makefile operations](operations.md) - Makefile 타깃 표와 기본 변수. `Makefile` 이나 `scripts/` 를 고치면 같이 고친다.
+- [Argo CD upgrades](argocd-upgrades.md) - 버전 핀, Helm 4/확장 호환성, 검증 및 롤백 경로.
 
 ## Rules
 
