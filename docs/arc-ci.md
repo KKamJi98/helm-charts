@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-17T17:40:02+09:00
+updated: 2026-10-17T18:36:43+09:00
 type: runbook
 status: current
 ---
@@ -445,3 +445,18 @@ no registry publication or credential transfer was performed. Image-GC/node
 recovery and general production runner distribution are not solved merely by
 this bounded validation. Current App/ESO/controller credential inputs are already
 resolved and must not be re-entered or treated as an old profile blocker.
+
+
+## Explicit5Gi first and bounded Docker lab approval
+
+The owner now authorizes one5Gi/j1 BQL trial on an existing safe worker, not
+necessarily k8s-w2. Discover capacity/image-eligible workers and let node affinity
+restrict scheduling to that verified set; preserve512Mi scheduling and1Gi
+actual reserve, CPU/Pod/storage/security/source/release12bin contracts.
+Only shared memory quota totals temporarily become5Gi/5Gi; restore1Gi/1536Mi
+through normal GitOps even on OOM/failure/interruption and verify actual/Argo.
+Workload relocation is permitted when needed, not a requirement to move services.
+The separately approved180s trusted Docker lab includes namespace, NNP0/cap2,
+Localhost6-call profile and Pod UID/GID mapping hypotheses. It does not approve
+privileged/SYS_ADMIN/host socket/Unconfined/Unmasked, credential exposure,
+untrusted application execution or production full CI before drop/API proof.
