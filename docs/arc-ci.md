@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-17T16:01:29+09:00
+updated: 2026-10-17T16:18:32+09:00
 type: runbook
 status: current
 ---
@@ -364,3 +364,21 @@ and limits are below the existing regular container, so effective job scheduling
 requests/limits do not increase. This tool copy does not qualify Docker/full CI.
 The OCI index/AMD64 manifest/CRI config chain must be read back before source
 activation; the node-local immutable reference is not registry publication.
+
+
+## Restricted non-Docker frontend validation
+
+The Platform job uses the same verified SDK-derived toolchain image in an explicit
+non-Docker role. Its trusted launch checks uid1001/NNP1/cap0/Seccomp2/no token/no
+host socket, asserts the private Docker socket absent, records Node/Chrome
+versions and starts the unchanged official SDK. It never starts RootlessKit or
+Docker and is not the8Gi full-Docker runner/preflight/CEL qualification.
+Regular resources/security/volumes/SA and BQL light are unchanged. A256Mi init
+limit remains below the regular512Mi limit, so effective Pod budget is unchanged.
+Node26.7.0 and Helm4.2.1 toolcache entries point to verified image tools. Locked
+public npm packages were fetched by a trusted isolated metadata-only npm ci
+--ignore-scripts process, then COPY-only assembled into a local immutable image.
+The job copies only public cache content, verifies the source lock hash and runs
+its original npm ci/test/typecheck/build or three E2E shards with npm offline.
+No registry egress or browser sandbox/namespace/capability exception is added.
+This preparation does not claim fresh network npm audit or actual CI success.

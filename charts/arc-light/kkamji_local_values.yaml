@@ -58,7 +58,7 @@ template:
         type: RuntimeDefault
     initContainers:
     - name: verified-static-tools
-      image: docker.io/library/arc-platform-static-tools-20261017@sha256:fe125e08224c5493324aa1bd93e855ea237a187de5b40a3971c577a1d13121e7
+      image: docker.io/library/arc-platform-web-tools-20261017@sha256:76781a525d1fc7d6ddc2c2f37a5f1f4c0bf122285b1e01539e2b92ee7af4791e
       imagePullPolicy: Never
       command:
       - /bin/bash
@@ -70,6 +70,11 @@ template:
         install -m 0555 /opt/arc/helm/helm /home/runner/_work/_tool/helm/4.2.1/x64/helm
         touch /home/runner/_work/_tool/helm/4.2.1/x64.complete
         /home/runner/_work/_tool/helm/4.2.1/x64/helm version --short
+        install -d /home/runner/_work/_tool/node/26.7.0
+        ln -s /opt/arc/node /home/runner/_work/_tool/node/26.7.0/x64
+        touch /home/runner/_work/_tool/node/26.7.0/x64.complete
+        install -d /home/runner/_work/_npm-cache/_cacache
+        cp -a /opt/arc/npm-cache/. /home/runner/_work/_npm-cache/_cacache/
       securityContext:
         allowPrivilegeEscalation: false
         readOnlyRootFilesystem: true
@@ -82,20 +87,37 @@ template:
           ephemeral-storage: 16Mi
         limits:
           cpu: 250m
-          memory: 128Mi
+          memory: 256Mi
           ephemeral-storage: 64Mi
       volumeMounts:
       - name: work
         mountPath: /home/runner/_work
     containers:
     - name: runner
-      image: ghcr.io/actions/actions-runner@sha256:4ffadc0002b2581327e06101fc8c06cd189232baf79fe561fac9caeb76f5e807
-      imagePullPolicy: Always
+      image: docker.io/library/arc-platform-static-tools-20261017@sha256:fe125e08224c5493324aa1bd93e855ea237a187de5b40a3971c577a1d13121e7
+      imagePullPolicy: Never
       command:
-      - /home/runner/run.sh
+      - /bin/bash
+      - -ec
+      - |
+        /opt/arc/bin/runner-preflight.sh security
+        test ! -S /run/user/1001/docker.sock
+        /opt/arc/node/bin/node --version
+        /opt/google/chrome/chrome --version
+        exec /home/runner/run.sh
       env:
       - name: DISABLE_RUNNER_UPDATE
         value: 'true'
+      - name: RUNNER_TOOL_CACHE
+        value: /home/runner/_work/_tool
+      - name: NPM_CONFIG_CACHE
+        value: /home/runner/_work/_npm-cache
+      - name: NPM_CONFIG_OFFLINE
+        value: 'true'
+      - name: ARC_WEB_PACKAGE_LOCK_SHA256
+        value: 0dc65a67b5997c7451c2b09a23b4671ac8e02d9b54f2137fb42324ddbe346c03
+      - name: DOCKER_HOST
+        value: unix:///run/user/1001/non-docker-disabled.sock
       securityContext:
         allowPrivilegeEscalation: false
         capabilities:
