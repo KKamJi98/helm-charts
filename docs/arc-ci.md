@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-17T12:01:10+09:00
+updated: 2026-10-17T12:46:46+09:00
 type: runbook
 status: current
 ---
@@ -9,8 +9,11 @@ status: current
 
 The approved foundation/project stage was observed Synced/Healthy at revision
 30401e13df849ce222ac63876baa6f2dcd2e0f3f. This revision enables the controller
-after namespace/policy preparation. Both repository scale sets and authentication
-remain disabled. Neither canary nor full CI has run on ARC.
+after namespace/policy preparation. Repository scale sets remain disabled.
+The owner completed direct secure input; exact SSM metadata was read back without
+fetching values. Local foundation values now enable the canonical ExternalSecret
+under the approved Store/key/input gates. ESO Ready and registration remain
+separate runtime checks. Neither canary nor full CI has run on ARC.
 Do not replace this statement with an operating-success claim until evidence exists.
 
 ## Controller-first staging
@@ -21,9 +24,9 @@ umbrella project is enabled under the explicit initial CRD/RBAC/network/GitOps
 approval. Existing projects and Argo CD
 version/vendor remain unchanged.
 
-Foundation now defaults `githubAuth.enabled=false`, so namespace/policy/quota and
-controller preparation creates no ExternalSecret and cannot start a new SSM
-read for ARC. After owner acceptance of the existing Store trust boundary,
+The reusable foundation defaults `githubAuth.enabled=false`, so a default install
+creates no ExternalSecret. Approved local values opt into authentication only
+after the owner-input metadata and trust checks. After owner acceptance of the existing Store trust boundary,
 explicit key choice and secure owner input metadata, confirm the arcSsmReuse
 gates before enabling githubAuth and then repository scale sets. New IAM grants
 are not an automatic prerequisite.

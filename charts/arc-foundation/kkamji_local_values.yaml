@@ -1,5 +1,10 @@
-# Enable only after the exact credential grants and secure ESO delivery are approved.
 githubAuth:
-  enabled: false
+  enabled: true
 priorityClass:
   enabled: true
+arcSsmReuse:
+  enabled: true
+  namespaceTrustAccepted: true
+  existingStoreTrustAccepted: true
+  keyChoiceApproved: true
+  secureInputMetadataVerified: true
