@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import re
 import shutil
 import subprocess
 import unittest
@@ -55,6 +56,10 @@ class ArcFullContractTests(unittest.TestCase):
             self.assertIn(text, r.stdout)
         self.assertEqual(r.stdout.count("maxRunners: 0"), 0)
         self.assertEqual(r.stdout.count("maxRunners: 1"), 2)
+        self.assertEqual(
+            len(re.findall(r"workingDir:\s+/home/runner/_work(?:\s|$)", r.stdout)), 2
+        )
+        self.assertNotRegex(r.stdout, r"workingDir:\s+/home/runner(?:\s|$)")
         self.assertNotIn("kind: ClusterRole\n", r.stdout)
 
     def test_previously_excluded_or_outside_role_overrides_fail_closed(self):
