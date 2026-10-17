@@ -1,0 +1,12 @@
+dependencies:
+- name: gha-runner-scale-set-controller
+  repository: file://../arc-controller
+  version: 0.15.0
+- name: gha-runner-scale-set
+  repository: file://../arc-light
+  version: 0.15.0
+- name: gha-runner-scale-set
+  repository: file://../arc-light
+  version: 0.15.0
+digest: sha256:0335308b00e2946f9856f76038a83d31b44979a84f2d8c3b48bd5b08ad9c546d
+generated: "2026-10-17T23:59:04.301954785+09:00"

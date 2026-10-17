@@ -72,7 +72,7 @@ projects:
         kind: "*"
 
   arc-ci:
-    description: Repository-scoped light CI, no Docker or deployment credentials
+    description: Repository-scoped ARC CI with isolated per-job rootless Docker; no deployment credentials
     sourceRepos:
     - https://github.com/KKamJi98/helm-charts.git
     destinations:
@@ -80,6 +80,10 @@ projects:
       namespace: arc-system
     - server: https://kubernetes.default.svc
       namespace: ci-pr
+    - server: https://kubernetes.default.svc
+      namespace: ci-full
+    - server: https://kubernetes.default.svc
+      namespace: arc-runtime
     clusterResourceWhitelist:
     - group: ''
       kind: Namespace
@@ -98,6 +102,10 @@ projects:
       kind: RoleBinding
     - group: apps
       kind: Deployment
+    - group: apps
+      kind: DaemonSet
+    - group: ''
+      kind: ConfigMap
     - group: actions.github.com
       kind: AutoscalingRunnerSet
     - group: external-secrets.io

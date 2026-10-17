@@ -1,0 +1,335 @@
+controller:
+  fullnameOverride: arc-full-controller
+  replicaCount: 1
+  image:
+    repository: ghcr.io/actions/gha-runner-scale-set-controller
+    tag: 0.15.0@sha256:162dfb5bfbda9e7e49fbed67d428994c9ced55b41a37a18b75b46dab0aa98d37
+    pullPolicy: Always
+  serviceAccount:
+    create: true
+    name: arc-full-controller
+  flags:
+    watchSingleNamespace: ci-full
+    logLevel: info
+    logFormat: json
+    healthProbeBindAddress: :8081
+    autoscalingRunnerSetMaxConcurrentReconciles: 1
+    autoscalingListenerMaxConcurrentReconciles: 1
+    ephemeralRunnerSetMaxConcurrentReconciles: 1
+    ephemeralRunnerMaxConcurrentReconciles: 1
+  podLabels:
+    arc.kkamji.net/role: control
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+      - ALL
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+      ephemeral-storage: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+      ephemeral-storage: 256Mi
+  nodeSelector:
+    kubernetes.io/hostname: k8s-w1
+platform:
+  githubConfigUrl: https://github.com/KKamJi98/kkamji-platform
+  githubConfigSecret: arc-github-app-auth
+  runnerScaleSetName: kkamji-platform-full
+  minRunners: 0
+  maxRunners: 0
+  controllerServiceAccount:
+    namespace: ci-full
+    name: arc-full-controller
+  listenerTemplate:
+    metadata:
+      labels:
+        arc.kkamji.net/role: control
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: k8s-w1
+      containers:
+      - name: listener
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1001
+          seccompProfile:
+            type: RuntimeDefault
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+            ephemeral-storage: 64Mi
+          limits:
+            cpu: 250m
+            memory: 128Mi
+            ephemeral-storage: 256Mi
+  template: &fullRunnerTemplate
+    metadata:
+      labels:
+        arc.kkamji.net/role: job
+    spec:
+      automountServiceAccountToken: false
+      serviceAccountName: arc-full-job
+      hostUsers: false
+      hostNetwork: false
+      hostPID: false
+      hostIPC: false
+      shareProcessNamespace: false
+      enableServiceLinks: false
+      restartPolicy: Never
+      activeDeadlineSeconds: 22500
+      terminationGracePeriodSeconds: 45
+      priorityClassName: arc-ci-nonpreempting
+      nodeSelector:
+        kubernetes.io/hostname: k8s-w2
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
+        supplementalGroups: []
+        supplementalGroupsPolicy: Strict
+      resources:
+        requests:
+          cpu: 500m
+          memory: 5Gi
+        limits:
+          cpu: '2'
+          memory: 5Gi
+      volumes:
+      - name: runtime-config
+        configMap:
+          name: arc-full-runtime
+          defaultMode: 292
+      - name: sdk-home
+        emptyDir:
+          sizeLimit: 4Gi
+      - name: work
+        emptyDir:
+          sizeLimit: 6Gi
+      - name: socket
+        emptyDir:
+          sizeLimit: 16Mi
+      - name: runtime
+        emptyDir:
+          sizeLimit: 64Mi
+      - name: private-home
+        emptyDir:
+          sizeLimit: 256Mi
+      - name: docker-data
+        emptyDir:
+          sizeLimit: 10Gi
+      - name: sdk-tmp
+        emptyDir:
+          sizeLimit: 512Mi
+      - name: daemon-tmp
+        emptyDir:
+          sizeLimit: 512Mi
+      initContainers:
+      - name: seed-sdk
+        image: docker.io/library/arc-platform-nosuidmount-setfcap-20261017@sha256:0a8a8a31aac32784698f59ce1d45a242eeb2dcb9221894d39d14fce00ccff72d
+        imagePullPolicy: Never
+        command:
+        - bash
+        - -c
+        - "set -eu\nfor file in run.sh env.sh config.sh run-helper.sh.template run-helper.cmd.template\
+          \ safe_sleep.sh bin externals; do\n  test -e \"/home/runner/$file\"\n  cp\
+          \ -a \"/home/runner/$file\" /runner-home/\ndone\nmkdir -p /runner-home/_work\n"
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1001
+          runAsGroup: 1001
+          allowPrivilegeEscalation: false
+          privileged: false
+          readOnlyRootFilesystem: true
+          procMount: Default
+          capabilities:
+            drop:
+            - ALL
+            add: []
+          seccompProfile:
+            type: RuntimeDefault
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        volumeMounts:
+        - name: sdk-home
+          mountPath: /runner-home
+      - name: dind
+        image: docker.io/library/arc-platform-nosuidmount-setfcap-20261017@sha256:0a8a8a31aac32784698f59ce1d45a242eeb2dcb9221894d39d14fce00ccff72d
+        imagePullPolicy: Never
+        restartPolicy: Always
+        command:
+        - /usr/bin/python3
+        - -u
+        - /etc/arc-full/trusted-runtime.py
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1001
+          runAsGroup: 1001
+          allowPrivilegeEscalation: true
+          privileged: false
+          readOnlyRootFilesystem: true
+          procMount: Unmasked
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - SETUID
+            - SETGID
+            - SETFCAP
+          seccompProfile:
+            type: Localhost
+            localhostProfile: arc-docker-runtime-v2.json
+        resources:
+          requests:
+            cpu: 250m
+            memory: 128Mi
+            ephemeral-storage: 1Gi
+            kkamji.net/arc-tun: '1'
+          limits:
+            ephemeral-storage: 10Gi
+            kkamji.net/arc-tun: '1'
+        startupProbe:
+          exec:
+            command:
+            - /usr/bin/python3
+            - /etc/arc-full/trusted-runtime.py
+            - --check-ready
+          failureThreshold: 150
+          periodSeconds: 2
+          timeoutSeconds: 4
+        volumeMounts:
+        - name: runtime-config
+          mountPath: /etc/arc-full
+          readOnly: true
+        - name: work
+          mountPath: /home/runner/_work
+        - name: socket
+          mountPath: /run/arc-api
+        - name: runtime
+          mountPath: /run/arc-runtime
+        - name: private-home
+          mountPath: /privatehome
+        - name: docker-data
+          mountPath: /var/lib/arc-docker
+        - name: daemon-tmp
+          mountPath: /tmp
+        - name: runtime-config
+          mountPath: /etc/subuid
+          subPath: subuid
+          readOnly: true
+        - name: runtime-config
+          mountPath: /etc/subgid
+          subPath: subgid
+          readOnly: true
+      containers:
+      - name: runner
+        image: docker.io/library/arc-platform-nosuidmount-setfcap-20261017@sha256:0a8a8a31aac32784698f59ce1d45a242eeb2dcb9221894d39d14fce00ccff72d
+        imagePullPolicy: Never
+        command:
+        - /usr/bin/python3
+        - -u
+        - /etc/arc-full/sdk-entry.py
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1001
+          runAsGroup: 1001
+          allowPrivilegeEscalation: false
+          privileged: false
+          readOnlyRootFilesystem: true
+          procMount: Default
+          capabilities:
+            drop:
+            - ALL
+            add: []
+          seccompProfile:
+            type: RuntimeDefault
+        env:
+        - name: DOCKER_HOST
+          value: unix:///run/arc-api/docker.sock
+        - name: DOCKER_CONFIG
+          value: /home/runner/.docker
+        - name: RUNNER_TOOL_CACHE
+          value: /home/runner/_work/_tool
+        - name: HOME
+          value: /home/runner
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+            ephemeral-storage: 1Gi
+          limits:
+            ephemeral-storage: 4Gi
+        volumeMounts:
+        - name: runtime-config
+          mountPath: /etc/arc-full
+          readOnly: true
+        - name: sdk-home
+          mountPath: /home/runner
+        - name: work
+          mountPath: /home/runner/_work
+        - name: socket
+          mountPath: /run/arc-api
+        - name: sdk-tmp
+          mountPath: /tmp
+        workingDir: /home/runner
+bql:
+  githubConfigUrl: https://github.com/KKamJi98/binance-quant-lab
+  githubConfigSecret: arc-github-app-auth
+  runnerScaleSetName: binance-quant-lab-full
+  minRunners: 0
+  maxRunners: 0
+  controllerServiceAccount:
+    namespace: ci-full
+    name: arc-full-controller
+  listenerTemplate:
+    metadata:
+      labels:
+        arc.kkamji.net/role: control
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: k8s-w1
+      containers:
+      - name: listener
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1001
+          seccompProfile:
+            type: RuntimeDefault
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+            ephemeral-storage: 64Mi
+          limits:
+            cpu: 250m
+            memory: 128Mi
+            ephemeral-storage: 256Mi
+  template: *fullRunnerTemplate
+githubAuth:
+  enabled: false
+  existingSourceReuseApproved: false

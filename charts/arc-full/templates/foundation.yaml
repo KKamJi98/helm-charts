@@ -1,0 +1,121 @@
+{{- include "arc-full.validate" . }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ci-full
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: v1.36
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: arc-full-job
+  namespace: ci-full
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arc-full-runtime
+  namespace: ci-full
+data:
+  subuid: |
+    runner:0:1001
+    runner:1002:64534
+  subgid: |
+    runner:0:1001
+    runner:1002:64534
+  trusted-runtime.py: |
+{{ .Files.Get "files/trusted-runtime.py" | indent 4 }}
+  sdk-entry.py: |
+{{ .Files.Get "files/sdk-entry.py" | indent 4 }}
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: full-budget
+  namespace: ci-full
+spec:
+  hard:
+    pods: "5"
+    requests.cpu: 900m
+    limits.cpu: "4"
+    requests.memory: 5632Mi
+    limits.memory: 6Gi
+    requests.ephemeral-storage: 3Gi
+    limits.ephemeral-storage: 16Gi
+    requests.kkamji.net/arc-tun: "1"
+    persistentvolumeclaims: "0"
+---
+{{- if .Values.githubAuth.enabled }}
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: arc-github-app-auth
+  namespace: ci-full
+spec:
+  refreshInterval: 1h
+  secretStoreRef: {name: parameter-store, kind: ClusterSecretStore}
+  target:
+    name: arc-github-app-auth
+    creationPolicy: Orphan
+    deletionPolicy: Retain
+  dataFrom:
+  - extract: {key: /kkamji/arc/github-app}
+{{- end }}
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: full-default-deny
+  namespace: ci-full
+spec:
+  endpointSelector: {}
+  ingress: []
+  egress: []
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: full-control
+  namespace: ci-full
+spec:
+  endpointSelector:
+    matchLabels: {arc.kkamji.net/role: control}
+  ingress: []
+  egress:
+  - toEntities: [kube-apiserver]
+  - toEndpoints:
+    - matchLabels:
+        k8s:io.kubernetes.pod.namespace: kube-system
+        k8s:k8s-app: kube-dns
+    toPorts:
+    - ports: [{port: "53", protocol: UDP}, {port: "53", protocol: TCP}]
+  - toCIDRSet:
+    - cidr: 0.0.0.0/0
+      except: [0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16, 198.18.0.0/15, 224.0.0.0/4, 240.0.0.0/4]
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: full-jobs
+  namespace: ci-full
+spec:
+  endpointSelector:
+    matchLabels: {arc.kkamji.net/role: job}
+  ingress: []
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        k8s:io.kubernetes.pod.namespace: kube-system
+        k8s:k8s-app: kube-dns
+    toPorts:
+    - ports: [{port: "53", protocol: UDP}, {port: "53", protocol: TCP}]
+  - toCIDRSet:
+    - cidr: 0.0.0.0/0
+      except: [0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16, 198.18.0.0/15, 224.0.0.0/4, 240.0.0.0/4]

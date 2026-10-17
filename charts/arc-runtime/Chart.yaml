@@ -1,0 +1,6 @@
+apiVersion: v2
+name: arc-runtime
+description: Scoped worker runtime prerequisites for per-job rootless ARC Docker
+type: application
+version: 0.1.0
+appVersion: "0.2.0"
