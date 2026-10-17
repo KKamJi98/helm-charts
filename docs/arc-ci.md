@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-17T16:49:58+09:00
+updated: 2026-10-17T17:16:46+09:00
 type: runbook
 status: current
 ---
@@ -386,8 +386,9 @@ This preparation does not claim fresh network npm audit or actual CI success.
 
 ## Frontend Node heap evidence and bounded budget
 
-Native043bb767 run39013869533 reached original npm install/build, but Playwright
-failed134 with V8 ineffective mark-compacts near the roughly256MB heap limit.
+Native043bb767 run39013869533 installed npm packages, then aborted134 during
+tsc -b in the composite E2E preparation step at a roughly256MB V8 heap limit,
+before Playwright executed. The step label alone did not identify the command.
 Sampled kernel OOM was0; no seccomp/PID/namespace relaxation was inferred.
 The stuck SDK-session-conflict run was cancelled for complete logs, not passed.
 The Platform non-Docker job memory reservation becomes1Gi and cap1536Mi, both
@@ -396,3 +397,17 @@ frontend envelope, not a measured minimum or BQL/full-Docker8Gi reduction.
 CPU/storage/namespace quota, source checks/shards/timeouts and all security
 contexts stay unchanged. Startup records actual V8 heap limit; the same source
 failed/cancelled jobs must be rerun and verified before claiming recovery.
+
+
+## Data-only font differential for remaining geometry failures
+
+At the same043bb767 source, the bounded heap profile passed973 web tests,
+typecheck/build and E2E shard2. Shards1/3 retained exact geometry assertions and
+failed at877px versus844px focus height and a2-line title versus1 at1024px.
+The toolchain only had Liberation fonts; fc-match system-ui/sans-serif/Korean
+fell back to Liberation Mono. A data-only child adds checksum-verified
+architecture-all DejaVu/Noto core/CJK/emoji font files without package scripts.
+fc-match now selects Noto Sans and Noto Sans CJK. SDK/Chrome/Node/npm/source,
+resource limits, permissions, policies and all assertions remain unchanged.
+This is a differential hypothesis until the same original failed shards rerun;
+font metadata or a changed image digest alone is not E2E success.
