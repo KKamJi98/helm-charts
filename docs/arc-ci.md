@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-17T15:46:26+09:00
+updated: 2026-10-17T16:01:29+09:00
 type: runbook
 status: current
 ---
@@ -350,3 +350,17 @@ limits.memory1536Mi. The standalone compilation outcome is separate evidence;
 this restore does not claim full CI success. CPU/Pod/storage/security/auth and
 existing workloads remain unchanged. Actual quota and Argo convergence must be
 verified against this source revision before closing the window.
+
+
+## Non-Docker static tool preparation
+
+The Platform light template gains a token-free uid1001/NNP1/dropALL/RuntimeDefault
+read-only init container. It copies only checksum-verified Helm4.2.1 from the
+existing pinned toolchain image into the existing per-job work/toolcache path.
+No daemon, host socket/path, extra capabilities, new egress, pool/namespace,
+credential or quota field is introduced. Main runner/SDK/auth/resource/volume
+settings and the BQL light template stay unchanged. Non-restartable init requests
+and limits are below the existing regular container, so effective job scheduling
+requests/limits do not increase. This tool copy does not qualify Docker/full CI.
+The OCI index/AMD64 manifest/CRI config chain must be read back before source
+activation; the node-local immutable reference is not registry publication.
