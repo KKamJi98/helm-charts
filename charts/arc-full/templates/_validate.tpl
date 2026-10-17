@@ -20,8 +20,29 @@
 {{- $daemon := index $p.initContainers 1 -}}
 {{- $s := $sdk.securityContext -}}
 {{- $t := $daemon.securityContext -}}
-{{- if or (ne (dig "resources" "limits" "ephemeral-storage" "" (default (dict) $daemon)) "12Gi") (ne (dig "resources" "limits" "ephemeral-storage" "" (default (dict) $sdk)) "4Gi") -}}
-{{- fail "ARC full boundary: private Docker12Gi plus SDK4Gi must match the startup disk guard" -}}
+{{- $dockerLimit := "12Gi" -}}
+{{- if eq $name "bql" -}}
+{{- $dockerLimit = "16Gi" -}}
+{{- end -}}
+{{- if or (ne (dig "resources" "limits" "ephemeral-storage" "" (default (dict) $daemon)) $dockerLimit) (ne (dig "resources" "limits" "ephemeral-storage" "" (default (dict) $sdk)) "4Gi") -}}
+{{- fail "ARC full boundary: pool Docker budget plus SDK4Gi must match the startup disk guard" -}}
+{{- end -}}
+{{- $budgetEnv := list -}}
+{{- range $env := $sdk.env -}}
+{{- if eq $env.name "ARC_JOB_EPHEMERAL_GIB" -}}
+{{- $budgetEnv = append $budgetEnv $env -}}
+{{- end -}}
+{{- end -}}
+{{- if eq $name "bql" -}}
+{{- if ne (len $budgetEnv) 1 -}}
+{{- fail "ARC full boundary: BQL must declare one20Gi startup budget" -}}
+{{- end -}}
+{{- $budget := index $budgetEnv 0 -}}
+{{- if or (hasKey $budget "valueFrom") (not (kindIs "string" $budget.value)) (ne (toString $budget.value) "20") -}}
+{{- fail "ARC full boundary: BQL startup budget must remain20Gi" -}}
+{{- end -}}
+{{- else if ne (len $budgetEnv) 0 -}}
+{{- fail "ARC full boundary: Platform must retain its original16Gi startup budget" -}}
 {{- end -}}
 {{- if or (ne $sdk.name "runner") (ne $s.procMount "Default") $s.allowPrivilegeEscalation $s.privileged (not $s.readOnlyRootFilesystem) (ne (len (default (list) $s.capabilities.add)) 0) (ne (join "," $s.capabilities.drop) "ALL") -}}
 {{- fail "ARC full boundary: SDK must keep Default/NNP1/cap0/read-only" -}}
@@ -36,8 +57,8 @@
 {{- if not $volume -}}
 {{- fail "ARC full boundary: empty volume entries are not allowed" -}}
 {{- end -}}
-{{- if and (eq $volume.name "docker-data") (ne $volume.emptyDir.sizeLimit "12Gi") -}}
-{{- fail "ARC full boundary: private Docker data must match its bounded12Gi limit" -}}
+{{- if and (eq $volume.name "docker-data") (ne $volume.emptyDir.sizeLimit $dockerLimit) -}}
+{{- fail "ARC full boundary: private Docker data must match the pool limit" -}}
 {{- end -}}
 {{- if not (or (hasKey $volume "emptyDir") (hasKey $volume "configMap")) -}}
 {{- fail "ARC full boundary: no host/PVC/Secret volume is allowed in SDK Pods" -}}

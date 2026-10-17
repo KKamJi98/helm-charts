@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import os
 import re
 import shutil
@@ -12,7 +13,7 @@ HELM = os.environ.get("HELM_BINARY") or shutil.which("helm")
 
 
 class ArcFullContractTests(unittest.TestCase):
-    def render(self, flags=(), local=False):
+    def render(self, flags=(), local=False, json_flags=()):
         self.assertIsNotNone(
             HELM, "Use the existing Helm; no network/dependency installation"
         )
@@ -29,6 +30,8 @@ class ArcFullContractTests(unittest.TestCase):
             args += ["-f", str(ROOT / "charts/arc-full/kkamji_local_values.yaml")]
         for flag in flags:
             args += ["--set", flag]
+        for flag in json_flags:
+            args += ["--set-json", flag]
         return subprocess.run(args, capture_output=True, text=True, check=False)
 
     def test_default_auth_off(self):
@@ -62,6 +65,62 @@ class ArcFullContractTests(unittest.TestCase):
         self.assertNotRegex(r.stdout, r"workingDir:\s+/home/runner(?:\s|$)")
         self.assertNotIn("kind: ClusterRole\n", r.stdout)
 
+    def test_bql_storage_growth_keeps_platform_template_and_sdk_budget(self):
+        r = self.render(local=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        sets = [
+            doc for doc in r.stdout.split("---") if "kind: AutoscalingRunnerSet" in doc
+        ]
+        bql = next(doc for doc in sets if "name: binance-quant-lab-full" in doc)
+        platform = next(doc for doc in sets if "name: kkamji-platform-full" in doc)
+        self.assertRegex(bql, r"sizeLimit:\s+16Gi")
+        self.assertRegex(bql, r"ephemeral-storage:\s+16Gi")
+        self.assertRegex(bql, r"name: ARC_JOB_EPHEMERAL_GIB\s+value: ['\"]?20")
+        self.assertRegex(bql, r"ephemeral-storage:\s+4Gi")
+        self.assertRegex(platform, r"sizeLimit:\s+12Gi")
+        self.assertNotIn("ARC_JOB_EPHEMERAL_GIB", platform)
+        self.assertIn("limits.ephemeral-storage: 22Gi", r.stdout)
+
+    def test_bql_budget_requires_one_literal_twenty_gib_value(self):
+        values = (ROOT / "charts/arc-full/values.yaml").read_text()
+        image = re.search(r"&fullRunnerSDK\s+name: runner\s+image: (\S+)", values)
+        self.assertIsNotNone(image)
+        assert image is not None
+        sdk = {
+            "name": "runner",
+            "image": image.group(1),
+            "securityContext": {
+                "runAsUser": 1001,
+                "procMount": "Default",
+                "allowPrivilegeEscalation": False,
+                "readOnlyRootFilesystem": True,
+                "capabilities": {"drop": ["ALL"], "add": []},
+                "seccompProfile": {"type": "RuntimeDefault"},
+            },
+            "resources": {"limits": {"ephemeral-storage": "4Gi"}},
+            "env": [{"name": "ARC_JOB_EPHEMERAL_GIB", "value": "20"}],
+        }
+        literal = self.render(
+            json_flags=["bql.template.spec.containers=" + json.dumps([sdk])]
+        )
+        self.assertEqual(literal.returncode, 0, literal.stderr)
+        sdk["env"][0]["valueFrom"] = {
+            "secretKeyRef": {"name": "not-read", "key": "unused"}
+        }
+        r = self.render(
+            json_flags=["bql.template.spec.containers=" + json.dumps([sdk])]
+        )
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("ARC full boundary", r.stderr)
+        budget = {"name": "ARC_JOB_EPHEMERAL_GIB", "value": "20"}
+        for invalid in [[], [{**budget, "value": "16"}], [budget, budget]]:
+            sdk["env"] = invalid
+            r = self.render(
+                json_flags=["bql.template.spec.containers=" + json.dumps([sdk])]
+            )
+            self.assertNotEqual(r.returncode, 0)
+            self.assertIn("ARC full boundary", r.stderr)
+
     def test_previously_excluded_or_outside_role_overrides_fail_closed(self):
         mutations = [
             "platform.template.spec.hostUsers=true",
@@ -74,6 +133,12 @@ class ArcFullContractTests(unittest.TestCase):
             "platform.template.spec.initContainers[1].resources.limits.ephemeral-storage=14Gi",
             "platform.template.spec.containers[0].resources.limits.ephemeral-storage=6Gi",
             "platform.template.spec.volumes[6].emptyDir.sizeLimit=20Gi",
+            "bql.template.spec.initContainers[1].resources.limits.ephemeral-storage=18Gi",
+            "bql.template.spec.containers[0].env[7].value=16",
+            "bql.template.spec.containers[0].env[7].name=UNEXPECTED",
+            "bql.template.spec.containers[0].env[8].name=ARC_JOB_EPHEMERAL_GIB",
+            "bql.template.spec.volumes[6].emptyDir.sizeLimit=20Gi",
+            "platform.template.spec.containers[0].env[7].name=ARC_JOB_EPHEMERAL_GIB",
         ]
         for flag in mutations:
             with self.subTest(flag=flag):
@@ -83,6 +148,20 @@ class ArcFullContractTests(unittest.TestCase):
 
 
 class DiskReserveTests(unittest.TestCase):
+    def test_bql_twenty_gib_budget_retains_full_pressure_margin(self):
+        spec = importlib.util.spec_from_file_location(
+            "sdk_entry", ROOT / "charts/arc-full/files/sdk-entry.py"
+        )
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        gib = 1024**3
+        self.assertEqual(module.disk_required_bytes(100 * gib, 20), 36 * gib)
+        self.assertEqual(module.disk_required_bytes(20 * gib, 20), 25 * gib)
+        for unsupported in (0, 15, 19, 21):
+            with self.assertRaises(ValueError):
+                module.disk_required_bytes(100 * gib, unsupported)
+
     def test_disk_guard_retains_job_budget_and_imagefs_margin(self):
         spec = importlib.util.spec_from_file_location(
             "sdk_entry", ROOT / "charts/arc-full/files/sdk-entry.py"
@@ -100,7 +179,7 @@ class DiskReserveTests(unittest.TestCase):
         self.assertIn("sizeLimit: 12Gi", text)
         self.assertIn("ephemeral-storage: 12Gi", text)
         self.assertIn(
-            "limits.ephemeral-storage: 18Gi",
+            "limits.ephemeral-storage: 22Gi",
             (ROOT / "charts/arc-full/templates/foundation.yaml").read_text(),
         )
 

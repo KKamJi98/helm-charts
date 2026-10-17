@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-18T03:03:43+09:00
+updated: 2026-10-18T06:10:26+09:00
 type: runbook
 status: current
 ---
@@ -675,3 +675,39 @@ BQL workflow disables incremental intermediates, not any checks or release
 outputs. No node resize, image/cache deletion, PVC/host volume or shared job data.
 Private emptyDirs still die with their own Pod; native data/logical Docker size
 and final original CI results must establish whether this candidate succeeds.
+
+## BQL whole-workspace private storage continuation
+
+The original825 CI source-qualification20 active cases, release12 producers plus
+one separate operator tool, Tier B, proof receipts and Python recorders passed.
+The actual release archive SHA256, all ELF64/x86_64 payload checksums and0555
+modes were parent-verified. Tier A instead lost its runner when docker-data
+exceeded12Gi; the retained Pod event says EmptyDir eviction. This is not a Rust
+assertion or evidence of a memory minimum. The capped data observation is not a
+successful required-storage measurement.
+
+The next BQL-only candidate raises private Docker data/daemon limit to16Gi,
+keeps SDK4Gi and shared Pod5Gi/CPU2, and raises the aggregate namespace ephemeral
+limit18Gi to22Gi for the20Gi Job plus control/surge. Platform keeps its exact
+original Pod template and12Gi+4Gi allocation. YAML inheritance preserves the
+other BQL roles, mounts, image pins, requests and security fields unchanged.
+
+The SDK requires20Gi + max(5Gi, filesystem15%+1Gi) before BQL repository code.
+Platform retains its16Gi base. The BQL template must declare exactly one literal
+20Gi budget, never an absent/duplicate/under-sized or Secret-referenced alias.
+Unknown budgets fail closed. The shared5Gi+1Gi memory reserve and all native
+security checks remain unchanged; no pressure guard is lowered to admit work.
+
+Only the task-owned retired measurement image tag was removed after zero live
+references and verified immutable recovery export. Operating full/light images
+remain; no shared image prune, node resize/restart, PVC/host volume or key change.
+Actual free space must pass the stronger preflight after the competing Job's own
+cleanup; projected reclaimed space is not a successful execution gate.
+
+After exact-head checks, GitOps readback and fresh capacity, rerun only failed
+original Tier A/dependent verdict on the same825 source. Keep all independent
+successes and original tests/oracles/needs/timeouts/release contracts. A successful
+candidate must still complete the original main workflow after normal merge.
+Rollback drains only owned BQL work, restores BQL12Gi/guard16Gi and namespace18Gi
+through GitOps, and retains controllers, authentication and finalizers. Do not
+interrupt another repository's busy runner or delete its data to make room.
