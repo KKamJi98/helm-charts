@@ -370,7 +370,7 @@ bql:
           sizeLimit: 512Mi
       - name: daemon-tmp
         emptyDir:
-          sizeLimit: 512Mi
+          sizeLimit: 3Gi
       initContainers:
       - *fullRunnerSeed
       - <<: *fullRunnerDaemon
