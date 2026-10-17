@@ -56,6 +56,37 @@ template:
       fsGroup: 1001
       seccompProfile:
         type: RuntimeDefault
+    initContainers:
+    - name: verified-static-tools
+      image: docker.io/library/arc-platform-static-tools-20261017@sha256:fe125e08224c5493324aa1bd93e855ea237a187de5b40a3971c577a1d13121e7
+      imagePullPolicy: Never
+      command:
+      - /bin/bash
+      - -euc
+      - |
+        /opt/arc/bin/runner-preflight.sh security
+        printf '1ce3db0d1efbea3c381b28599c54944d6b0e8ae65d410132992e49886765a3e0  /opt/arc/helm/helm\n' | sha256sum --check --status
+        install -d /home/runner/_work/_tool/helm/4.2.1/x64
+        install -m 0555 /opt/arc/helm/helm /home/runner/_work/_tool/helm/4.2.1/x64/helm
+        touch /home/runner/_work/_tool/helm/4.2.1/x64.complete
+        /home/runner/_work/_tool/helm/4.2.1/x64/helm version --short
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: [ALL]
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+          ephemeral-storage: 16Mi
+        limits:
+          cpu: 250m
+          memory: 128Mi
+          ephemeral-storage: 64Mi
+      volumeMounts:
+      - name: work
+        mountPath: /home/runner/_work
     containers:
     - name: runner
       image: ghcr.io/actions/actions-runner@sha256:4ffadc0002b2581327e06101fc8c06cd189232baf79fe561fac9caeb76f5e807
