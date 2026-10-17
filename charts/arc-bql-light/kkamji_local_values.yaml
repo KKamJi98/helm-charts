@@ -1,5 +1,5 @@
 githubConfigUrl: https://github.com/KKamJi98/binance-quant-lab
-githubConfigSecret: arc-bql-auth
+githubConfigSecret: arc-github-app-auth
 runnerScaleSetName: binance-quant-lab-light
 minRunners: 0
 maxRunners: 1
