@@ -103,6 +103,7 @@ template:
         /opt/arc/bin/runner-preflight.sh security
         test ! -S /run/user/1001/docker.sock
         /opt/arc/node/bin/node --version
+        /opt/arc/node/bin/node -e 'console.log(JSON.stringify({node:process.version,v8_heap_limit:require("node:v8").getHeapStatistics().heap_size_limit}))'
         /opt/google/chrome/chrome --version
         exec /home/runner/run.sh
       env:
@@ -126,11 +127,11 @@ template:
       resources:
         requests:
           cpu: 250m
-          memory: 256Mi
+          memory: 1Gi
           ephemeral-storage: 512Mi
         limits:
           cpu: '1'
-          memory: 512Mi
+          memory: 1536Mi
           ephemeral-storage: 2Gi
       volumeMounts:
       - name: work

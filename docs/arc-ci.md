@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-17T16:18:32+09:00
+updated: 2026-10-17T16:49:58+09:00
 type: runbook
 status: current
 ---
@@ -382,3 +382,17 @@ The job copies only public cache content, verifies the source lock hash and runs
 its original npm ci/test/typecheck/build or three E2E shards with npm offline.
 No registry egress or browser sandbox/namespace/capability exception is added.
 This preparation does not claim fresh network npm audit or actual CI success.
+
+
+## Frontend Node heap evidence and bounded budget
+
+Native043bb767 run39013869533 reached original npm install/build, but Playwright
+failed134 with V8 ineffective mark-compacts near the roughly256MB heap limit.
+Sampled kernel OOM was0; no seccomp/PID/namespace relaxation was inferred.
+The stuck SDK-session-conflict run was cancelled for complete logs, not passed.
+The Platform non-Docker job memory reservation becomes1Gi and cap1536Mi, both
+within the unchanged existing namespace hard budget. This is a provisional
+frontend envelope, not a measured minimum or BQL/full-Docker8Gi reduction.
+CPU/storage/namespace quota, source checks/shards/timeouts and all security
+contexts stay unchanged. Startup records actual V8 heap limit; the same source
+failed/cancelled jobs must be rerun and verified before claiming recovery.
