@@ -142,7 +142,7 @@ platform:
           sizeLimit: 512Mi
       initContainers:
       - name: seed-sdk
-        image: docker.io/library/arc-platform-nosuidmount-setfcap-20261017@sha256:0a8a8a31aac32784698f59ce1d45a242eeb2dcb9221894d39d14fce00ccff72d
+        image: docker.io/library/arc-platform-web-tools-20261017@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5
         imagePullPolicy: Never
         command:
         - bash
@@ -244,7 +244,7 @@ platform:
           readOnly: true
       containers:
       - name: runner
-        image: docker.io/library/arc-platform-nosuidmount-setfcap-20261017@sha256:0a8a8a31aac32784698f59ce1d45a242eeb2dcb9221894d39d14fce00ccff72d
+        image: docker.io/library/arc-platform-web-tools-20261017@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5
         imagePullPolicy: Never
         command:
         - /usr/bin/python3
@@ -273,6 +273,12 @@ platform:
           value: /home/runner/_work/_tool
         - name: HOME
           value: /home/runner
+        - name: NPM_CONFIG_CACHE
+          value: /home/runner/.npm
+        - name: NPM_CONFIG_OFFLINE
+          value: 'false'
+        - name: DISABLE_RUNNER_UPDATE
+          value: 'true'
         resources:
           requests:
             cpu: 250m

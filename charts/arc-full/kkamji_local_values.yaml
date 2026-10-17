@@ -4,4 +4,4 @@ githubAuth:
 platform:
   maxRunners: 1
 bql:
-  maxRunners: 0
+  maxRunners: 1

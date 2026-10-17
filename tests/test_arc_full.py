@@ -42,7 +42,7 @@ class ArcFullContractTests(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("ARC full auth", r.stderr)
 
-    def test_local_uses_existing_source_and_opens_only_platform_canary(self):
+    def test_local_uses_existing_source_and_opens_qualified_repository_pools(self):
         r = self.render(local=True)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(r.stdout.count("kind: ExternalSecret"), 1)
@@ -53,8 +53,8 @@ class ArcFullContractTests(unittest.TestCase):
             "deletionPolicy: Retain",
         ]:
             self.assertIn(text, r.stdout)
-        self.assertEqual(r.stdout.count("maxRunners: 0"), 1)
-        self.assertEqual(r.stdout.count("maxRunners: 1"), 1)
+        self.assertEqual(r.stdout.count("maxRunners: 0"), 0)
+        self.assertEqual(r.stdout.count("maxRunners: 1"), 2)
         self.assertNotIn("kind: ClusterRole\n", r.stdout)
 
     def test_previously_excluded_or_outside_role_overrides_fail_closed(self):
