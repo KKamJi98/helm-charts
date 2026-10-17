@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-17T18:46:49+09:00
+updated: 2026-10-17T19:32:24+09:00
 type: runbook
 status: current
 ---
@@ -437,8 +437,9 @@ weakened, and the canary workflow remains manual-only.
 This is a restricted non-Docker validation role, not full Docker8Gi guard
 qualification. The stock NNP0/capSETUID+SETGID/raw API design is not adopted.
 All-thread outer privilege removal and a byte-identified filtered Docker API
-implementation/escape/compatibility evidence remain unresolved. New namespace,
-capability/syscall/profile/host access changes are not authorized by this work.
+implementation/escape/compatibility evidence remain unresolved. Outside the
+separately approved fixed diagnostic below, production namespace/capability/
+syscall/profile/host access changes remain unauthorized.
 
 Images use verified node-local immutable references with imagePullPolicy=Never;
 no registry publication or credential transfer was performed. Image-GC/node
@@ -469,3 +470,39 @@ limits.memory1536Mi. The standalone compilation outcome is separate evidence;
 this restore does not claim full CI success. CPU/Pod/storage/security/auth and
 existing workloads remain unchanged. Actual quota and Argo convergence must be
 verified against this source revision before closing the window.
+
+
+## Verified5Gi compilation and bounded lab result
+
+The single5Gi/j1 trial compiled the original source and all12 release binaries.
+Cargo returned0, wall412.40s, CPU410.65s, cgroup peak3.371Gi, largest child
+maxrss3.179Gi and OOM deltas0. Downloaded ELF x86-64/mode0555, size and SHA256
+were verified for every output. Lock/security/CPU/storage contracts stayed intact.
+This is standalone compilation, not the full BQL workflow, not a proven minimum
+and not permission to weaken the existing full candidate guards.
+
+Only currently safe/image-eligible workers were admitted by affinity. No existing
+workload relocation was necessary. Normal PR24 expanded only shared memory and
+PR25 restored1Gi/1536Mi. Actual used0 and Argo source/Healthy/Synced matched.
+The local wrapper's exit1 was an asynchronous quota-used readback race AFTER
+compile/export success, not an OOM or compilation failure. A bounded convergence
+wait now has positive/stale and negative/nonconvergence regression checks; the
+successful compile was not needlessly rerun.
+
+The authorized fixed180s lab ran with actual hostUsersfalse, trusted NNP0 and
+only SETUID/GID, job NNP1/cap0, readonly roots and native-matched six-call profile.
+Stock SUID mapping helper failed opening uid_map. A byte-identical helper variant
+removed SUID and used only per-helper SETUID/GID file capabilities; it opened the
+file but failed writing uid_map with EPERM. Neither attempt initialized Docker,
+ran application source or proved post-init drop/API/network isolation.
+
+The proposed full65536-ID mapping includes parent UID0. Linux5.12+ requires
+CAP_SETFCAP for that mapping; current approved bounding set excludes it. This
+is a definite missing prerequisite of this mapping design, not proof it is the
+only remaining failure. See https://man7.org/linux/man-pages/man7/user_namespaces.7.html .
+No CAP_SETFCAP, SYS_ADMIN, Unmasked, Unconfined or host access was added. Do not
+shrink the UID model or claim a minimum/sufficient capability set just to pass.
+All owned lab Pods/namespace and the created node profile were removed and read
+back absent. Verified local image caches remain artifacts, not active authority.
+A new narrow permission decision is needed before another broader lab step;
+operational full CI stays unqualified, and neither canary nor subset is full CI.
