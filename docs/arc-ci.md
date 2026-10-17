@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-18T00:14:12+09:00
+updated: 2026-10-18T00:35:40+09:00
 type: runbook
 status: current
 ---
@@ -574,7 +574,9 @@ namespace were removed, with existing ci-pr quota unchanged.
 
 `charts/arc-runtime` installs the versioned trusted seccomp profile on worker
 nodes and registers only `kkamji.net/arc-tun`, one slot per node. The pinned
-Device Plugin is UID0/cap0/NNP1/read-only, not a privileged container. Its
+Device Plugin is UID0/cap0/NNP1/read-only, not a privileged container. The pinned
+0.2.0 binary accepts `--listen=:8080`, not `--listen-address`; CLI parity is
+regression checked. Its
 namespace admits only the necessary host registration/device discovery mounts;
 the fixed installer also writes the dedicated seccomp file. Both components
 have no Kubernetes token. Do not remove that file while any running Pod uses it.
