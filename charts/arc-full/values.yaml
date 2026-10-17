@@ -298,7 +298,7 @@ platform:
           mountPath: /run/arc-api
         - name: sdk-tmp
           mountPath: /tmp
-        workingDir: /home/runner
+        workingDir: /home/runner/_work
 bql:
   githubConfigUrl: https://github.com/KKamJi98/binance-quant-lab
   githubConfigSecret: arc-github-app-auth

@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-18T01:45:27+09:00
+updated: 2026-10-18T02:34:59+09:00
 type: runbook
 status: current
 ---
@@ -642,3 +642,18 @@ and permanent operational health remain unverified at this source-staging step.
 Rollback keeps both maxima0, restores routing, removes only owned workload/helper
 resources, and removes an unchanged owned profile only after no Pod references
 it. Namespace pruning is disabled and authentication targets are retained.
+
+## ARC0.15 JIT workspace mapping
+
+The first original BQL run stopped before Rust tests: its checkout landed under
+private SDK HOME, outside the daemon's shared work mount. Docker correctly could
+not create that path on its read-only root. Matching upstream
+[ARC0.15 source](https://github.com/actions/actions-runner-controller/blob/gha-runner-scale-set-0.15.0/controllers/actions.github.com/ephemeralrunner_controller.go)
+assigns JIT WorkFolder from the runner container workingDir. Set workingDir to
+/home/runner/_work, the existing shared work path, not private /home/runner.
+
+This is a workspace mapping fix, not a permission, Rust assertion or memory fix.
+Keep SDK HOME unshared, the same work/socket/data volumes, approved roles,
+profiles and shared5Gi/CPU2. The rendered two-repository path regression first
+failed and then passed. Original BQL CI must be rerun on the same source after
+the GitOps fix; the initial exit125 and cancelled siblings remain failed evidence.
