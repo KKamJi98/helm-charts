@@ -3,6 +3,12 @@ import os
 from pathlib import Path
 
 
+def disk_required_bytes(total):
+    gib = 1024**3
+    imagefs_margin = (total * 15 + 99) // 100 + gib
+    return 16 * gib + max(5 * gib, imagefs_margin)
+
+
 def main():
     assert os.getuid() == os.getgid() == 1001
     status = dict(
@@ -29,8 +35,10 @@ def main():
     assert available >= 6 * 1024**3, (
         "node memory reserve below shared5Gi plus1Gi; no repository workload started"
     )
-    assert free >= 19 * 1024**3, (
-        "node disk reserve below14Gi plus5Gi; no repository workload started"
+    required_disk = disk_required_bytes(fs.f_blocks * fs.f_frsize)
+    assert free >= required_disk, (
+        "node disk reserve below16Gi plus max5Gi/imagefs15percent+1Gi; "
+        "no repository workload started"
     )
     print(
         json.dumps(
@@ -42,6 +50,9 @@ def main():
                 "shared_Pod_budget_GiB": 5,
                 "node_memory_available_bytes": available,
                 "node_disk_available_bytes": free,
+                "node_disk_required_bytes": required_disk,
+                "job_ephemeral_budget_GiB": 16,
+                "imagefs_pressure_guard_percent": 15,
             }
         ),
         flush=True,

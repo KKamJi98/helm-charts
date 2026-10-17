@@ -20,6 +20,9 @@
 {{- $daemon := index $p.initContainers 1 -}}
 {{- $s := $sdk.securityContext -}}
 {{- $t := $daemon.securityContext -}}
+{{- if or (ne (dig "resources" "limits" "ephemeral-storage" "" (default (dict) $daemon)) "12Gi") (ne (dig "resources" "limits" "ephemeral-storage" "" (default (dict) $sdk)) "4Gi") -}}
+{{- fail "ARC full boundary: private Docker12Gi plus SDK4Gi must match the startup disk guard" -}}
+{{- end -}}
 {{- if or (ne $sdk.name "runner") (ne $s.procMount "Default") $s.allowPrivilegeEscalation $s.privileged (not $s.readOnlyRootFilesystem) (ne (len (default (list) $s.capabilities.add)) 0) (ne (join "," $s.capabilities.drop) "ALL") -}}
 {{- fail "ARC full boundary: SDK must keep Default/NNP1/cap0/read-only" -}}
 {{- end -}}
@@ -30,6 +33,12 @@
 {{- fail "ARC full boundary: approved UID and role-specific seccomp profiles are required" -}}
 {{- end -}}
 {{- range $volume := $p.volumes -}}
+{{- if not $volume -}}
+{{- fail "ARC full boundary: empty volume entries are not allowed" -}}
+{{- end -}}
+{{- if and (eq $volume.name "docker-data") (ne $volume.emptyDir.sizeLimit "12Gi") -}}
+{{- fail "ARC full boundary: private Docker data must match its bounded12Gi limit" -}}
+{{- end -}}
 {{- if not (or (hasKey $volume "emptyDir") (hasKey $volume "configMap")) -}}
 {{- fail "ARC full boundary: no host/PVC/Secret volume is allowed in SDK Pods" -}}
 {{- end -}}
