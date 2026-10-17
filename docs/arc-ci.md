@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-17T17:16:46+09:00
+updated: 2026-10-17T17:40:02+09:00
 type: runbook
 status: current
 ---
@@ -330,7 +330,7 @@ input, ESO Ready and target Secret metadata can verify reconciliation without
 printing secret data; no such reconciliation has happened yet.
 
 
-## Temporary 3Gi compilation measurement window
+## Completed temporary 3Gi compilation measurement window
 
 The owner explicitly authorized changing only the shared namespace memory sums
 of ci-pr/arc-job-budget: requests.memory1Gi to3Gi, limits.memory1536Mi to3Gi.
@@ -399,7 +399,7 @@ contexts stay unchanged. Startup records actual V8 heap limit; the same source
 failed/cancelled jobs must be rerun and verified before claiming recovery.
 
 
-## Data-only font differential for remaining geometry failures
+## Verified data-only font recovery for geometry failures
 
 At the same043bb767 source, the bounded heap profile passed973 web tests,
 typecheck/build and E2E shard2. Shards1/3 retained exact geometry assertions and
@@ -409,5 +409,39 @@ fell back to Liberation Mono. A data-only child adds checksum-verified
 architecture-all DejaVu/Noto core/CJK/emoji font files without package scripts.
 fc-match now selects Noto Sans and Noto Sans CJK. SDK/Chrome/Node/npm/source,
 resource limits, permissions, policies and all assertions remain unchanged.
-This is a differential hypothesis until the same original failed shards rerun;
-font metadata or a changed image digest alone is not E2E success.
+The same-source font-only attempt3 replay passed all188 original E2E tests
+across3 shards; font metadata/image digest alone was not used as the gate.
+Original API/image hosted failures still prevent full CI success.
+
+
+## Verified boundary and remaining blockers
+
+The approved BQL single j1 trial at request=limit3Gi OOMKilled/137 with zero
+verified release outputs. PR17 temporarily expanded only shared memory totals;
+PR18 restored requests.memory1Gi/limits.memory1536Mi through normal GitOps.
+Source/live quota equality and Argo Synced/Healthy were verified after cleanup.
+CPU/Pod/storage quota, VM/node memory and security permissions did not change.
+The OOM-clipped3Gi peak proves neither a successful minimum nor8Gi necessity.
+
+Platform source043bb767 run39013869533 is the original CI, not a smoke alias.
+Attempt3 actually passed native gate/static, Python108, web973/typecheck/build
+and all3 original E2E shards (188 tests). The same source/CSS/assertions and
+Chrome/Node/runtime/resources were retained; only font data resolved the exact
+prior two geometry failures. Native runner/job verdicts remain distinct from
+workflow-level success.
+API/image-pr remain hosted pre-start payment failures, not code-test failures;
+ci-ok retains its real failure aggregation and PR136 stays draft/unmerged.
+No protection rule, original assertion, test selection, matrix or timeout was
+weakened, and the canary workflow remains manual-only.
+
+This is a restricted non-Docker validation role, not full Docker8Gi guard
+qualification. The stock NNP0/capSETUID+SETGID/raw API design is not adopted.
+All-thread outer privilege removal and a byte-identified filtered Docker API
+implementation/escape/compatibility evidence remain unresolved. New namespace,
+capability/syscall/profile/host access changes are not authorized by this work.
+
+Images use verified node-local immutable references with imagePullPolicy=Never;
+no registry publication or credential transfer was performed. Image-GC/node
+recovery and general production runner distribution are not solved merely by
+this bounded validation. Current App/ESO/controller credential inputs are already
+resolved and must not be re-entered or treated as an old profile blocker.
