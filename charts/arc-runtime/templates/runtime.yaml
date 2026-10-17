@@ -98,7 +98,7 @@ spec:
       - name: tun-device-plugin
         image: docker.io/squat/generic-device-plugin@sha256:bf312a67334be792d3a3d3042c99225aec469957dc1737911970aebbf82d1545
         args:
-        - --listen-address=:8080
+        - --listen=:8080
         - --domain=kkamji.net
         - '--device={"name":"arc-tun","groups":[{"count":1,"paths":[{"path":"/dev/net/tun","mountPath":"/dev/net/tun","permissions":"rw","type":"Device"}]}]}'
         securityContext:

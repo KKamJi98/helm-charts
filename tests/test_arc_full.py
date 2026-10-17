@@ -72,6 +72,28 @@ class ArcFullContractTests(unittest.TestCase):
                 self.assertIn("ARC full boundary", r.stderr)
 
 
+class RuntimePinnedCliTests(unittest.TestCase):
+    def test_runtime_uses_actual_pinned_plugin_listen_flag(self):
+        r = subprocess.run(
+            [
+                HELM,
+                "template",
+                "arc-runtime",
+                str(ROOT / "charts/arc-runtime"),
+                "-n",
+                "arc-runtime",
+                "-f",
+                str(ROOT / "charts/arc-runtime/kkamji_local_values.yaml"),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("--listen=:8080", r.stdout)
+        self.assertNotIn("--listen-address", r.stdout)
+
+
 class TrustedStartupReadinessTests(unittest.TestCase):
     def module(self):
         spec = importlib.util.spec_from_file_location(
