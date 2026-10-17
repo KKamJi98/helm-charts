@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-18T02:34:59+09:00
+updated: 2026-10-18T03:03:43+09:00
 type: runbook
 status: current
 ---
@@ -657,3 +657,21 @@ Keep SDK HOME unshared, the same work/socket/data volumes, approved roles,
 profiles and shared5Gi/CPU2. The rendered two-repository path regression first
 failed and then passed. Original BQL CI must be rerun on the same source after
 the GitOps fix; the initial exit125 and cancelled siblings remain failed evidence.
+
+## Bounded BQL Docker storage and pressure-aware startup
+
+The corrected original BQL checkout reached Tier A. Its Pod was then evicted
+because private docker-data exceeded10Gi, not memory OOM or a Rust assertion.
+The failed attempt is retained and stopped; a truncated budget is not a proven
+minimum. The next bounded candidate is Docker data12Gi and SDK4Gi, aggregate
+Job ephemeral limit16Gi, namespace limit18Gi including control/surge. Memory
+stays shared5Gi/CPU2 and all source tests/timeouts/parallelism remain unchanged.
+
+Before repository code, require free disk >=16Gi + max(5Gi, filesystem15%+1Gi).
+Matching kubelet1.36.1 Linux source uses imagefs15% when the live config/flags do
+not override it. The native preflight confirmed this candidate fits. This raises
+the original fixed14Gi+5Gi guard; it never lowers it to force a run. The paired
+BQL workflow disables incremental intermediates, not any checks or release
+outputs. No node resize, image/cache deletion, PVC/host volume or shared job data.
+Private emptyDirs still die with their own Pod; native data/logical Docker size
+and final original CI results must establish whether this candidate succeeds.

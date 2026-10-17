@@ -71,12 +71,38 @@ class ArcFullContractTests(unittest.TestCase):
             "platform.template.spec.initContainers[1].securityContext.capabilities.add[3]=SYS_ADMIN",
             "platform.template.spec.resources.limits.memory=6Gi",
             "bql.template.spec.automountServiceAccountToken=true",
+            "platform.template.spec.initContainers[1].resources.limits.ephemeral-storage=14Gi",
+            "platform.template.spec.containers[0].resources.limits.ephemeral-storage=6Gi",
+            "platform.template.spec.volumes[6].emptyDir.sizeLimit=20Gi",
         ]
         for flag in mutations:
             with self.subTest(flag=flag):
                 r = self.render([flag])
                 self.assertNotEqual(r.returncode, 0)
                 self.assertIn("ARC full boundary", r.stderr)
+
+
+class DiskReserveTests(unittest.TestCase):
+    def test_disk_guard_retains_job_budget_and_imagefs_margin(self):
+        spec = importlib.util.spec_from_file_location(
+            "sdk_entry", ROOT / "charts/arc-full/files/sdk-entry.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        gib = 1024**3
+        required = module.disk_required_bytes(100 * gib)
+        self.assertEqual(required, 32 * gib)
+        self.assertGreater(required, 25 * gib)
+        self.assertEqual(module.disk_required_bytes(20 * gib), 21 * gib)
+
+    def test_runtime_has_bounded_twelve_gib_private_data(self):
+        text = (ROOT / "charts/arc-full/values.yaml").read_text()
+        self.assertIn("sizeLimit: 12Gi", text)
+        self.assertIn("ephemeral-storage: 12Gi", text)
+        self.assertIn(
+            "limits.ephemeral-storage: 18Gi",
+            (ROOT / "charts/arc-full/templates/foundation.yaml").read_text(),
+        )
 
 
 class RuntimePinnedCliTests(unittest.TestCase):
