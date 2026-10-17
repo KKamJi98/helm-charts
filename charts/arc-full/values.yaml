@@ -81,7 +81,7 @@ platform:
     metadata:
       labels:
         arc.kkamji.net/role: job
-    spec:
+    spec: &fullRunnerSpec
       automountServiceAccountToken: false
       serviceAccountName: arc-full-job
       hostUsers: false
@@ -141,7 +141,8 @@ platform:
         emptyDir:
           sizeLimit: 512Mi
       initContainers:
-      - name: seed-sdk
+      - &fullRunnerSeed
+        name: seed-sdk
         image: docker.io/library/arc-platform-web-tools-20261017@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5
         imagePullPolicy: Never
         command:
@@ -174,7 +175,8 @@ platform:
         volumeMounts:
         - name: sdk-home
           mountPath: /runner-home
-      - name: dind
+      - &fullRunnerDaemon
+        name: dind
         image: docker.io/library/arc-platform-nosuidmount-setfcap-20261017@sha256:0a8a8a31aac32784698f59ce1d45a242eeb2dcb9221894d39d14fce00ccff72d
         imagePullPolicy: Never
         restartPolicy: Always
@@ -200,7 +202,7 @@ platform:
           seccompProfile:
             type: Localhost
             localhostProfile: arc-docker-runtime-v2.json
-        resources:
+        resources: &fullRunnerDaemonResources
           requests:
             cpu: 250m
             memory: 128Mi
@@ -243,7 +245,8 @@ platform:
           subPath: subgid
           readOnly: true
       containers:
-      - name: runner
+      - &fullRunnerSDK
+        name: runner
         image: docker.io/library/arc-platform-web-tools-20261017@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5
         imagePullPolicy: Never
         command:
@@ -335,7 +338,66 @@ bql:
             cpu: 250m
             memory: 128Mi
             ephemeral-storage: 256Mi
-  template: *fullRunnerTemplate
+  template:
+    <<: *fullRunnerTemplate
+    spec:
+      <<: *fullRunnerSpec
+      volumes:
+      - name: runtime-config
+        configMap:
+          name: arc-full-runtime
+          defaultMode: 292
+      - name: sdk-home
+        emptyDir:
+          sizeLimit: 4Gi
+      - name: work
+        emptyDir:
+          sizeLimit: 6Gi
+      - name: socket
+        emptyDir:
+          sizeLimit: 16Mi
+      - name: runtime
+        emptyDir:
+          sizeLimit: 64Mi
+      - name: private-home
+        emptyDir:
+          sizeLimit: 256Mi
+      - name: docker-data
+        emptyDir:
+          sizeLimit: 16Gi
+      - name: sdk-tmp
+        emptyDir:
+          sizeLimit: 512Mi
+      - name: daemon-tmp
+        emptyDir:
+          sizeLimit: 512Mi
+      initContainers:
+      - *fullRunnerSeed
+      - <<: *fullRunnerDaemon
+        resources:
+          <<: *fullRunnerDaemonResources
+          limits:
+            ephemeral-storage: 16Gi
+            kkamji.net/arc-tun: '1'
+      containers:
+      - <<: *fullRunnerSDK
+        env:
+        - name: DOCKER_HOST
+          value: unix:///run/arc-api/docker.sock
+        - name: DOCKER_CONFIG
+          value: /home/runner/.docker
+        - name: RUNNER_TOOL_CACHE
+          value: /home/runner/_work/_tool
+        - name: HOME
+          value: /home/runner
+        - name: NPM_CONFIG_CACHE
+          value: /home/runner/.npm
+        - name: NPM_CONFIG_OFFLINE
+          value: 'false'
+        - name: DISABLE_RUNNER_UPDATE
+          value: 'true'
+        - name: ARC_JOB_EPHEMERAL_GIB
+          value: '20'
 githubAuth:
   enabled: false
   existingSourceReuseApproved: false

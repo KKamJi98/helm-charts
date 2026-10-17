@@ -3,10 +3,12 @@ import os
 from pathlib import Path
 
 
-def disk_required_bytes(total):
+def disk_required_bytes(total, job_budget_gib=16):
+    if job_budget_gib not in (16, 20):
+        raise ValueError("job disk budget must match a qualified pool:16Gi or20Gi")
     gib = 1024**3
     imagefs_margin = (total * 15 + 99) // 100 + gib
-    return 16 * gib + max(5 * gib, imagefs_margin)
+    return job_budget_gib * gib + max(5 * gib, imagefs_margin)
 
 
 def main():
@@ -35,9 +37,10 @@ def main():
     assert available >= 6 * 1024**3, (
         "node memory reserve below shared5Gi plus1Gi; no repository workload started"
     )
-    required_disk = disk_required_bytes(fs.f_blocks * fs.f_frsize)
+    job_budget_gib = int(os.environ.get("ARC_JOB_EPHEMERAL_GIB", "16"))
+    required_disk = disk_required_bytes(fs.f_blocks * fs.f_frsize, job_budget_gib)
     assert free >= required_disk, (
-        "node disk reserve below16Gi plus max5Gi/imagefs15percent+1Gi; "
+        f"node disk reserve below{job_budget_gib}Gi plus max5Gi/imagefs15percent+1Gi; "
         "no repository workload started"
     )
     print(
@@ -51,7 +54,7 @@ def main():
                 "node_memory_available_bytes": available,
                 "node_disk_available_bytes": free,
                 "node_disk_required_bytes": required_disk,
-                "job_ephemeral_budget_GiB": 16,
+                "job_ephemeral_budget_GiB": job_budget_gib,
                 "imagefs_pressure_guard_percent": 15,
             }
         ),
