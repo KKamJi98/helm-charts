@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-18T01:15:36+09:00
+updated: 2026-10-18T01:45:27+09:00
 type: runbook
 status: current
 ---
@@ -610,8 +610,19 @@ headroom is separate from the one heavy-job memory/TUN quota. Public CI egress
 excludes private, node, loopback, link-local, CGNAT and metadata ranges; only
 control roles can reach the API. No external endpoint or persistent cache is added.
 
-Reusable scale-set defaults keep min0/max0. The local Platform pool now allows
-min0/max1 only for a trusted-branch SDK/JIT/cache canary; BQL stays max0. Two
+Reusable scale-set defaults keep min0/max0. Both local repository pools now
+allow min0/max1 after the common fixed runtime and actual Platform SDK/JIT/GHA
+cache qualification. BQL first gets its own trusted canary before normal routing.
+All normal CI Jobs will use the full pool rather than overlap a w2 light Job with
+a5Gi heavy Job. Existing light canaries and ci-pr quota/policies remain intact.
+
+The SDK and seed use the already verified frontend image0d5, which has system
+Chrome/font parity. Its managed SDK/Worker DLLs, startup scripts and Docker CLI
+match the qualified helper image exactly. The daemon remains on image0a and the
+same profile/privileges. SDK private HOME only receives immutable SDK files;
+normal npm cache is writable there and online, not an image-auth/cache copy.
+This avoids transferring a large extra toolchain into w1's smaller disk budget.
+No w1 large-image import, low disk reserve or image rebuild is hidden here. Two
 fixed SDK Pods actually passed non-root/NNP1/cap0/read-only/no-token/no-TUN,
 private HOME/node-profile/socket isolation, private TCP denial, fresh job graph,
 and native-sidecar recovery. All three roles exited0, the daemon restarted once
