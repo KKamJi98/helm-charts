@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-17T19:32:24+09:00
+updated: 2026-10-17T20:54:45+09:00
 type: runbook
 status: current
 ---
@@ -474,6 +474,9 @@ verified against this source revision before closing the window.
 
 ## Verified5Gi compilation and bounded lab result
 
+This cap2 evidence and permission hold are historical. The later explicit
+SETFCAP diagnostic authorization/result below supersedes only that hold.
+
 The single5Gi/j1 trial compiled the original source and all12 release binaries.
 Cargo returned0, wall412.40s, CPU410.65s, cgroup peak3.371Gi, largest child
 maxrss3.179Gi and OOM deltas0. Downloaded ELF x86-64/mode0555, size and SHA256
@@ -506,3 +509,51 @@ All owned lab Pods/namespace and the created node profile were removed and read
 back absent. Verified local image caches remain artifacts, not active authority.
 A new narrow permission decision is needed before another broader lab step;
 operational full CI stays unqualified, and neither canary nor subset is full CI.
+
+
+## Explicit SETFCAP scope - isolated rootless core initialization verified
+
+The owner separately approved SETFCAP ONLY for the same fixed180s trusted
+role and mapping helper. Bounding is exactly SETUID/GID/FCAP, observer NNP1
+and cap0, readonly/no-token/hostUsersfalse/procMountDefault and native-matched
+six-call Localhost unchanged. No outer SYS_ADMIN/NET_ADMIN/DAC_OVERRIDE,
+Unmasked, Unconfined, device or host access was added. No application source
+or operational ARC/JIT job was run.
+
+The original UID-helper failure advanced to detached-network-namespace bind
+failure. The actual Docker entrypoint supports DETACH_NETNS0; that official
+configuration preserved slirp while avoiding the persistent bind. Missing ip
+and omitted sbin PATH were image packaging defects, corrected with signed
+Ubuntu iproute2 and existing iptables. The normal slirp path then reached
+TUN creation, where actual Pod /dev/net/tun was absent. Node device presence
+does not mean it was allocated into the Pod.
+
+A clearly separate netnone diagnostic isolated daemon prerequisites from TUN.
+The complete map puts image parentUID0 at nestedUID1; image SUID4755 mount
+and umount changed the intended nested identity. Removing just their SUID
+bits, retaining exact binary bytes and every runtime authority, fixed that
+transition. This did not add an outer capability or reduce UID coverage.
+
+Under that isolated netnone variant, actual Docker29.9.1 initialized and the
+fixed version/info observer passed; trusted and observer native exits were0.
+Nested UID/GID maps covered all65536 IDs. Kernel capabilities in a child user
+namespace were observed and are not host capabilities or proof of post-init
+all-thread privilege removal. The parent remains NNP0/bounding3 in this
+authorized diagnostic; effective0 by itself is not privilege-drop success.
+
+This result is NOT the original network/bridge/port/cache/image contract,
+container execution, API authorization/escape/peer-negative proof or full CI.
+Do not turn netnone into a workflow skip or qualifying flag. Existing BQL5Gi
+ELF12 proof and restored1Gi/1536Mi/used0 remain valid; no compilation rerun.
+All owned lab Pods/namespace and created node profile were removed/read back.
+
+Normal networking remains blocked on a NEW TUN device-allocation boundary.
+Current containerd defaults do not grant TUN in the device cgroup, and kubelet
+does not copy arbitrary Pod annotations into CRI container CDI annotations.
+A file mount or Pod CDI annotation is not enough. Device-plugin/DRA allocation
+requires a separately reviewed scope; no plugin, host registration socket,
+CDI spec, node configuration, namespace-policy exception or device access was
+applied. An upstream privileged/whole-dev example is not a safe template.
+Proposed nonprivileged/single-device adaptation is source-only and not ready
+for deployment until its exact image and new authority are verified/authorized.
+Operational full CI, post-init drop and per-job API isolation remain partial.
