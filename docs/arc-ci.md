@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-18T06:10:26+09:00
+updated: 2026-10-18T07:44:52+09:00
 type: runbook
 status: current
 ---
@@ -711,3 +711,31 @@ candidate must still complete the original main workflow after normal merge.
 Rollback drains only owned BQL work, restores BQL12Gi/guard16Gi and namespace18Gi
 through GitOps, and retains controllers, authentication and finalizers. Do not
 interrupt another repository's busy runner or delete its data to make room.
+
+## BQL private test scratch within the same20Gi Pod limit
+
+The bounded16Gi original Tier A attempt still hit its EmptyDir ceiling after
+277 test binaries were built;275 captured target summaries had no failures, but
+the final serial targets/S2 completion were not verified. Retain this failure.
+Do not call a higher cap a minimum, discard tests, strip ELFs or prune node data.
+
+Keep Docker data16Gi, SDK4Gi, shared5Gi/CPU2, Pod aggregate20Gi and namespace22Gi.
+Only BQL daemon-tmp grows512Mi to3Gi, disk-backed under that SAME aggregate limit;
+Platform's Pod template stays exact. The existing trusted UID1001 role prepares
+/tmp/arc-bql-scratch as its own sticky1777 parent using O_NOFOLLOW and fd chmod,
+with no chown or new capability. A normal Ubuntu UID1000 helper creates0700 child
+state and the paired workflow binds just that child at the original HOME cache
+scratch base. This separates temporary real-ELF copies from Cargo's data graph,
+not from the Pod's accounting or before-repository pressure guard.
+
+Actual native root/caller ancestry, UID1000/0700, ELF SHA/0500 execution and RO
+refusal passed in a token-free fixed probe, followed by namespace/Pod cleanup.
+The BusyBox /home65534 refusal and argv0 fixture error were preserved, not
+whitelisted or reported as runtime permission failures. This is FS evidence only;
+the original complete Ubuntu workload must still validate all contracts.
+
+There is no new volume type, mount propagation, host path, Secret, device, role
+or controller/auth change. Disk3Gi/never-memory and pool budgets fail closed.
+Keep the actual20Gi+pressure/memory6Gi start guards. Deploy this preparation
+before its workflow; roll back the workflow before shrinking scratch, drain only
+owned work, and preserve other repositories and controller/finalizer cleanup.

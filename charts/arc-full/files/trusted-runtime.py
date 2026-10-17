@@ -11,6 +11,16 @@ SOCKET_ROOT = Path("/run/arc-api")
 RUN_ROOT = Path("/run/arc-runtime")
 
 
+def prepare_private_scratch(path):
+    path.mkdir(mode=0o700, exist_ok=True)
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        assert os.fstat(fd).st_uid == os.getuid()
+        os.fchmod(fd, 0o1777)
+    finally:
+        os.close(fd)
+
+
 def status():
     return dict(
         line.split(":", 1)
@@ -69,6 +79,7 @@ def main():
         Path("/var/lib/arc-docker/data"),
     ]:
         path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    prepare_private_scratch(Path("/tmp/arc-bql-scratch"))
     ready.unlink(missing_ok=True)
     (RUN_ROOT / "daemon.pid").unlink(missing_ok=True)
     env = os.environ.copy()

@@ -81,6 +81,20 @@ class ArcFullContractTests(unittest.TestCase):
         self.assertNotIn("ARC_JOB_EPHEMERAL_GIB", platform)
         self.assertIn("limits.ephemeral-storage: 22Gi", r.stdout)
 
+    def test_bql_private_scratch_is_disk_backed_within_same_twenty_gib(self):
+        r = self.render(local=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        bql = next(
+            doc
+            for doc in r.stdout.split("---")
+            if "kind: AutoscalingRunnerSet" in doc
+            and "name: binance-quant-lab-full" in doc
+        )
+        self.assertRegex(bql, r"emptyDir:\s+sizeLimit: 3Gi\s+name: daemon-tmp")
+        self.assertNotIn("medium: Memory", bql)
+        self.assertIn('value: "20"', bql)
+        self.assertIn("limits.ephemeral-storage: 22Gi", r.stdout)
+
     def test_bql_budget_requires_one_literal_twenty_gib_value(self):
         values = (ROOT / "charts/arc-full/values.yaml").read_text()
         image = re.search(r"&fullRunnerSDK\s+name: runner\s+image: (\S+)", values)
@@ -214,6 +228,33 @@ class TrustedStartupReadinessTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
+
+    def test_private_scratch_is_sticky_and_restart_preserves_caller_data(self):
+        import tempfile
+
+        module = self.module()
+        with tempfile.TemporaryDirectory() as parent:
+            path = Path(parent) / "private-scratch"
+            module.prepare_private_scratch(path)
+            self.assertEqual(path.stat().st_mode & 0o7777, 0o1777)
+            self.assertEqual(path.stat().st_uid, os.getuid())
+            sentinel = path / "caller-data"
+            sentinel.write_text("preserve")
+            module.prepare_private_scratch(path)
+            self.assertEqual(sentinel.read_text(), "preserve")
+
+    def test_private_scratch_rejects_symlink_without_changing_target(self):
+        import tempfile
+
+        module = self.module()
+        with tempfile.TemporaryDirectory() as parent:
+            target = Path(parent) / "target"
+            target.mkdir(mode=0o700)
+            link = Path(parent) / "private-scratch"
+            link.symlink_to(target, target_is_directory=True)
+            with self.assertRaises(OSError):
+                module.prepare_private_scratch(link)
+            self.assertEqual(target.stat().st_mode & 0o7777, 0o700)
 
     def test_stale_ready_file_does_not_hide_failed_daemon(self):
         module = self.module()

@@ -1,6 +1,6 @@
 ---
 title: Docs index
-updated: 2026-10-18T06:10:26+09:00
+updated: 2026-10-18T07:44:52+09:00
 type: architecture
 status: current
 ---
@@ -25,5 +25,5 @@ status: current
 - [ArgoCD notifications improvement](specs/2026-06-08-argocd-notifications-improvement.md) - 알림 개선 설계.
 - [Alerting quality improvements](specs/2026-06-12-alerting-quality-improvements.md) - 알림 품질 개선 설계.
 
-- [ARC rollout](arc-ci.md) - Qualified trusted full SDK/JIT, shared5Gi and BQL-only bounded16Gi private storage candidate with unchanged pressure guard.
+- [ARC rollout](arc-ci.md) - Qualified full SDK/JIT and BQL private scratch/ELF candidate within unchanged shared5Gi and20Gi Pod accounting.
 - [ARC GitHub App](arc-github-app.md) - Approved App installation, shared authority, separately approved secure input, rotation and recovery.

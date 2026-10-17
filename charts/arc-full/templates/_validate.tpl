@@ -21,8 +21,10 @@
 {{- $s := $sdk.securityContext -}}
 {{- $t := $daemon.securityContext -}}
 {{- $dockerLimit := "12Gi" -}}
+{{- $scratchLimit := "512Mi" -}}
 {{- if eq $name "bql" -}}
 {{- $dockerLimit = "16Gi" -}}
+{{- $scratchLimit = "3Gi" -}}
 {{- end -}}
 {{- if or (ne (dig "resources" "limits" "ephemeral-storage" "" (default (dict) $daemon)) $dockerLimit) (ne (dig "resources" "limits" "ephemeral-storage" "" (default (dict) $sdk)) "4Gi") -}}
 {{- fail "ARC full boundary: pool Docker budget plus SDK4Gi must match the startup disk guard" -}}
@@ -59,6 +61,9 @@
 {{- end -}}
 {{- if and (eq $volume.name "docker-data") (ne $volume.emptyDir.sizeLimit $dockerLimit) -}}
 {{- fail "ARC full boundary: private Docker data must match the pool limit" -}}
+{{- end -}}
+{{- if and (eq $volume.name "daemon-tmp") (or (ne $volume.emptyDir.sizeLimit $scratchLimit) (ne (default "" $volume.emptyDir.medium) "")) -}}
+{{- fail "ARC full boundary: private scratch must match the pool disk limit, never memory" -}}
 {{- end -}}
 {{- if not (or (hasKey $volume "emptyDir") (hasKey $volume "configMap")) -}}
 {{- fail "ARC full boundary: no host/PVC/Secret volume is allowed in SDK Pods" -}}
