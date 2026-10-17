@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-17T18:36:43+09:00
+updated: 2026-10-17T18:46:49+09:00
 type: runbook
 status: current
 ---
@@ -460,3 +460,12 @@ The separately approved180s trusted Docker lab includes namespace, NNP0/cap2,
 Localhost6-call profile and Pod UID/GID mapping hypotheses. It does not approve
 privileged/SYS_ADMIN/host socket/Unconfined/Unmasked, credential exposure,
 untrusted application execution or production full CI before drop/API proof.
+
+
+## Restore shared memory budget
+
+This commit returns the temporary namespace sums to requests.memory1Gi and
+limits.memory1536Mi. The standalone compilation outcome is separate evidence;
+this restore does not claim full CI success. CPU/Pod/storage/security/auth and
+existing workloads remain unchanged. Actual quota and Argo convergence must be
+verified against this source revision before closing the window.
