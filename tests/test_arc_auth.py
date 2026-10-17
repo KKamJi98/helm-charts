@@ -16,7 +16,7 @@ GATES = (
 
 
 class ArcAuthenticationRenderTests(unittest.TestCase):
-    def render(self, flags=()):
+    def render(self, flags=(), local=False):
         self.assertIsNotNone(
             HELM, "Helm is required; do not install or fetch charts in this test"
         )
@@ -27,9 +27,9 @@ class ArcAuthenticationRenderTests(unittest.TestCase):
             str(ROOT / "charts/arc-foundation"),
             "-n",
             "arc-system",
-            "-f",
-            str(ROOT / "charts/arc-foundation/kkamji_local_values.yaml"),
         ]
+        if local:
+            args += ["-f", str(ROOT / "charts/arc-foundation/kkamji_local_values.yaml")]
         for flag in flags:
             args += ["--set", flag]
         return subprocess.run(args, capture_output=True, text=True, check=False)
@@ -82,6 +82,13 @@ class ArcAuthenticationRenderTests(unittest.TestCase):
             with self.subTest(chart=chart):
                 text = (ROOT / f"charts/{chart}/kkamji_local_values.yaml").read_text()
                 self.assertIn("githubConfigSecret: arc-github-app-auth", text)
+
+    def test_owner_confirmed_local_values_render_one_auth_resource(self):
+        result = self.render(local=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.count("kind: ExternalSecret"), 1)
+        self.assertIn("name: arc-github-app-auth", result.stdout)
+        self.assertNotIn("kind: Secret\n", result.stdout)
 
     def test_confirmation_schema_rejects_non_boolean(self):
         result = self.render(["arcSsmReuse.keyChoiceApproved=not-a-boolean"])
