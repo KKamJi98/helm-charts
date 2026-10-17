@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-17T12:46:46+09:00
+updated: 2026-10-17T12:54:37+09:00
 type: runbook
 status: current
 ---
@@ -9,11 +9,12 @@ status: current
 
 The approved foundation/project stage was observed Synced/Healthy at revision
 30401e13df849ce222ac63876baa6f2dcd2e0f3f. This revision enables the controller
-after namespace/policy preparation. Repository scale sets remain disabled.
-The owner completed direct secure input; exact SSM metadata was read back without
-fetching values. Local foundation values now enable the canonical ExternalSecret
-under the approved Store/key/input gates. ESO Ready and registration remain
-separate runtime checks. Neither canary nor full CI has run on ARC.
+after namespace/policy preparation. The owner completed direct secure input; exact SSM metadata was read back without
+fetching values. Foundation auth is now Synced/Healthy and the canonical
+ExternalSecret reports Ready/SecretSynced. The two light Application source flags
+are enabled for the approved registration stage. Registration/listener readiness,
+canary jobs and full CI remain separate runtime checks. Neither canary nor full
+CI has run on ARC.
 Do not replace this statement with an operating-success claim until evidence exists.
 
 ## Controller-first staging
@@ -32,8 +33,9 @@ gates before enabling githubAuth and then repository scale sets. New IAM grants
 are not an automatic prerequisite.
 This separates control-plane activation from authentication/registration.
 Foundation is already enabled. Controller activation is covered by the explicit
-initial approval; both repository scale sets remain disabled. A source change is
-not evidence of successful runner registration or CI execution.
+initial approval; both light scale sets now opt into the approved registration
+stage after ESO Ready. A source change is not evidence of successful runner
+registration or CI execution.
 
 ## Exact configuration
 

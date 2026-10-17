@@ -79,7 +79,7 @@ applications:
         - kkamji_local_values.yaml
         skipCrds: false
   arc-light:
-    enabled: false
+    enabled: true
     name: arc-light
     project: arc-ci
     destination:
@@ -92,7 +92,7 @@ applications:
         valueFiles:
         - kkamji_local_values.yaml
   arc-bql-light:
-    enabled: false
+    enabled: true
     name: arc-bql-light
     project: arc-ci
     destination:
