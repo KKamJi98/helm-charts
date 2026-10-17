@@ -45,9 +45,9 @@ metadata:
 spec:
   hard:
     requests.cpu: 500m
-    requests.memory: 1Gi
+    requests.memory: 3Gi
     limits.cpu: '2'
-    limits.memory: 1536Mi
+    limits.memory: 3Gi
     requests.ephemeral-storage: 1Gi
     limits.ephemeral-storage: 4Gi
     pods: '1'
