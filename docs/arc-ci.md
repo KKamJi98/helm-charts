@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-17T12:54:37+09:00
+updated: 2026-10-17T15:35:49+09:00
 type: runbook
 status: current
 ---
@@ -13,9 +13,9 @@ after namespace/policy preparation. The owner completed direct secure input; exa
 fetching values. Foundation auth is now Synced/Healthy and the canonical
 ExternalSecret reports Ready/SecretSynced. The two light Application source flags
 are enabled for the approved registration stage. Registration/listener readiness,
-canary jobs and full CI remain separate runtime checks. Neither canary nor full
-CI has run on ARC.
-Do not replace this statement with an operating-success claim until evidence exists.
+canary jobs and full CI remain separate runtime checks. BQL light canary39001288294 and Platform light canary39006129183 have actual
+success evidence. Full original CI remains unverified and is not replaced by smoke.
+Platform temporary trusted-branch trigger was restored to manual-only.
 
 ## Controller-first staging
 
@@ -328,3 +328,16 @@ policy cannot be established, mark it unverified and have the owner approve an
 exact principal/resource/key delta, never wildcard IAM widening. After owner
 input, ESO Ready and target Secret metadata can verify reconciliation without
 printing secret data; no such reconciliation has happened yet.
+
+
+## Temporary 3Gi compilation measurement window
+
+The owner explicitly authorized changing only the shared namespace memory sums
+of ci-pr/arc-job-budget: requests.memory1Gi to3Gi, limits.memory1536Mi to3Gi.
+CPU/Pod/storage quota, PSS/network/auth/other workloads remain unchanged.
+One token-free hardened standalone BQL release-compilation Job runs at j1 with
+request=limit3Gi. This is not a full CI resource/preflight/CEL reduction.
+A same-owner bounded controller must restore both Git desired memory fields and
+verify Argo Synced/Healthy plus actual quota equality after success, OOM, failure
+or interruption. No direct kubectl quota patch or selfHeal suppression is used.
+No higher budget, VM/node resize, paid usage, security or IAM grant is authorized.
