@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-17T15:35:49+09:00
+updated: 2026-10-17T15:46:26+09:00
 type: runbook
 status: current
 ---
@@ -341,3 +341,12 @@ A same-owner bounded controller must restore both Git desired memory fields and
 verify Argo Synced/Healthy plus actual quota equality after success, OOM, failure
 or interruption. No direct kubectl quota patch or selfHeal suppression is used.
 No higher budget, VM/node resize, paid usage, security or IAM grant is authorized.
+
+
+## Restore shared memory budget
+
+This commit returns the temporary namespace sums to requests.memory1Gi and
+limits.memory1536Mi. The standalone compilation outcome is separate evidence;
+this restore does not claim full CI success. CPU/Pod/storage/security/auth and
+existing workloads remain unchanged. Actual quota and Argo convergence must be
+verified against this source revision before closing the window.
