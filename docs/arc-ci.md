@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-16T01:39:48+09:00
+updated: 2026-10-17T12:01:10+09:00
 type: runbook
 status: current
 ---
@@ -23,8 +23,10 @@ version/vendor remain unchanged.
 
 Foundation now defaults `githubAuth.enabled=false`, so namespace/policy/quota and
 controller preparation creates no ExternalSecret and cannot start a new SSM
-read for ARC. After explicit credential grants, secure owner input and ESO
-principal/path/KMS approval, enable githubAuth and then repository scale sets.
+read for ARC. After owner acceptance of the existing Store trust boundary,
+explicit key choice and secure owner input metadata, confirm the arcSsmReuse
+gates before enabling githubAuth and then repository scale sets. New IAM grants
+are not an automatic prerequisite.
 This separates control-plane activation from authentication/registration.
 Foundation is already enabled. Controller activation is covered by the explicit
 initial approval; both repository scale sets remain disabled. A source change is
@@ -79,11 +81,14 @@ This completed approval does not authorize those later steps. Follow the
 [GitHub App security review](arc-github-app.md) for the precise proposed grant,
 shared-key authority, secure storage, rotation and recovery.
 
-The two disabled legacy PAT-shaped references are not instructions to create
-PATs. Authentication remains off; update the source wiring only after the exact
-App/security/input confirmation. No credential value was created or read.
-ESO principal/path/KMS permission expansion is not implied. Owner ExternalSecrets
-can garbage-collect target Secrets despite deletionPolicy Retain.
+Canonical authentication is one SecureString JSON at `/kkamji/arc/github-app`
+through the existing `parameter-store`. Both light sets reference
+`ci-pr/arc-github-app-auth`; one App key is shared authority, not repository
+credential isolation. Authentication remains off pending the owner Store trust,
+key selection and secure-input metadata gates. No value is created or read by
+this source change. Existing Store principal linkage must not be inferred from
+its Secret reference alone. The ARC target uses Orphan/Retain to avoid owner
+garbage collection; it does not expand IAM or create another reader/Store.
 
 Policies default-deny both namespaces; DNS/GitHub/Actions/log-artifact destinations
 are explicit Cilium FQDN rules. Only management Pods reach kube-apiserver; job

@@ -1,6 +1,6 @@
 ---
 title: External Secrets rules
-updated: 2026-10-15T23:14:00+09:00
+updated: 2026-10-17T12:01:10+09:00
 type: rule
 status: current
 ---
@@ -18,5 +18,15 @@ ESO 매니페스트를 고칠 때 함께 확인한다. 아래 항목은 전부 �
 
 ## ARC candidate
 
-The disabled ARC foundation references two separate paths, `/kkamji/arc/platform-auth` and `/kkamji/arc/bql-auth`, through `parameter-store`. No credential value is committed or created. See [ARC rollout](../arc-ci.md) for the required grant and rotation approval.
+ARC foundation은 단일 `/kkamji/arc/github-app` 경로를 기존 `parameter-store`로 참조합니다. 값은 커밋하거나 생성하지 않습니다. [ARC rollout](../arc-ci.md)의 사용자 입력, 단계별 활성화와 회전 경계를 따릅니다.
 - ARC foundation의 `githubAuth.enabled`는 기본 false입니다. 인증 승인/안전한 SSM 입력/ESO의 정확한 경로와 KMS 권한 확인 전에 ExternalSecret을 생성하지 않습니다. controller 단계와 등록 단계를 분리하며, 값은 조회하지 않습니다.
+
+## ARC App authentication
+
+- ARC는 /kkamji/arc/github-app의 단일 SecureString JSON을 기존 parameter-store로 읽습니다. key 세 개는 github_app_id, github_app_installation_id, github_app_private_key입니다. 값은 chart/문서에 넣지 않습니다.
+- ci-pr/arc-github-app-auth ExternalSecret과 target Secret을 두 light chart가 같은 이름으로 참조합니다. App key 하나를 공유하므로 저장소별 Secret 권한 분리라고 주장하지 않습니다.
+- target은 creationPolicy=Orphan/deletionPolicy=Retain입니다. ExternalSecret 제거가 App credential 삭제로 이어지지 않도록 합니다.
+- githubAuth.enabled는 기본 false입니다. 활성화 전에 arcSsmReuse의 enabled, namespaceTrustAccepted, existingStoreTrustAccepted, keyChoiceApproved, secureInputMetadataVerified를 확인합니다. 이 flag는 IAM 추가 권한 요구가 아니라 owner 신뢰/선택/보안 입력 확인입니다.
+- 기존 shared Store를 재사용하면 해당 namespace의 ExternalSecret 작성자에게 허용된 기존 신뢰 범위가 남습니다. namespace 격리나 실제 AWS principal 연결을 flag만으로 증명하지 않습니다. 새 reader/Store/IAM/key policy를 자동으로 추가하지 않습니다.
+- 사용자 보안 입력과 metadata 확인 전에는 auth를 켜거나 light Application을 활성화하지 않습니다. 실제 값 조회/로그 출력으로 검증하지 않습니다.
+- 로컬 회귀 검사는 Helm을 PATH에 둔 뒤 uv run --no-project python -m unittest discover -s tests -p test_arc_auth.py -v로 실행합니다. 기본 off, 확인 gate 누락, 단일 canonical ExternalSecret과 두 consumer 참조를 검사합니다.

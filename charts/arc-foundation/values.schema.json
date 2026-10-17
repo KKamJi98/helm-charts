@@ -17,6 +17,18 @@
       },
       "required": ["enabled"],
       "additionalProperties": false
+    },
+    "arcSsmReuse": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "namespaceTrustAccepted": {"type": "boolean"},
+        "existingStoreTrustAccepted": {"type": "boolean"},
+        "keyChoiceApproved": {"type": "boolean"},
+        "secureInputMetadataVerified": {"type": "boolean"}
+      },
+      "required": ["enabled", "namespaceTrustAccepted", "existingStoreTrustAccepted", "keyChoiceApproved", "secureInputMetadataVerified"],
+      "additionalProperties": false
     }
   }
 }

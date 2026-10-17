@@ -1,5 +1,5 @@
 githubConfigUrl: https://github.com/KKamJi98/kkamji-platform
-githubConfigSecret: arc-platform-auth
+githubConfigSecret: arc-github-app-auth
 runnerScaleSetName: kkamji-platform-light
 minRunners: 0
 maxRunners: 1

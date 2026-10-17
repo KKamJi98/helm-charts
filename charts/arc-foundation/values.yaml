@@ -2,3 +2,9 @@ githubAuth:
   enabled: false
 priorityClass:
   enabled: false
+arcSsmReuse:
+  enabled: false
+  namespaceTrustAccepted: false
+  existingStoreTrustAccepted: false
+  keyChoiceApproved: false
+  secureInputMetadataVerified: false
