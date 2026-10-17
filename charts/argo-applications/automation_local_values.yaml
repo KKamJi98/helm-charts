@@ -104,3 +104,32 @@ applications:
       helm:
         valueFiles:
         - kkamji_local_values.yaml
+
+  arc-runtime:
+    enabled: true
+    name: arc-runtime
+    project: arc-ci
+    destination:
+      namespace: arc-runtime
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/arc-runtime
+      helm:
+        valueFiles:
+        - kkamji_local_values.yaml
+
+  arc-full:
+    enabled: true
+    name: arc-full
+    project: arc-ci
+    destination:
+      namespace: ci-full
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/arc-full
+      helm:
+        valueFiles:
+        - kkamji_local_values.yaml
+        skipCrds: true

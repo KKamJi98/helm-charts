@@ -1,0 +1,53 @@
+import json
+import os
+from pathlib import Path
+
+
+def main():
+    assert os.getuid() == os.getgid() == 1001
+    status = dict(
+        line.split(":", 1)
+        for line in Path("/proc/self/status").read_text().splitlines()
+        if ":" in line
+    )
+    assert status["NoNewPrivs"].strip() == "1"
+    assert all(int(status[k].strip(), 16) == 0 for k in ["CapEff", "CapPrm", "CapBnd"])
+    assert not Path("/var/run/secrets/kubernetes.io/serviceaccount/token").exists()
+    assert os.statvfs("/").f_flag & os.ST_RDONLY
+    available = (
+        int(
+            next(
+                line.split()[1]
+                for line in Path("/proc/meminfo").read_text().splitlines()
+                if line.startswith("MemAvailable:")
+            )
+        )
+        * 1024
+    )
+    fs = os.statvfs("/home/runner/_work")
+    free = fs.f_bavail * fs.f_frsize
+    assert available >= 6 * 1024**3, (
+        "node memory reserve below shared5Gi plus1Gi; no repository workload started"
+    )
+    assert free >= 19 * 1024**3, (
+        "node disk reserve below14Gi plus5Gi; no repository workload started"
+    )
+    print(
+        json.dumps(
+            {
+                "phase": "SDK_SECURITY_AND_NODE_RESERVE_PASS",
+                "UID": 1001,
+                "NNP": 1,
+                "capabilities": 0,
+                "shared_Pod_budget_GiB": 5,
+                "node_memory_available_bytes": available,
+                "node_disk_available_bytes": free,
+            }
+        ),
+        flush=True,
+    )
+    os.execv("/home/runner/run.sh", ["/home/runner/run.sh"])
+
+
+if __name__ == "__main__":
+    main()

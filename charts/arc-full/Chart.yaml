@@ -1,0 +1,19 @@
+apiVersion: v2
+name: arc-full
+description: Repository-scoped ARC runners with per-job rootless Docker
+type: application
+version: 0.1.0
+appVersion: "0.15.0"
+dependencies:
+- name: gha-runner-scale-set-controller
+  alias: controller
+  version: 0.15.0
+  repository: file://../arc-controller
+- name: gha-runner-scale-set
+  alias: platform
+  version: 0.15.0
+  repository: file://../arc-light
+- name: gha-runner-scale-set
+  alias: bql
+  version: 0.15.0
+  repository: file://../arc-light

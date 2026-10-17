@@ -1,0 +1,7 @@
+githubAuth:
+  enabled: true
+  existingSourceReuseApproved: true
+platform:
+  maxRunners: 0
+bql:
+  maxRunners: 0

@@ -1,0 +1,12 @@
+{
+  "profile_sha256": "8814d29dfc13801408c724c09b762ace96681787e8b1c0384324af6a2374c725",
+  "frozen_initial_profile_sha256": "268d20817138b669d1dada6988d6bb662d1675fb9dcb2b0ba37f3f9be055eb5c",
+  "pinned_source": "containerd64b425cf570b3b8dd1d4cc46da7c1fce65c6651a plus matching nested runc1.5.2 source",
+  "trusted_only": true,
+  "keyctl_arg0": [
+    1,
+    5,
+    6
+  ],
+  "no_outer_privileged_SYSADMIN_Unconfined": true
+}

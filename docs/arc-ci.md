@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-17T20:54:45+09:00
+updated: 2026-10-18T00:14:12+09:00
 type: runbook
 status: current
 ---
@@ -557,3 +557,62 @@ applied. An upstream privileged/whole-dev example is not a safe template.
 Proposed nonprivileged/single-device adaptation is source-only and not ready
 for deployment until its exact image and new authority are verified/authorized.
 Operational full CI, post-init drop and per-job API isolation remain partial.
+
+## Isolated full-runner staging
+
+The latest owner approval includes trusted-only `procMount: Unmasked` validation
+and the same-role CI operating rollout after qualification. Fixed native Docker
+checks passed pull, build/cache, container, bridge, published port, bind mount,
+named volume and absence of the node profile in the daemon filesystem. Both
+consumer exits were0. This is not original full CI or a GitHub JIT startup result.
+
+A native Kubernetes1.36.1 proof separately verified a shared Pod-level memory
+request/limit5Gi and CPU limit2 for two containers. Both cgroup ancestor limits
+and quota usage were5Gi, not two5Gi budgets. QoS was Burstable, not Guaranteed.
+ARC0.15.0's installed CRD carries the Pod resources field. The proof Pod and its
+namespace were removed, with existing ci-pr quota unchanged.
+
+`charts/arc-runtime` installs the versioned trusted seccomp profile on worker
+nodes and registers only `kkamji.net/arc-tun`, one slot per node. The pinned
+Device Plugin is UID0/cap0/NNP1/read-only, not a privileged container. Its
+namespace admits only the necessary host registration/device discovery mounts;
+the fixed installer also writes the dedicated seccomp file. Both components
+have no Kubernetes token. Do not remove that file while any running Pod uses it.
+
+`charts/arc-full` packages the existing official0.15 controller and two scale-set
+charts with local locked dependencies. Its controller watches only ci-full;
+the existing arc-system controller still watches ci-pr. Global CRDs remain
+owned by the existing controller Application; the full Application skips CRDs.
+The existing approved SSM source is referenced by ESO in ci-full, without
+manual value read/copy or IAM/key changes. Both namespace targets still share
+one GitHub App authority, not isolated credentials. Reusable auth defaults off;
+local reuse is explicit, Orphan/Retain preserves the target during rollback.
+
+SDK work and daemon data use distinct per-Pod emptyDir volumes. Only the work
+path and API socket cross the SDK/daemon boundary. The SDK private HOME and
+registration files are not mounted into the daemon. SDK seeding copies only
+the verified immutable runner files, bin and externals, never image credential
+paths. SDK is UID1001/NNP1/cap0/read-only/RuntimeDefault. The trusted native
+sidecar is UID1001/NNP0, bounded to SETUID/SETGID/SETFCAP, Unmasked and the pinned
+Localhost profile. Those trusted privileges last for the job, not initialization
+only; no all-thread privilege-drop claim is made. Neither role uses host PID,
+network, IPC, host Docker socket or a mounted Kubernetes token. The outer Pod
+uses hostUsersfalse/full65536 and a shared5Gi budget. Inner Docker API authority
+is delegated for that job only; it is not a node daemon.
+
+Fresh capacity snapshots selected w2 for the current5Gi/14Gi ephemeral envelope;
+this is measured eligibility, not a requirement that future runners always use
+w2. The new small control Pods are placed on w1. SDK startup checks node memory
+reserve1Gi and disk reserve5Gi before repository code. Controller/listener surge
+headroom is separate from the one heavy-job memory/TUN quota. Public CI egress
+excludes private, node, loopback, link-local, CGNAT and metadata ranges; only
+control roles can reach the API. No external endpoint or persistent cache is added.
+
+Both new scale sets intentionally keep min0/max0. Do not route normal CI here
+until actual SDK startup, Docker API isolation/lifecycle, exact resource and
+GitHub JIT qualification pass. Canary or local fixed probes never replace the
+original job/needs/matrix/timeouts/tests and release binary contracts. Full CI
+and permanent operational health remain unverified at this source-staging step.
+Rollback keeps both maxima0, restores routing, removes only owned workload/helper
+resources, and removes an unchanged owned profile only after no Pod references
+it. Namespace pruning is disabled and authentication targets are retained.

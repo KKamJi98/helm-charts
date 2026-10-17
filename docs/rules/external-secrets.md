@@ -1,6 +1,6 @@
 ---
 title: External Secrets rules
-updated: 2026-10-17T12:01:10+09:00
+updated: 2026-10-18T00:14:12+09:00
 type: rule
 status: current
 ---
@@ -30,3 +30,4 @@ ARC foundation은 단일 `/kkamji/arc/github-app` 경로를 기존 `parameter-st
 - 기존 shared Store를 재사용하면 해당 namespace의 ExternalSecret 작성자에게 허용된 기존 신뢰 범위가 남습니다. namespace 격리나 실제 AWS principal 연결을 flag만으로 증명하지 않습니다. 새 reader/Store/IAM/key policy를 자동으로 추가하지 않습니다.
 - 사용자 보안 입력과 metadata 확인 전에는 auth를 켜거나 light Application을 활성화하지 않습니다. 실제 값 조회/로그 출력으로 검증하지 않습니다.
 - 로컬 회귀 검사는 Helm을 PATH에 둔 뒤 uv run --no-project python -m unittest discover -s tests -p test_arc_auth.py -v로 실행합니다. 기본 off, 확인 gate 누락, 단일 canonical ExternalSecret과 두 consumer 참조를 검사합니다.
+- Full-runner staging은 ci-full의 ESO가 같은 기존 SSM source를 참조합니다. Agent는 credential 값을 읽거나 복사하지 않습니다. 두 namespace는 하나의 App 권한을 공유하며 인증 격리라고 주장하지 않습니다. full chart의 기본 auth는 off이고 local reuse만 명시적으로 켭니다. Orphan/Retain과 기존 ci-pr source를 보존하며 새 IAM/Store/key를 만들지 않습니다.
