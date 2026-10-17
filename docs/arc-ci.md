@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-18T00:35:40+09:00
+updated: 2026-10-18T01:15:36+09:00
 type: runbook
 status: current
 ---
@@ -610,9 +610,22 @@ headroom is separate from the one heavy-job memory/TUN quota. Public CI egress
 excludes private, node, loopback, link-local, CGNAT and metadata ranges; only
 control roles can reach the API. No external endpoint or persistent cache is added.
 
-Both new scale sets intentionally keep min0/max0. Do not route normal CI here
-until actual SDK startup, Docker API isolation/lifecycle, exact resource and
-GitHub JIT qualification pass. Canary or local fixed probes never replace the
+Reusable scale-set defaults keep min0/max0. The local Platform pool now allows
+min0/max1 only for a trusted-branch SDK/JIT/cache canary; BQL stays max0. Two
+fixed SDK Pods actually passed non-root/NNP1/cap0/read-only/no-token/no-TUN,
+private HOME/node-profile/socket isolation, private TCP denial, fresh job graph,
+and native-sidecar recovery. All three roles exited0, the daemon restarted once
+per job, data persisted only within that job, and both Pod directories were
+removed. This is actual fixed runtime qualification, not GitHub JIT/full CI.
+
+The docker-container BuildKit driver was denied at privileged sysfs mount.
+Do not relax host/sysfs policy to make that mode pass. The native Docker29
+containerd image store and embedded docker driver actually passed build/load/run
+plus local cache export, builder-prune, external cache import and RUN CACHED.
+Official Docker cache documentation supports gha with this driver when that
+store is enabled; actual GHA cache export/import still needs the GitHub canary.
+Keep original cache parameters/tests, never replace this gate with a local-only
+claim. Do not route normal CI until actual SDK/JIT/cache startup is verified. Canary or local fixed probes never replace the
 original job/needs/matrix/timeouts/tests and release binary contracts. Full CI
 and permanent operational health remain unverified at this source-staging step.
 Rollback keeps both maxima0, restores routing, removes only owned workload/helper
