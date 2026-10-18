@@ -88,11 +88,11 @@ class ArcFullContractTests(unittest.TestCase):
             self.assertNotIn("nodeSelector:\n        kubernetes.io/hostname: k8s-w2", doc)
         quota = next(doc for doc in r.stdout.split("---") if "kind: ResourceQuota" in doc)
         # One arc-tun slot per worker; quota admits exactly two runners
-        # (BQL: 500m/2 CPU, 5Gi, 2Gi/20Gi ephemeral each) plus control and surge.
+        # (BQL: 500m/4 CPU, 5Gi, 2Gi/20Gi ephemeral each) plus control and surge.
         for line in [
             'pods: "6"',
             "requests.cpu: 1400m",
-            'limits.cpu: "6"',
+            'limits.cpu: "10"',
             "requests.memory: 10752Mi",
             "limits.memory: 11Gi",
             "requests.ephemeral-storage: 5Gi",
