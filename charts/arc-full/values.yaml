@@ -376,7 +376,7 @@ bql:
           sizeLimit: 256Mi
       - name: docker-data
         emptyDir:
-          sizeLimit: 16Gi
+          sizeLimit: 30Gi
       - name: sdk-tmp
         emptyDir:
           sizeLimit: 512Mi
@@ -389,7 +389,7 @@ bql:
         resources:
           <<: *fullRunnerDaemonResources
           limits:
-            ephemeral-storage: 16Gi
+            ephemeral-storage: 30Gi
             kkamji.net/arc-tun: '1'
       containers:
       - <<: *fullRunnerSDK
@@ -409,7 +409,7 @@ bql:
         - name: DISABLE_RUNNER_UPDATE
           value: 'true'
         - name: ARC_JOB_EPHEMERAL_GIB
-          value: '20'
+          value: '34'
 githubAuth:
   enabled: false
   existingSourceReuseApproved: false

@@ -88,7 +88,7 @@ class ArcFullContractTests(unittest.TestCase):
             self.assertNotIn("nodeSelector:\n        kubernetes.io/hostname: k8s-w2", doc)
         quota = next(doc for doc in r.stdout.split("---") if "kind: ResourceQuota" in doc)
         # One arc-tun slot per worker; quota admits exactly two runners
-        # (BQL: 500m/4 CPU, 5Gi, 2Gi/20Gi ephemeral each) plus control and surge.
+        # (BQL: 500m/4 CPU, 5Gi, 2Gi/34Gi ephemeral each) plus control and surge.
         for line in [
             'pods: "6"',
             "requests.cpu: 1400m",
@@ -96,7 +96,7 @@ class ArcFullContractTests(unittest.TestCase):
             "requests.memory: 10752Mi",
             "limits.memory: 11Gi",
             "requests.ephemeral-storage: 5Gi",
-            "limits.ephemeral-storage: 42Gi",
+            "limits.ephemeral-storage: 70Gi",
             'requests.kkamji.net/arc-tun: "2"',
         ]:
             self.assertIn(line, quota)
@@ -109,15 +109,15 @@ class ArcFullContractTests(unittest.TestCase):
         ]
         bql = next(doc for doc in sets if "name: binance-quant-lab-full" in doc)
         platform = next(doc for doc in sets if "name: kkamji-platform-full" in doc)
-        self.assertRegex(bql, r"sizeLimit:\s+16Gi")
-        self.assertRegex(bql, r"ephemeral-storage:\s+16Gi")
-        self.assertRegex(bql, r"name: ARC_JOB_EPHEMERAL_GIB\s+value: ['\"]?20")
+        self.assertRegex(bql, r"sizeLimit:\s+30Gi")
+        self.assertRegex(bql, r"ephemeral-storage:\s+30Gi")
+        self.assertRegex(bql, r"name: ARC_JOB_EPHEMERAL_GIB\s+value: ['\"]?34")
         self.assertRegex(bql, r"ephemeral-storage:\s+4Gi")
         self.assertRegex(platform, r"sizeLimit:\s+12Gi")
         self.assertNotIn("ARC_JOB_EPHEMERAL_GIB", platform)
-        self.assertIn("limits.ephemeral-storage: 42Gi", r.stdout)
+        self.assertIn("limits.ephemeral-storage: 70Gi", r.stdout)
 
-    def test_bql_private_scratch_is_disk_backed_within_same_twenty_gib(self):
+    def test_bql_private_scratch_is_disk_backed_within_same_pod_budget(self):
         r = self.render(local=True)
         self.assertEqual(r.returncode, 0, r.stderr)
         bql = next(
@@ -128,10 +128,10 @@ class ArcFullContractTests(unittest.TestCase):
         )
         self.assertRegex(bql, r"emptyDir:\s+sizeLimit: 3Gi\s+name: daemon-tmp")
         self.assertNotIn("medium: Memory", bql)
-        self.assertIn('value: "20"', bql)
-        self.assertIn("limits.ephemeral-storage: 42Gi", r.stdout)
+        self.assertIn('value: "34"', bql)
+        self.assertIn("limits.ephemeral-storage: 70Gi", r.stdout)
 
-    def test_bql_budget_requires_one_literal_twenty_gib_value(self):
+    def test_bql_budget_requires_one_literal_value(self):
         values = (ROOT / "charts/arc-full/values.yaml").read_text()
         image = re.search(r"&fullRunnerSDK\s+name: runner\s+image: (\S+)", values)
         self.assertIsNotNone(image)
@@ -148,7 +148,7 @@ class ArcFullContractTests(unittest.TestCase):
                 "seccompProfile": {"type": "RuntimeDefault"},
             },
             "resources": {"limits": {"ephemeral-storage": "4Gi"}},
-            "env": [{"name": "ARC_JOB_EPHEMERAL_GIB", "value": "20"}],
+            "env": [{"name": "ARC_JOB_EPHEMERAL_GIB", "value": "34"}],
         }
         literal = self.render(
             json_flags=["bql.template.spec.containers=" + json.dumps([sdk])]
@@ -162,8 +162,8 @@ class ArcFullContractTests(unittest.TestCase):
         )
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("ARC full boundary", r.stderr)
-        budget = {"name": "ARC_JOB_EPHEMERAL_GIB", "value": "20"}
-        for invalid in [[], [{**budget, "value": "16"}], [budget, budget]]:
+        budget = {"name": "ARC_JOB_EPHEMERAL_GIB", "value": "34"}
+        for invalid in [[], [{**budget, "value": "16"}, {**budget, "value": "20"}], [budget, budget]]:
             sdk["env"] = invalid
             r = self.render(
                 json_flags=["bql.template.spec.containers=" + json.dumps([sdk])]
@@ -188,6 +188,8 @@ class ArcFullContractTests(unittest.TestCase):
             "bql.template.spec.containers[0].env[7].name=UNEXPECTED",
             "bql.template.spec.containers[0].env[8].name=ARC_JOB_EPHEMERAL_GIB",
             "bql.template.spec.volumes[6].emptyDir.sizeLimit=20Gi",
+            "bql.template.spec.volumes[6].emptyDir.sizeLimit=16Gi",
+            "bql.template.spec.initContainers[1].resources.limits.ephemeral-storage=16Gi",
             "platform.template.spec.containers[0].env[7].name=ARC_JOB_EPHEMERAL_GIB",
         ]
         for flag in mutations:
@@ -198,7 +200,7 @@ class ArcFullContractTests(unittest.TestCase):
 
 
 class DiskReserveTests(unittest.TestCase):
-    def test_bql_twenty_gib_budget_retains_full_pressure_margin(self):
+    def test_bql_budget_retains_full_pressure_margin(self):
         spec = importlib.util.spec_from_file_location(
             "sdk_entry", ROOT / "charts/arc-full/files/sdk-entry.py"
         )
@@ -206,9 +208,9 @@ class DiskReserveTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         gib = 1024**3
-        self.assertEqual(module.disk_required_bytes(100 * gib, 20), 36 * gib)
-        self.assertEqual(module.disk_required_bytes(20 * gib, 20), 25 * gib)
-        for unsupported in (0, 15, 19, 21):
+        self.assertEqual(module.disk_required_bytes(100 * gib, 34), 50 * gib)
+        self.assertEqual(module.disk_required_bytes(20 * gib, 34), 39 * gib)
+        for unsupported in (0, 15, 20, 30, 35):
             with self.assertRaises(ValueError):
                 module.disk_required_bytes(100 * gib, unsupported)
 
@@ -229,7 +231,7 @@ class DiskReserveTests(unittest.TestCase):
         self.assertIn("sizeLimit: 12Gi", text)
         self.assertIn("ephemeral-storage: 12Gi", text)
         self.assertIn(
-            "limits.ephemeral-storage: 42Gi",
+            "limits.ephemeral-storage: 70Gi",
             (ROOT / "charts/arc-full/templates/foundation.yaml").read_text(),
         )
 

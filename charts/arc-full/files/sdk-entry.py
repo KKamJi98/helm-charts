@@ -4,8 +4,8 @@ from pathlib import Path
 
 
 def disk_required_bytes(total, job_budget_gib=16):
-    if job_budget_gib not in (16, 20):
-        raise ValueError("job disk budget must match a qualified pool:16Gi or20Gi")
+    if job_budget_gib not in (16, 34):
+        raise ValueError("job disk budget must match a qualified pool:16Gi or34Gi")
     gib = 1024**3
     imagefs_margin = (total * 15 + 99) // 100 + gib
     return job_budget_gib * gib + max(5 * gib, imagefs_margin)

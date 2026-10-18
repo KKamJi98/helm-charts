@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-18T18:11:44+09:00
+updated: 2026-10-18T18:12:21+09:00
 type: runbook
 status: current
 ---
@@ -781,3 +781,21 @@ guarantees of other workloads are unchanged. `ci-full/full-budget`
 `limits.cpu` is 10 (two runners at 4 plus control 1 and the same 1 margin).
 BQL keeps `CARGO_BUILD_JOBS=1` until memory headroom for parallel builds is
 measured; its memory peak was 4.98GiB of the 5Gi limit.
+
+## BQL Docker data 30Gi (owner decision)
+
+On 2026-10-18 the owner raised the BQL Docker data budget from 16Gi to 30Gi.
+Measured peaks in the last full gate run were below the old limit (Docker data
+6.71GiB in source qualification, 3.87GiB in Tier B; Tier A was not sampled),
+so this adds headroom; it does not fix a measured failure.
+
+- BQL `docker-data` sizeLimit and the `dind` ephemeral limit are 30Gi. With the
+  SDK 4Gi the Pod aggregate and `ARC_JOB_EPHEMERAL_GIB` are 34. Platform keeps
+  12Gi/16. The validator, `sdk-entry.py` and tests pin 30Gi/34 and reject 16Gi/20.
+- The start guard now needs free disk >= 34Gi + max(5Gi, 15% + 1Gi), 49.4GiB on
+  the 95.7GiB worker root filesystems. Free disk at the change: k8s-w1 57.7GiB,
+  k8s-w2 63.0GiB. A node below the guard fails the job before any repository
+  code runs; it does not wait. Watch node free disk: kubelet image GC starts only
+  at 85% usage, well after this guard trips.
+- `ci-full/full-budget` `limits.ephemeral-storage` is 70Gi (two BQL Pods at 34Gi
+  plus control 768Mi and the same 1280Mi margin). Other quota values are unchanged.

@@ -51,7 +51,7 @@ spec:
     requests.memory: 10752Mi
     limits.memory: 11Gi
     requests.ephemeral-storage: 5Gi
-    limits.ephemeral-storage: 42Gi
+    limits.ephemeral-storage: 70Gi
     requests.kkamji.net/arc-tun: "2"
     persistentvolumeclaims: "0"
 ---
