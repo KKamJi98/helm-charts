@@ -1,23 +1,23 @@
 ---
 title: ARC runner images build, publish and recovery
-updated: 2026-10-18T15:29:16+09:00
+updated: 2026-10-18T15:53:12+09:00
 type: runbook
 status: current
 ---
 
 # ARC runner images
 
-The full and light ARC pools run two custom images. Until they are published,
-both exist only in the node containerd store of `k8s-w2` and in the build
-host's local Docker, and the chart pins them with `imagePullPolicy: Never`.
-A runner scheduled on another node fails with `ErrImageNeverPull`, and losing
-`k8s-w2` loses the images. This page is the recipe and the procedure that
-remove that dependency.
+The full and light ARC pools run two custom images. They used to exist only
+in the node containerd store of `k8s-w2` and in the build host's local Docker,
+pinned with `imagePullPolicy: Never`, so a runner on another node failed with
+`ErrImageNeverPull` and losing `k8s-w2` lost the images. The images are now
+in private GHCR and the charts pull them by digest with `IfNotPresent`. This
+page is the recipe, the publish procedure and the pull path.
 
-| Role | Containers | Current local reference |
-| --- | --- | --- |
-| runner/SDK tools | `seed-sdk`, `runner`, `verified-static-tools` | `arc-platform-web-tools-20261017@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5` (tag `font-parity`) |
-| trusted rootless Docker | `dind` | `arc-platform-nosuidmount-setfcap-20261017@sha256:0a8a8a31aac32784698f59ce1d45a242eeb2dcb9221894d39d14fce00ccff72d` (tag `diagnostic`) |
+| Role | Containers | Chart reference | Former local name |
+| --- | --- | --- | --- |
+| runner/SDK tools | `seed-sdk`, `runner`, `verified-static-tools` | `ghcr.io/kkamji98/arc-runner-web-tools@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5` | `arc-platform-web-tools-20261017:font-parity` |
+| trusted rootless Docker | `dind` | `ghcr.io/kkamji98/arc-runner-dind@sha256:0a8a8a31aac32784698f59ce1d45a242eeb2dcb9221894d39d14fce00ccff72d` | `arc-platform-nosuidmount-setfcap-20261017:diagnostic` |
 
 ## Recipe (`images/arc-runner/`)
 
@@ -67,7 +67,7 @@ Checked on 2026-10-18 before publishing, without printing any matched text:
   (`k8s` hook bundles, Node headers, launchpadlib cache) or inside sha256-verified
   upstream archives (Node headers, Corretto `java.security`). No match in the
   layers this recipe adds. Image `Env` and `Labels` hold no credentials.
-- The npm cache holds 476 entries, all from `https://registry.npmjs.org`. No
+- The npm cache holds 238 entries, all from `https://registry.npmjs.org`. No
   private source is included.
 
 ## Publishing (GHCR, private)
@@ -86,25 +86,35 @@ Checked on 2026-10-18 before publishing, without printing any matched text:
 ```
 
   The printed `ghcr.io/kkamji98/<name>@sha256:...` is the registry manifest
-  digest. It differs from the local containerd digest because the registry
-  stores compressed layers; the image content is the same.
+  digest. The build host's Docker uses the containerd image store, so the
+  manifest is pushed unchanged and the registry digest equals the former
+  local digest (verified for both images on 2026-10-18).
 
-## Cluster pull (planned, separate change)
+## Cluster pull
 
-- Pull credential: a classic PAT with only `read:packages`, entered by the
-  owner into SSM `/kkamji/arc/ghcr-pull` (SecureString). Agents never read or
-  print the value.
-- ESO renders a `kubernetes.io/dockerconfigjson` Secret in `ci-full` and
-  `ci-pr` from the existing `parameter-store`; the runner Pod templates
-  reference it with `imagePullSecrets`.
-- The chart then pins the registry digests and switches `Never` to
-  `IfNotPresent`. Verification is a real pull and start on a node without the
-  image in its cache (`k8s-w1`), followed by one full CI run per repository.
+- Pull credential: one classic PAT with only `read:packages`, in SSM
+  `/kkamji/personal/kkamji-platform/ghcr/pull-token` (SecureString JSON with
+  `username` and `token`). The same parameter already backs
+  `kkamji-platform/ghcr-pull-secret`, so ARC needs no new credential or IAM
+  change. The owner enters it; agents never read or print the value.
+- `arc-full` (`ci-full`) and `arc-foundation` (`ci-pr`) render an
+  ExternalSecret `ghcr-pull-secret` of type `kubernetes.io/dockerconfigjson`
+  from `parameter-store` when `imagePullSecret.enabled` is true. The runner
+  Pod templates reference it with `imagePullSecrets`. The job service
+  accounts cannot read Secrets, and no Secret is mounted into runner Pods.
+- Rotation: create a new classic PAT, replace the parameter value, then
+  force a refresh of every ExternalSecret that reads it
+  (`kubectl annotate externalsecret ghcr-pull-secret -n <ns> force-sync=$(date +%s) --overwrite`
+  for `kkamji-platform`, `ci-full` and `ci-pr`). Deleting the PAT breaks new
+  pulls in all three namespaces; running Pods keep working.
+- Verification: a real pull and start on a node without the image in its
+  cache, followed by one full CI run per repository. Each image is about
+  7 GB unpacked, so check node disk headroom before a cold pull.
 
 ## Rollback
 
 - The local images stay on `k8s-w2` and in the build host's Docker until the
   registry path is verified. Reverting the chart commit restores the
-  `Never`/local digest pins.
+  `Never`/local digest pins and removes the ARC pull Secrets.
 - Node image cleanup starts only after the cold pull verification. Images used
   by running or scheduled ARC jobs and CronJobs are kept.

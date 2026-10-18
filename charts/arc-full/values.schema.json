@@ -16,6 +16,17 @@
           "type": "boolean"
         }
       }
+    },
+    "imagePullSecret": {
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
     }
   }
 }
