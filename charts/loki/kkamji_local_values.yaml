@@ -49,8 +49,26 @@ test:
 
 deploymentMode: SingleBinary
 
+# requests: 2026-10-18 기준 24h working set p95 에 여유를 더한 값. CPU limit 은 두지 않는다.
 singleBinary:
   replicas: 1
+  resources:
+    requests:
+      cpu: 20m
+      memory: 640Mi
+
+gateway:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+
+# loki-sc-rules sidecar
+sidecar:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 128Mi
 
 # Zero out replica counts of other deployment modes
 backend:
