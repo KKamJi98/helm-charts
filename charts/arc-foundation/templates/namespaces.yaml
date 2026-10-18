@@ -44,11 +44,14 @@ metadata:
   namespace: ci-pr
 spec:
   hard:
-    requests.cpu: 500m
-    requests.memory: 1Gi
-    limits.cpu: '2'
-    limits.memory: 1536Mi
-    requests.ephemeral-storage: 1Gi
-    limits.ephemeral-storage: 4Gi
-    pods: '1'
+    # One shared light job Pod (Platform or BQL: 1Gi/1536Mi each) plus the
+    # terraform-lab Pod (512Mi/2Gi). Two light Pods never fit the memory
+    # request budget together, so the light pools still run one at a time.
+    requests.cpu: 750m
+    requests.memory: 1536Mi
+    limits.cpu: '3'
+    limits.memory: 3584Mi
+    requests.ephemeral-storage: 1536Mi
+    limits.ephemeral-storage: 8Gi
+    pods: '2'
     persistentvolumeclaims: '0'
