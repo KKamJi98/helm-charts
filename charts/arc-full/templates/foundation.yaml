@@ -47,7 +47,7 @@ spec:
   hard:
     pods: "6"
     requests.cpu: 1400m
-    limits.cpu: "6"
+    limits.cpu: "10"
     requests.memory: 10752Mi
     limits.memory: 11Gi
     requests.ephemeral-storage: 5Gi

@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-18T17:04:40+09:00
+updated: 2026-10-18T18:12:21+09:00
 type: runbook
 status: current
 ---
@@ -768,6 +768,19 @@ images existed only there. The images now come from GHCR
   8.0GiB MemAvailable and 65GB free disk, above both guards.
 - Rollback: revert the commit. Running jobs keep their Pods; ARC skips busy
   runners when it replaces an outdated runner set.
+
+## Runner CPU limit 4 after the 8 vCPU workers
+
+Before 2026-10-18 the workers had 3 vCPU (2.4 allocatable) and runner Pods a
+CPU limit of 2. Over three days runner Pods were CFS-throttled in 14-21% of
+periods (Platform runner containers, BQL up to 19%), BQL peaked at 1.95 cores
+and node busy time reached 84-86% while hypervisor steal stayed 0%. The owner
+raised k8s-w1 and k8s-w2 to 8 vCPU (7400m allocatable). The runner Pod CPU
+limit is now 4 for both pools; requests stay 500m, so scheduling and the
+guarantees of other workloads are unchanged. `ci-full/full-budget`
+`limits.cpu` is 10 (two runners at 4 plus control 1 and the same 1 margin).
+BQL keeps `CARGO_BUILD_JOBS=1` until memory headroom for parallel builds is
+measured; its memory peak was 4.98GiB of the 5Gi limit.
 
 ## BQL Docker data 30Gi (owner decision)
 
