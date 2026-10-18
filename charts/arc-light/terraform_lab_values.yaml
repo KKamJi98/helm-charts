@@ -1,0 +1,117 @@
+# terraform-lab runner scale set (docs/arc-ci.md "terraform-lab runner").
+# Same chart as the Platform light pool; no Docker. Only these Pods carry the
+# arc.kkamji.net/egress=terraform label that the foundation policy opens to
+# AWS, HashiCorp and Terraform Cloud. The AWS role arrives per job through
+# GitHub OIDC; nothing long-lived is mounted.
+githubConfigUrl: https://github.com/KKamJi98/terraform-lab
+githubConfigSecret: arc-github-app-auth
+runnerScaleSetName: terraform-lab-light
+minRunners: 0
+maxRunners: 1
+controllerServiceAccount:
+  namespace: arc-system
+  name: arc-controller
+listenerTemplate:
+  metadata:
+    labels:
+      arc.kkamji.net/role: control
+  spec:
+    nodeSelector:
+      kubernetes.io/hostname: k8s-w2
+    priorityClassName: arc-ci-nonpreempting
+    preemptionPolicy: Never
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 65532
+      seccompProfile:
+        type: RuntimeDefault
+    containers:
+    - name: listener
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+          - ALL
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+          ephemeral-storage: 64Mi
+        limits:
+          cpu: 250m
+          memory: 128Mi
+          ephemeral-storage: 128Mi
+template:
+  metadata:
+    labels:
+      arc.kkamji.net/role: job
+      arc.kkamji.net/egress: terraform
+  spec:
+    automountServiceAccountToken: false
+    serviceAccountName: arc-light-job
+    imagePullSecrets:
+    - name: ghcr-pull-secret
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+              - k8s-w1
+              - k8s-w2
+    priorityClassName: arc-ci-nonpreempting
+    preemptionPolicy: Never
+    terminationGracePeriodSeconds: 30
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1001
+      runAsGroup: 1001
+      fsGroup: 1001
+      seccompProfile:
+        type: RuntimeDefault
+    containers:
+    - name: runner
+      image: ghcr.io/kkamji98/arc-runner-web-tools@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5
+      imagePullPolicy: IfNotPresent
+      command:
+      - /bin/bash
+      - -ec
+      - |
+        /opt/arc/bin/runner-preflight.sh security
+        test ! -S /run/user/1001/docker.sock
+        unzip -v >/dev/null
+        exec /home/runner/run.sh
+      env:
+      - name: DISABLE_RUNNER_UPDATE
+        value: 'true'
+      - name: RUNNER_TOOL_CACHE
+        value: /home/runner/_work/_tool
+      - name: DOCKER_HOST
+        value: unix:///run/user/1001/non-docker-disabled.sock
+      - name: CHECKPOINT_DISABLE
+        value: '1'
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+      # The AWS provider plugin alone is several hundred MB on disk and in memory.
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+          ephemeral-storage: 512Mi
+        limits:
+          cpu: '1'
+          memory: 2Gi
+          ephemeral-storage: 4Gi
+      volumeMounts:
+      - name: work
+        mountPath: /home/runner/_work
+    volumes:
+    - name: work
+      emptyDir:
+        sizeLimit: 3Gi

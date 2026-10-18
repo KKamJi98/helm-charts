@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-19T00:53:23+09:00
+updated: 2026-10-19T02:04:44+09:00
 type: runbook
 status: current
 ---
@@ -850,3 +850,32 @@ headroom, matching BQL.
   to the 30-40GiB in use (free 110GiB and 119GiB after the disk growth).
 - `ci-full/full-budget` `limits.ephemeral-storage` is 138Gi (four Pods at 34Gi
   plus control 768Mi and the 1280Mi margin). Other quota values are unchanged.
+
+## terraform-lab runner
+
+On 2026-10-19 the owner moved terraform-lab (private) to the homelab because
+GitHub-hosted jobs of private repositories no longer start (account spending
+limit). Its plan, apply, GitHub and destroy workflows need no Docker.
+
+- Scale set `terraform-lab-light` in `ci-pr`, rendered from `charts/arc-light`
+  with `terraform_lab_values.yaml` (Argo app `arc-terraform-lab-light`).
+  `maxRunners: 1`, web-tools image (unzip, python3, curl, git, jq), no Docker,
+  no Kubernetes API token, 512Mi/2Gi memory and a 3Gi work volume for provider
+  plugins, either worker.
+- Only its Pods carry `arc.kkamji.net/egress: terraform`. The foundation policy
+  `arc-terraform-egress` adds DNS and HTTPS for `**.amazonaws.com` (Cilium
+  1.19 `**.` matches several labels, which EKS endpoints need),
+  `releases.hashicorp.com`, `registry.terraform.io` and `app.terraform.io` to
+  those Pods only. Every other ci-pr Pod keeps the GitHub-only egress.
+- `arc-system/arc-control-budget` holds the controller, three listeners and one
+  controller rollout surge (pods 5, CPU 350m/1750m, memory 448Mi/896Mi,
+  ephemeral 320Mi/640Mi). The first rollout left it exactly full (4/4), so a
+  controller upgrade could not surge.
+- `ci-pr/arc-job-budget` now admits two Pods: one light job (1Gi/1536Mi, so two
+  light Pods still never fit together) plus the terraform Pod (512Mi/2Gi).
+- AWS access stays per job through GitHub OIDC; the role trust policy is scoped
+  to `repo:KKamJi98/terraform-lab:*` and needs no change for self-hosted
+  runners. The ARC GitHub App installation must include terraform-lab (owner
+  action) before the listener can register.
+- Rollback: set the Argo app `enabled: false` (or revert), then point the
+  workflows back to `ubuntu-latest`.

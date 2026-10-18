@@ -108,6 +108,19 @@ applications:
       helm:
         valueFiles:
         - kkamji_local_values.yaml
+  arc-terraform-lab-light:
+    enabled: true
+    name: arc-terraform-lab-light
+    project: arc-ci
+    destination:
+      namespace: ci-pr
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/arc-light
+      helm:
+        valueFiles:
+        - terraform_lab_values.yaml
 
   arc-runtime:
     enabled: true

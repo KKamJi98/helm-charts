@@ -76,3 +76,36 @@ spec:
       arc.kkamji.net/role: job
   egressDeny:
     - toEntities: [host, remote-node, kube-apiserver]
+---
+# terraform-lab runner Pods only: AWS APIs (multi-level, e.g. EKS endpoints),
+# Terraform/provider downloads and the Terraform Cloud backend.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: arc-terraform-egress
+  namespace: ci-pr
+spec:
+  endpointSelector:
+    matchLabels:
+      arc.kkamji.net/role: job
+      arc.kkamji.net/egress: terraform
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s:k8s-app: kube-dns
+      toPorts:
+        - ports: [{port: "53", protocol: ANY}]
+          rules:
+            dns:
+              - {matchPattern: "**.amazonaws.com"}
+              - {matchName: releases.hashicorp.com}
+              - {matchName: registry.terraform.io}
+              - {matchName: app.terraform.io}
+    - toFQDNs:
+        - {matchPattern: "**.amazonaws.com"}
+        - {matchName: releases.hashicorp.com}
+        - {matchName: registry.terraform.io}
+        - {matchName: app.terraform.io}
+      toPorts:
+        - ports: [{port: "443", protocol: TCP}]
