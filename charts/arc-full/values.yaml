@@ -96,8 +96,9 @@ platform:
       activeDeadlineSeconds: 22500
       terminationGracePeriodSeconds: 45
       priorityClassName: arc-ci-nonpreempting
-      # Any worker with the runtime DaemonSet (seccomp profile and one
-      # kkamji.net/arc-tun slot). The slot request keeps one runner per node.
+      # Any worker with the runtime DaemonSet (seccomp profile and two
+      # kkamji.net/arc-tun slots). At most one runner of each pool per node, so
+      # every worker holds one Platform and one BQL slot (docs/arc-ci.md).
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -108,6 +109,13 @@ platform:
                 values:
                 - k8s-w1
                 - k8s-w2
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/component: runner
+                actions.github.com/scale-set-name: kkamji-platform-full
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
@@ -119,10 +127,10 @@ platform:
       resources:
         requests:
           cpu: 500m
-          memory: 5Gi
+          memory: 3584Mi
         limits:
           cpu: '4'
-          memory: 5Gi
+          memory: 3584Mi
       volumes:
       - name: runtime-config
         configMap:
@@ -294,6 +302,8 @@ platform:
           value: 'false'
         - name: DISABLE_RUNNER_UPDATE
           value: 'true'
+        - name: ARC_POD_MEMORY_MIB
+          value: '3584'
         resources:
           requests:
             cpu: 250m
@@ -354,6 +364,30 @@ bql:
     <<: *fullRunnerTemplate
     spec:
       <<: *fullRunnerSpec
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - k8s-w1
+                - k8s-w2
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/component: runner
+                actions.github.com/scale-set-name: binance-quant-lab-full
+      resources:
+        requests:
+          cpu: 500m
+          memory: 7Gi
+        limits:
+          cpu: '4'
+          memory: 7Gi
       volumes:
       - name: runtime-config
         configMap:
@@ -410,6 +444,8 @@ bql:
           value: 'true'
         - name: ARC_JOB_EPHEMERAL_GIB
           value: '34'
+        - name: ARC_POD_MEMORY_MIB
+          value: '7168'
 githubAuth:
   enabled: false
   existingSourceReuseApproved: false

@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-18T18:12:21+09:00
+updated: 2026-10-18T22:31:36+09:00
 type: runbook
 status: current
 ---
@@ -799,3 +799,37 @@ so this adds headroom; it does not fix a measured failure.
   at 85% usage, well after this guard trips.
 - `ci-full/full-budget` `limits.ephemeral-storage` is 70Gi (two BQL Pods at 34Gi
   plus control 768Mi and the same 1280Mi margin). Other quota values are unchanged.
+
+## Sized slots: one Platform and one BQL runner per worker
+
+With two shared slots the pools still waited on each other: on 2026-10-18 a
+Platform runner sat quota-rejected while two BQL jobs held both slots. The owner
+then raised k8s-w1 and k8s-w2 to 16GiB memory (14.77GiB allocatable) and the
+worker disks from 100GB to 160GB (root filesystem 155GiB, grown online with
+`growpart`, `pvresize` and `lvextend -r`; kubelet restarted to report the new
+ephemeral capacity).
+
+- `arc-runtime` advertises two `kkamji.net/arc-tun` slots per worker (the device
+  plugin group `count` is 2; both share `/dev/net/tun`).
+- Each pool requires anti-affinity against its own runners on
+  `kubernetes.io/hostname`, so a worker holds at most one Platform and one BQL
+  runner. Both pools keep `maxRunners: 2`.
+- Pod memory is per pool: Platform 3584Mi (measured peak 2.76GiB), BQL 7Gi
+  (peak 4.98GiB at the old 5Gi limit with `CARGO_BUILD_JOBS=1`; the headroom is
+  for parallel builds after it is measured). One of each plus the 4.19GiB that
+  other workloads requested on the busiest worker is 14.69GiB. A runner that
+  does not fit waits as Pending; it does not fail.
+- The memory start guard reads `ARC_POD_MEMORY_MIB` and needs node
+  MemAvailable >= Pod budget + 1Gi (4.5GiB Platform, 8GiB BQL). The validator
+  pins the variable to each pool's Pod memory. A Pod from the old template has
+  no variable and keeps the old 6GiB guard during the rollout.
+- Disk start guards are unchanged (Platform 16Gi, BQL 34Gi plus max(5Gi, 15% +
+  1Gi)): 40.3GiB and 58.3GiB on the 155GiB root. Both budgets plus the margin
+  (74.3GiB) fit next to the 30-40GiB already used (110GiB and 119GiB free after
+  the growth).
+- `ci-full/full-budget` admits four runners: pods 8, CPU 2400m/18, memory
+  22016Mi/22Gi, ephemeral 9Gi/102Gi, `arc-tun` 4 (two BQL and two Platform Pods
+  plus control and the same margins as before).
+- Rollout: merge when no full runner is busy if possible. ARC skips busy runners
+  when it replaces the runner sets; the device plugin restart keeps allocated
+  devices. Rollback: revert the commit (the disk and memory growth stay).
