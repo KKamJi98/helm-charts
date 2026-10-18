@@ -86,8 +86,15 @@ class ArcAuthenticationRenderTests(unittest.TestCase):
     def test_owner_confirmed_local_values_render_one_auth_resource(self):
         result = self.render(local=True)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.count("kind: ExternalSecret"), 1)
+        # App auth plus the runner image pull credential.
+        self.assertEqual(result.stdout.count("kind: ExternalSecret"), 2)
         self.assertIn("name: arc-github-app-auth", result.stdout)
+        for expected in [
+            "name: ghcr-pull-secret",
+            "type: kubernetes.io/dockerconfigjson",
+            "/kkamji/personal/kkamji-platform/ghcr/pull-token",
+        ]:
+            self.assertIn(expected, result.stdout)
         self.assertNotIn("kind: Secret\n", result.stdout)
 
     def test_confirmation_schema_rejects_non_boolean(self):

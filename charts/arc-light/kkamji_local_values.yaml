@@ -44,6 +44,8 @@ template:
   spec:
     automountServiceAccountToken: false
     serviceAccountName: arc-light-job
+    imagePullSecrets:
+    - name: ghcr-pull-secret
     nodeSelector:
       kubernetes.io/hostname: k8s-w2
     priorityClassName: arc-ci-nonpreempting
@@ -58,8 +60,8 @@ template:
         type: RuntimeDefault
     initContainers:
     - name: verified-static-tools
-      image: docker.io/library/arc-platform-web-tools-20261017@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5
-      imagePullPolicy: Never
+      image: ghcr.io/kkamji98/arc-runner-web-tools@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5
+      imagePullPolicy: IfNotPresent
       command:
       - /bin/bash
       - -euc
@@ -94,8 +96,8 @@ template:
         mountPath: /home/runner/_work
     containers:
     - name: runner
-      image: docker.io/library/arc-platform-web-tools-20261017@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5
-      imagePullPolicy: Never
+      image: ghcr.io/kkamji98/arc-runner-web-tools@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5
+      imagePullPolicy: IfNotPresent
       command:
       - /bin/bash
       - -ec

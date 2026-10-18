@@ -29,6 +29,14 @@
       },
       "required": ["enabled", "namespaceTrustAccepted", "existingStoreTrustAccepted", "keyChoiceApproved", "secureInputMetadataVerified"],
       "additionalProperties": false
+    },
+    "imagePullSecret": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"}
+      },
+      "required": ["enabled"],
+      "additionalProperties": false
     }
   }
 }

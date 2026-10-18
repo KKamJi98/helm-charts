@@ -2,6 +2,8 @@ global:
   # kubespray-deployed CoreDNS service is named "coredns", not the upstream
   # default "kube-dns"; loki-gateway nginx resolver fails to start otherwise.
   dnsService: coredns
+  # kube-prometheus-stack 차트가 만드는 관측 스택 PriorityClass.
+  priorityClassName: kkamji-observability
 
 loki:
   commonConfig:

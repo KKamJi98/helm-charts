@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "registry": "ghcr.io/kkamji98",
+  "base_tools": "base/tools-lock.json",
+  "fonts": {
+    "source": "Ubuntu 26.04 (resolute) archive, data files only, no maintainer scripts",
+    "mirror": "http://archive.ubuntu.com/ubuntu/pool/main/f",
+    "packages": [
+      {"path": "fonts-dejavu/fonts-dejavu-core_2.37-8build1_all.deb", "sha256": "f4606b12eb41ddf7932d3a1ebc2019f9bbf90d0824943a2dc0c77a00f43019f2"},
+      {"path": "fonts-noto/fonts-noto-core_20201225-2build1_all.deb", "sha256": "25999af6e6665266b1f055d351fc5008534e65c9f7bdda1e7fb5a7574c42372f"},
+      {"path": "fonts-noto-cjk/fonts-noto-cjk_20240730+repack1-1build1_all.deb", "sha256": "be378a571b8f49b4b9146f7d13b31990950d35ee3e0bf1999f554c3ed5670dc0"},
+      {"path": "fonts-noto-color-emoji/fonts-noto-color-emoji_2.051-1build1_all.deb", "sha256": "040b1e0a0700c849b9ce59d97878019e16720d18063f7d0585d906ea609d7235"}
+    ],
+    "font_file_count": 277
+  },
+  "npm_cache": {
+    "repository": "KKamJi98/kkamji-platform",
+    "commit": "57d21795d105839a8dd99c57cc7e168f718f07a8",
+    "directory": "apps/web",
+    "package_lock_sha256": "0dc65a67b5997c7451c2b09a23b4671ac8e02d9b54f2137fb42324ddbe346c03",
+    "registry": "https://registry.npmjs.org",
+    "command": "npm ci --ignore-scripts with an empty environment and no npm credentials"
+  }
+}

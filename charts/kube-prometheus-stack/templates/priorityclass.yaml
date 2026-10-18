@@ -1,0 +1,15 @@
+{{- with .Values.observabilityPriorityClass }}
+{{- if .enabled }}
+# 관측 스택(prometheus, alertmanager, grafana, loki, alloy 등)이 CI runner 같은
+# 기본 우선순위(0) 워크로드보다 먼저 스케줄되고, 자원 부족 시 이들을 선점할 수 있게 한다.
+# loki/alloy 차트도 이 이름을 참조한다.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ .name }}
+value: {{ .value }}
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: {{ .description | quote }}
+{{- end }}
+{{- end }}

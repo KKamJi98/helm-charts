@@ -8,3 +8,5 @@ arcSsmReuse:
   existingStoreTrustAccepted: true
   keyChoiceApproved: true
   secureInputMetadataVerified: true
+imagePullSecret:
+  enabled: true

@@ -84,6 +84,8 @@ platform:
     spec: &fullRunnerSpec
       automountServiceAccountToken: false
       serviceAccountName: arc-full-job
+      imagePullSecrets:
+      - name: ghcr-pull-secret
       hostUsers: false
       hostNetwork: false
       hostPID: false
@@ -143,8 +145,8 @@ platform:
       initContainers:
       - &fullRunnerSeed
         name: seed-sdk
-        image: docker.io/library/arc-platform-web-tools-20261017@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5
-        imagePullPolicy: Never
+        image: ghcr.io/kkamji98/arc-runner-web-tools@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5
+        imagePullPolicy: IfNotPresent
         command:
         - bash
         - -c
@@ -177,8 +179,8 @@ platform:
           mountPath: /runner-home
       - &fullRunnerDaemon
         name: dind
-        image: docker.io/library/arc-platform-nosuidmount-setfcap-20261017@sha256:0a8a8a31aac32784698f59ce1d45a242eeb2dcb9221894d39d14fce00ccff72d
-        imagePullPolicy: Never
+        image: ghcr.io/kkamji98/arc-runner-dind@sha256:0a8a8a31aac32784698f59ce1d45a242eeb2dcb9221894d39d14fce00ccff72d
+        imagePullPolicy: IfNotPresent
         restartPolicy: Always
         command:
         - /usr/bin/python3
@@ -247,8 +249,8 @@ platform:
       containers:
       - &fullRunnerSDK
         name: runner
-        image: docker.io/library/arc-platform-web-tools-20261017@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5
-        imagePullPolicy: Never
+        image: ghcr.io/kkamji98/arc-runner-web-tools@sha256:0d5fe73d622effec94798a9859382f9779ab5d026bbdcdbfb2930bd5ca48b7d5
+        imagePullPolicy: IfNotPresent
         command:
         - /usr/bin/python3
         - -u
@@ -401,3 +403,5 @@ bql:
 githubAuth:
   enabled: false
   existingSourceReuseApproved: false
+imagePullSecret:
+  enabled: false

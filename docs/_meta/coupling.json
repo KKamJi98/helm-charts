@@ -15,5 +15,9 @@
   ],
   "docs/rules/gateway-api-routing.md": [
     "charts/envoy-gateway/templates/*.yaml"
+  ],
+  "docs/arc-runner-images.md": [
+    "images/arc-runner/*",
+    "images/arc-runner/*/*"
   ]
 }

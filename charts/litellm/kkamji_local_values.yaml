@@ -1,0 +1,69 @@
+# kkamji local overrides for litellm-helm 1.1.2.
+# 2026-08-29 수동 helm install 로 시작한 PoC 용 release 를 2026-10-18 Argo CD(automation-root)로 이전했다.
+# chart 는 설치된 release(v6)에서 복원했고, postgresql 14.3.1 subchart 는 bitnamicharts OCI 에서 받았다.
+
+image:
+  repository: litellm/litellm
+  # v1.98.0 -> v1.104.2: 같은 mock 설정으로 측정한 idle RSS 가 770MB -> 540MB 로 줄었다.
+  tag: v1.104.2
+
+# master key 는 SSM(/kkamji/automation/litellm/master-key) -> ESO -> Secret 으로 주입한다.
+masterkeySecretName: litellm-master-key
+masterkeySecretKey: master_key
+kkamjiMasterKeyExternalSecret:
+  enabled: true
+  ssmKey: /kkamji/automation/litellm/master-key
+  refreshInterval: 1h
+  secretStoreRef:
+    name: parameter-store
+    kind: ClusterSecretStore
+
+proxy_config:
+  general_settings:
+    master_key: os.environ/PROXY_MASTER_KEY
+  # mock_response 모델이라 api_key 는 실제 호출에 쓰이지 않는다.
+  model_list:
+    - model_name: gpt-3.5-turbo
+      litellm_params:
+        model: gpt-3.5-turbo
+        api_key: mock-key
+        mock_response: Mock reply from litellm lab.
+    - model_name: mock-model
+      litellm_params:
+        model: openai/mock-model
+        api_key: mock-key
+        mock_response: Mock reply from litellm lab.
+
+# standalone in-cluster postgres via bundled bitnami subchart
+db:
+  deployStandalone: true
+
+postgresql:
+  image:
+    repository: bitnamilegacy/postgresql
+  auth:
+    database: litellm
+    # bitnami 는 postgres(admin) 비밀번호를 렌더할 때마다 새로 만든다. Argo CD 렌더가
+    # 매번 값을 바꾸지 않도록 기존 release 가 만든 Secret 을 그대로 참조한다 (Git 비관리).
+    existingSecret: litellm-postgresql
+  primary:
+    # DB 크기가 12MB 수준이라 기본 128MB shared_buffers 가 필요 없다.
+    extendedConfiguration: |
+      shared_buffers = 32MB
+    resources:
+      requests:
+        cpu: 10m
+        memory: 96Mi
+
+service:
+  type: ClusterIP
+  port: 4000
+
+# 24h p95 working set 908Mi(v1.98.0). v1.104.2 idle RSS 540MB 기준으로 다시 잡는다.
+# CPU limit 은 두지 않고 memory limit 만 둔다.
+resources:
+  requests:
+    cpu: 50m
+    memory: 640Mi
+  limits:
+    memory: 1Gi

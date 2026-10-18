@@ -27,3 +27,4 @@ status: current
 
 - [ARC rollout](arc-ci.md) - Qualified full SDK/JIT and BQL private scratch/ELF candidate within unchanged shared5Gi and20Gi Pod accounting.
 - [ARC GitHub App](arc-github-app.md) - Approved App installation, shared authority, separately approved secure input, rotation and recovery.
+- [ARC runner images](arc-runner-images.md) - Recipe, content check, private GHCR publishing and rollback for the runner and rootless Docker images.

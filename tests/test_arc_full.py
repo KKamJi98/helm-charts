@@ -49,14 +49,22 @@ class ArcFullContractTests(unittest.TestCase):
     def test_local_uses_existing_source_and_opens_qualified_repository_pools(self):
         r = self.render(local=True)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(r.stdout.count("kind: ExternalSecret"), 1)
+        # App auth plus the runner image pull credential.
+        self.assertEqual(r.stdout.count("kind: ExternalSecret"), 2)
         self.assertNotIn("kind: Secret\n", r.stdout)
         for text in [
             "/kkamji/arc/github-app",
             "creationPolicy: Orphan",
             "deletionPolicy: Retain",
+            "type: kubernetes.io/dockerconfigjson",
+            "/kkamji/personal/kkamji-platform/ghcr/pull-token",
         ]:
             self.assertIn(text, r.stdout)
+        self.assertEqual(
+            len(re.findall(r"imagePullSecrets:\s*\n\s*- name: ghcr-pull-secret", r.stdout)), 2
+        )
+        self.assertNotRegex(r.stdout, r"imagePullPolicy:\s*Never")
+        self.assertNotIn("docker.io/library/arc-platform-", r.stdout)
         self.assertEqual(r.stdout.count("maxRunners: 0"), 0)
         self.assertEqual(r.stdout.count("maxRunners: 1"), 2)
         self.assertEqual(

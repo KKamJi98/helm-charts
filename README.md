@@ -39,7 +39,7 @@ AppProject는 `argocd`, `management`, `automation`, `personal`로 역할을 나�
 | Root Application | 자식 선언 파일 | 선언 대상 예시 |
 |---|---|---|
 | `management-root` | [management_local_values.yaml](charts/argo-applications/management_local_values.yaml) | Argo CD, Cilium, MetalLB, Envoy Gateway, ESO, 관측 도구 |
-| `automation-root` | [automation_local_values.yaml](charts/argo-applications/automation_local_values.yaml) | 자동화 도구와 ARC CI runner |
+| `automation-root` | [automation_local_values.yaml](charts/argo-applications/automation_local_values.yaml) | LiteLLM PoC, 자동화 도구와 ARC CI runner |
 | `personal-root` | [personal_local_values.yaml](charts/argo-applications/personal_local_values.yaml) | 별도 저장소에서 관리하는 개인 애플리케이션 |
 
 이 저장소의 GitOps 기준 branch는 `main`입니다. 자식 Application은 다른 Git 저장소나 버전이 고정된 외부 Helm chart를 사용할 수도 있습니다. 실제 소스와 revision은 각 Application 선언에서 확인합니다.
@@ -61,7 +61,7 @@ charts/
   envoy-gateway/          Gateway API 플랫폼 구성
   external-secrets/       ESO 구성
   cert-manager/           인증서 구성
-  openclaw/               자동화 서비스 차트
+  litellm/, openclaw/     LLM gateway PoC와 자동화 서비스 차트
   alloy/, loki/           관측 도구 차트
   ...                     나머지 인프라와 서비스 차트
 

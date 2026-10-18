@@ -12,6 +12,21 @@ syncPolicy:
     - ServerSideApply=true
 
 applications:
+  litellm:
+    # PoC 용 LLM gateway. 2026-10-18 수동 Helm release 에서 이전했다.
+    enabled: true
+    name: litellm
+    project: automation
+    destination:
+      namespace: litellm
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/litellm
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
   openclaw:
     enabled: false
     name: openclaw
