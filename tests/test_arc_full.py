@@ -73,7 +73,7 @@ class ArcFullContractTests(unittest.TestCase):
         self.assertNotRegex(r.stdout, r"workingDir:\s+/home/runner(?:\s|$)")
         self.assertNotIn("kind: ClusterRole\n", r.stdout)
 
-    def test_two_runner_slots_span_both_workers(self):
+    def test_sized_slots_hold_one_runner_of_each_pool_per_worker(self):
         r = self.render(local=True)
         self.assertEqual(r.returncode, 0, r.stderr)
         sets = [
@@ -86,20 +86,40 @@ class ArcFullContractTests(unittest.TestCase):
                 r"key: kubernetes.io/hostname\s+operator: In\s+values:\s+- k8s-w1\s+- k8s-w2",
             )
             self.assertNotIn("nodeSelector:\n        kubernetes.io/hostname: k8s-w2", doc)
+        for pool, memory, mib in [
+            ("binance-quant-lab-full", "7Gi", "7168"),
+            ("kkamji-platform-full", "3584Mi", "3584"),
+        ]:
+            doc = next(d for d in sets if f"name: {pool}\n" in d)
+            # Required anti-affinity against the same pool's runners only.
+            self.assertRegex(
+                doc,
+                r"podAntiAffinity:\s+requiredDuringSchedulingIgnoredDuringExecution:"
+                r"\s+- labelSelector:\s+matchLabels:"
+                rf"\s+actions.github.com/scale-set-name: {pool}"
+                r"\s+app.kubernetes.io/component: runner"
+                r"\s+topologyKey: kubernetes.io/hostname",
+            )
+            self.assertRegex(doc, rf"limits:\s+cpu: \"4\"\s+memory: {memory}")
+            self.assertRegex(doc, rf"requests:\s+cpu: 500m\s+memory: {memory}")
+            self.assertRegex(doc, rf"name: ARC_POD_MEMORY_MIB\s+value: \"{mib}\"")
         quota = next(doc for doc in r.stdout.split("---") if "kind: ResourceQuota" in doc)
-        # One arc-tun slot per worker; quota admits exactly two runners
-        # (BQL: 500m/4 CPU, 5Gi, 2Gi/34Gi ephemeral each) plus control and surge.
+        # Two arc-tun slots per worker; quota admits exactly four runners (two
+        # BQL 7Gi/34Gi, two Platform 3584Mi/16Gi; 500m/4 CPU, 2Gi ephemeral
+        # requests each) plus control and surge.
         for line in [
-            'pods: "6"',
-            "requests.cpu: 1400m",
-            'limits.cpu: "10"',
-            "requests.memory: 10752Mi",
-            "limits.memory: 11Gi",
-            "requests.ephemeral-storage: 5Gi",
-            "limits.ephemeral-storage: 70Gi",
-            'requests.kkamji.net/arc-tun: "2"',
+            'pods: "8"',
+            "requests.cpu: 2400m",
+            'limits.cpu: "18"',
+            "requests.memory: 22016Mi",
+            "limits.memory: 22Gi",
+            "requests.ephemeral-storage: 9Gi",
+            "limits.ephemeral-storage: 102Gi",
+            'requests.kkamji.net/arc-tun: "4"',
         ]:
             self.assertIn(line, quota)
+        runtime = (ROOT / "charts/arc-runtime/templates/runtime.yaml").read_text()
+        self.assertIn('{"name":"arc-tun","groups":[{"count":2,', runtime)
 
     def test_bql_storage_growth_keeps_platform_template_and_sdk_budget(self):
         r = self.render(local=True)
@@ -115,7 +135,7 @@ class ArcFullContractTests(unittest.TestCase):
         self.assertRegex(bql, r"ephemeral-storage:\s+4Gi")
         self.assertRegex(platform, r"sizeLimit:\s+12Gi")
         self.assertNotIn("ARC_JOB_EPHEMERAL_GIB", platform)
-        self.assertIn("limits.ephemeral-storage: 70Gi", r.stdout)
+        self.assertIn("limits.ephemeral-storage: 102Gi", r.stdout)
 
     def test_bql_private_scratch_is_disk_backed_within_same_pod_budget(self):
         r = self.render(local=True)
@@ -129,7 +149,7 @@ class ArcFullContractTests(unittest.TestCase):
         self.assertRegex(bql, r"emptyDir:\s+sizeLimit: 3Gi\s+name: daemon-tmp")
         self.assertNotIn("medium: Memory", bql)
         self.assertIn('value: "34"', bql)
-        self.assertIn("limits.ephemeral-storage: 70Gi", r.stdout)
+        self.assertIn("limits.ephemeral-storage: 102Gi", r.stdout)
 
     def test_bql_budget_requires_one_literal_value(self):
         values = (ROOT / "charts/arc-full/values.yaml").read_text()
@@ -148,7 +168,10 @@ class ArcFullContractTests(unittest.TestCase):
                 "seccompProfile": {"type": "RuntimeDefault"},
             },
             "resources": {"limits": {"ephemeral-storage": "4Gi"}},
-            "env": [{"name": "ARC_JOB_EPHEMERAL_GIB", "value": "34"}],
+            "env": [
+                {"name": "ARC_JOB_EPHEMERAL_GIB", "value": "34"},
+                {"name": "ARC_POD_MEMORY_MIB", "value": "7168"},
+            ],
         }
         literal = self.render(
             json_flags=["bql.template.spec.containers=" + json.dumps([sdk])]
@@ -163,7 +186,15 @@ class ArcFullContractTests(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("ARC full boundary", r.stderr)
         budget = {"name": "ARC_JOB_EPHEMERAL_GIB", "value": "34"}
-        for invalid in [[], [{**budget, "value": "16"}, {**budget, "value": "20"}], [budget, budget]]:
+        memory = {"name": "ARC_POD_MEMORY_MIB", "value": "7168"}
+        for invalid in [
+            [memory],
+            [{**budget, "value": "16"}, {**budget, "value": "20"}, memory],
+            [budget, budget, memory],
+            [budget],
+            [budget, {**memory, "value": "3584"}],
+            [budget, memory, memory],
+        ]:
             sdk["env"] = invalid
             r = self.render(
                 json_flags=["bql.template.spec.containers=" + json.dumps([sdk])]
@@ -179,6 +210,10 @@ class ArcFullContractTests(unittest.TestCase):
             "platform.template.spec.containers[0].securityContext.allowPrivilegeEscalation=true",
             "platform.template.spec.initContainers[1].securityContext.capabilities.add[3]=SYS_ADMIN",
             "platform.template.spec.resources.limits.memory=6Gi",
+            "platform.template.spec.resources.requests.memory=5Gi",
+            "bql.template.spec.resources.limits.memory=5Gi",
+            "platform.template.spec.containers[0].env[7].value=7168",
+            "bql.template.spec.containers[0].env[8].value=3584",
             "bql.template.spec.automountServiceAccountToken=true",
             "platform.template.spec.initContainers[1].resources.limits.ephemeral-storage=14Gi",
             "platform.template.spec.containers[0].resources.limits.ephemeral-storage=6Gi",
@@ -200,6 +235,21 @@ class ArcFullContractTests(unittest.TestCase):
 
 
 class DiskReserveTests(unittest.TestCase):
+    def test_memory_guard_holds_the_pool_pod_budget_plus_one_gib(self):
+        spec = importlib.util.spec_from_file_location(
+            "sdk_entry", ROOT / "charts/arc-full/files/sdk-entry.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        mib = 1024**2
+        self.assertEqual(module.memory_required_bytes(3584), 4608 * mib)
+        self.assertEqual(module.memory_required_bytes(7168), 8192 * mib)
+        # Pods from the previous template carry no env and keep the old 6GiB guard.
+        self.assertEqual(module.memory_required_bytes(), 6144 * mib)
+        for unsupported in (0, 1024, 4096, 8192):
+            with self.assertRaises(ValueError):
+                module.memory_required_bytes(unsupported)
+
     def test_bql_budget_retains_full_pressure_margin(self):
         spec = importlib.util.spec_from_file_location(
             "sdk_entry", ROOT / "charts/arc-full/files/sdk-entry.py"
@@ -231,7 +281,7 @@ class DiskReserveTests(unittest.TestCase):
         self.assertIn("sizeLimit: 12Gi", text)
         self.assertIn("ephemeral-storage: 12Gi", text)
         self.assertIn(
-            "limits.ephemeral-storage: 70Gi",
+            "limits.ephemeral-storage: 102Gi",
             (ROOT / "charts/arc-full/templates/foundation.yaml").read_text(),
         )
 

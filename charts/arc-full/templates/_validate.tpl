@@ -10,8 +10,14 @@
 {{- if or (ne $p.hostUsers false) $p.hostPID $p.hostNetwork $p.hostIPC $p.shareProcessNamespace $p.automountServiceAccountToken -}}
 {{- fail "ARC full boundary: private user/PID/network/IPC namespaces and no API token are required" -}}
 {{- end -}}
-{{- if or (ne $p.resources.requests.memory "5Gi") (ne $p.resources.limits.memory "5Gi") -}}
-{{- fail "ARC full boundary: one shared5Gi Pod memory budget is required" -}}
+{{- $memory := "3584Mi" -}}
+{{- $memoryMiB := "3584" -}}
+{{- if eq $name "bql" -}}
+{{- $memory = "7Gi" -}}
+{{- $memoryMiB = "7168" -}}
+{{- end -}}
+{{- if or (ne $p.resources.requests.memory $memory) (ne $p.resources.limits.memory $memory) -}}
+{{- fail "ARC full boundary: Pod memory budget must match the pool slot (Platform3584Mi, BQL7Gi)" -}}
 {{- end -}}
 {{- if or (ne (len $p.containers) 1) (ne (len $p.initContainers) 2) -}}
 {{- fail "ARC full boundary: only the seed, trusted daemon and SDK roles are allowed" -}}
@@ -34,6 +40,15 @@
 {{- if eq $env.name "ARC_JOB_EPHEMERAL_GIB" -}}
 {{- $budgetEnv = append $budgetEnv $env -}}
 {{- end -}}
+{{- end -}}
+{{- $memoryEnv := list -}}
+{{- range $env := $sdk.env -}}
+{{- if eq $env.name "ARC_POD_MEMORY_MIB" -}}
+{{- $memoryEnv = append $memoryEnv $env -}}
+{{- end -}}
+{{- end -}}
+{{- if or (ne (len $memoryEnv) 1) (hasKey (index $memoryEnv 0) "valueFrom") (ne (toString (index $memoryEnv 0).value) $memoryMiB) -}}
+{{- fail "ARC full boundary: the memory start guard must use the pool Pod budget" -}}
 {{- end -}}
 {{- if eq $name "bql" -}}
 {{- if ne (len $budgetEnv) 1 -}}

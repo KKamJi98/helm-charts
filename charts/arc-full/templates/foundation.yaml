@@ -41,18 +41,19 @@ metadata:
   name: full-budget
   namespace: ci-full
 spec:
-  # Two runner Pods (one arc-tun slot on each worker) plus the controller, two
-  # listeners and one rollout surge. A third runner waits here: ARC requeues a
-  # quota-rejected Pod every 30s instead of failing the job.
+  # Four runner Pods (two arc-tun slots on each worker: one Platform 3584Mi and
+  # one BQL 7Gi per node) plus the controller, two listeners and one rollout
+  # surge. A fifth runner waits here: ARC requeues a quota-rejected Pod every
+  # 30s instead of failing the job.
   hard:
-    pods: "6"
-    requests.cpu: 1400m
-    limits.cpu: "10"
-    requests.memory: 10752Mi
-    limits.memory: 11Gi
-    requests.ephemeral-storage: 5Gi
-    limits.ephemeral-storage: 70Gi
-    requests.kkamji.net/arc-tun: "2"
+    pods: "8"
+    requests.cpu: 2400m
+    limits.cpu: "18"
+    requests.memory: 22016Mi
+    limits.memory: 22Gi
+    requests.ephemeral-storage: 9Gi
+    limits.ephemeral-storage: 102Gi
+    requests.kkamji.net/arc-tun: "4"
     persistentvolumeclaims: "0"
 ---
 {{- if .Values.githubAuth.enabled }}

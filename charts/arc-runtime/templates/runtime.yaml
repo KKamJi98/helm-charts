@@ -100,7 +100,7 @@ spec:
         args:
         - --listen=:8080
         - --domain=kkamji.net
-        - '--device={"name":"arc-tun","groups":[{"count":1,"paths":[{"path":"/dev/net/tun","mountPath":"/dev/net/tun","permissions":"rw","type":"Device"}]}]}'
+        - '--device={"name":"arc-tun","groups":[{"count":2,"paths":[{"path":"/dev/net/tun","mountPath":"/dev/net/tun","permissions":"rw","type":"Device"}]}]}'
         securityContext:
           privileged: false
           allowPrivilegeEscalation: false
