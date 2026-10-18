@@ -96,8 +96,18 @@ platform:
       activeDeadlineSeconds: 22500
       terminationGracePeriodSeconds: 45
       priorityClassName: arc-ci-nonpreempting
-      nodeSelector:
-        kubernetes.io/hostname: k8s-w2
+      # Any worker with the runtime DaemonSet (seccomp profile and one
+      # kkamji.net/arc-tun slot). The slot request keeps one runner per node.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - k8s-w1
+                - k8s-w2
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001

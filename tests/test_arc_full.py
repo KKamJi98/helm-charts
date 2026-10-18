@@ -66,12 +66,40 @@ class ArcFullContractTests(unittest.TestCase):
         self.assertNotRegex(r.stdout, r"imagePullPolicy:\s*Never")
         self.assertNotIn("docker.io/library/arc-platform-", r.stdout)
         self.assertEqual(r.stdout.count("maxRunners: 0"), 0)
-        self.assertEqual(r.stdout.count("maxRunners: 1"), 2)
+        self.assertEqual(r.stdout.count("maxRunners: 2"), 2)
         self.assertEqual(
             len(re.findall(r"workingDir:\s+/home/runner/_work(?:\s|$)", r.stdout)), 2
         )
         self.assertNotRegex(r.stdout, r"workingDir:\s+/home/runner(?:\s|$)")
         self.assertNotIn("kind: ClusterRole\n", r.stdout)
+
+    def test_two_runner_slots_span_both_workers(self):
+        r = self.render(local=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        sets = [
+            doc for doc in r.stdout.split("---") if "kind: AutoscalingRunnerSet" in doc
+        ]
+        self.assertEqual(len(sets), 2)
+        for doc in sets:
+            self.assertRegex(
+                doc,
+                r"key: kubernetes.io/hostname\s+operator: In\s+values:\s+- k8s-w1\s+- k8s-w2",
+            )
+            self.assertNotIn("nodeSelector:\n        kubernetes.io/hostname: k8s-w2", doc)
+        quota = next(doc for doc in r.stdout.split("---") if "kind: ResourceQuota" in doc)
+        # One arc-tun slot per worker; quota admits exactly two runners
+        # (BQL: 500m/2 CPU, 5Gi, 2Gi/20Gi ephemeral each) plus control and surge.
+        for line in [
+            'pods: "6"',
+            "requests.cpu: 1400m",
+            'limits.cpu: "6"',
+            "requests.memory: 10752Mi",
+            "limits.memory: 11Gi",
+            "requests.ephemeral-storage: 5Gi",
+            "limits.ephemeral-storage: 42Gi",
+            'requests.kkamji.net/arc-tun: "2"',
+        ]:
+            self.assertIn(line, quota)
 
     def test_bql_storage_growth_keeps_platform_template_and_sdk_budget(self):
         r = self.render(local=True)
@@ -87,7 +115,7 @@ class ArcFullContractTests(unittest.TestCase):
         self.assertRegex(bql, r"ephemeral-storage:\s+4Gi")
         self.assertRegex(platform, r"sizeLimit:\s+12Gi")
         self.assertNotIn("ARC_JOB_EPHEMERAL_GIB", platform)
-        self.assertIn("limits.ephemeral-storage: 22Gi", r.stdout)
+        self.assertIn("limits.ephemeral-storage: 42Gi", r.stdout)
 
     def test_bql_private_scratch_is_disk_backed_within_same_twenty_gib(self):
         r = self.render(local=True)
@@ -101,7 +129,7 @@ class ArcFullContractTests(unittest.TestCase):
         self.assertRegex(bql, r"emptyDir:\s+sizeLimit: 3Gi\s+name: daemon-tmp")
         self.assertNotIn("medium: Memory", bql)
         self.assertIn('value: "20"', bql)
-        self.assertIn("limits.ephemeral-storage: 22Gi", r.stdout)
+        self.assertIn("limits.ephemeral-storage: 42Gi", r.stdout)
 
     def test_bql_budget_requires_one_literal_twenty_gib_value(self):
         values = (ROOT / "charts/arc-full/values.yaml").read_text()
@@ -201,7 +229,7 @@ class DiskReserveTests(unittest.TestCase):
         self.assertIn("sizeLimit: 12Gi", text)
         self.assertIn("ephemeral-storage: 12Gi", text)
         self.assertIn(
-            "limits.ephemeral-storage: 22Gi",
+            "limits.ephemeral-storage: 42Gi",
             (ROOT / "charts/arc-full/templates/foundation.yaml").read_text(),
         )
 

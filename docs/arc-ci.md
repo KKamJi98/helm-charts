@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-18T07:44:52+09:00
+updated: 2026-10-18T16:29:02+09:00
 type: runbook
 status: current
 ---
@@ -739,3 +739,32 @@ or controller/auth change. Disk3Gi/never-memory and pool budgets fail closed.
 Keep the actual20Gi+pressure/memory6Gi start guards. Deploy this preparation
 before its workflow; roll back the workflow before shrinking scratch, drain only
 owned work, and preserve other repositories and controller/finalizer cleanup.
+
+## Two full runner slots across both workers
+
+Measured on 2026-10-18: one BQL gate run on ARC took about two hours because
+its six jobs ran one after another (Tier A 34m, Tier B 13m, release 8m, proof
+receipts 8m), while the same jobs on hosted runners ran in parallel in about
+25 minutes. Each full pool had `maxRunners: 1`, the namespace quota admitted
+one 5Gi runner, and runners were pinned to k8s-w2 only because the runner
+images existed only there. The images now come from GHCR
+([ARC runner images](arc-runner-images.md)), so that pin is gone.
+
+- Runner Pods require `kubernetes.io/hostname` In `k8s-w1`, `k8s-w2`. Both
+  workers run `arc-runtime` (same seccomp profile hash, one
+  `kkamji.net/arc-tun` slot each), so the slot request keeps one runner per
+  node. Listeners and the controller stay on k8s-w1.
+- Each pool allows `maxRunners: 2`. `ci-full/full-budget` admits exactly two
+  runners: `requests.kkamji.net/arc-tun` 2, pods 6, CPU 1400m/6, memory
+  10752Mi/11Gi, ephemeral 5Gi/42Gi. These are the live single-runner usage
+  (control 200m/1, 256Mi/512Mi, 192Mi/768Mi; BQL runner 500m/2, 5Gi/5Gi,
+  2Gi/20Gi) times two runners plus the same margins as before.
+- A third runner is rejected by quota, not left Pending on a node. ARC 0.15
+  requeues a quota-rejected runner Pod every 30s and recreates the ephemeral
+  runner before its JIT registration expires, so the job waits instead of
+  failing. The two pools share the two slots without a fairness guarantee.
+- Per-Pod budgets, security contexts, the 5Gi memory and 20Gi disk start
+  guards and the validator are unchanged. Before this change k8s-w1 had
+  8.0GiB MemAvailable and 65GB free disk, above both guards.
+- Rollback: revert the commit. Running jobs keep their Pods; ARC skips busy
+  runners when it replaces an outdated runner set.
