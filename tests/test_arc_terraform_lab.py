@@ -76,6 +76,20 @@ class TerraformLabRunnerTests(unittest.TestCase):
         ]:
             self.assertIn(line, quota)
 
+    def test_control_budget_keeps_a_controller_surge_with_three_listeners(self):
+        out = render("arc-foundation", "kkamji_local_values.yaml", "arc-system")
+        quota = next(d for d in out.split("---") if "name: arc-control-budget" in d)
+        for line in [
+            "requests.cpu: 350m",
+            "requests.memory: 448Mi",
+            "limits.cpu: 1750m",
+            "limits.memory: 896Mi",
+            "requests.ephemeral-storage: 320Mi",
+            "limits.ephemeral-storage: 640Mi",
+            "pods: '5'",
+        ]:
+            self.assertIn(line, quota)
+
     def test_argo_application_points_at_the_terraform_values(self):
         values = (ROOT / "charts/argo-applications/automation_local_values.yaml").read_text()
         block = values.split("  arc-terraform-lab-light:\n", 1)[1].split("\n  arc-", 1)[0]
