@@ -14,7 +14,10 @@ syncPolicy:
 applications:
   litellm:
     # PoC 용 LLM gateway. 2026-10-18 수동 Helm release 에서 이전했다.
-    enabled: true
+    # Paused 2026-10-18 (user request): chart 는 유지한다. DB PVC
+    # data-litellm-postgresql-0 와 Secret litellm-postgresql(existingSecret)은
+    # namespace 에 남겨 두었으므로 true 로 되돌리면 기존 데이터로 다시 뜬다.
+    enabled: false
     name: litellm
     project: automation
     destination:
