@@ -42,7 +42,7 @@ metadata:
   namespace: ci-full
 spec:
   # Four runner Pods (two arc-tun slots on each worker: one Platform 3584Mi and
-  # one BQL 7Gi per node) plus the controller, two listeners and one rollout
+  # one BQL 7Gi per node, each with a 34Gi disk budget) plus the controller, two listeners and one rollout
   # surge. A fifth runner waits here: ARC requeues a quota-rejected Pod every
   # 30s instead of failing the job.
   hard:
@@ -52,7 +52,7 @@ spec:
     requests.memory: 22016Mi
     limits.memory: 22Gi
     requests.ephemeral-storage: 9Gi
-    limits.ephemeral-storage: 102Gi
+    limits.ephemeral-storage: 138Gi
     requests.kkamji.net/arc-tun: "4"
     persistentvolumeclaims: "0"
 ---
