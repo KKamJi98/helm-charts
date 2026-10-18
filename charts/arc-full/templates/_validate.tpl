@@ -23,7 +23,7 @@
 {{- $dockerLimit := "12Gi" -}}
 {{- $scratchLimit := "512Mi" -}}
 {{- if eq $name "bql" -}}
-{{- $dockerLimit = "16Gi" -}}
+{{- $dockerLimit = "30Gi" -}}
 {{- $scratchLimit = "3Gi" -}}
 {{- end -}}
 {{- if or (ne (dig "resources" "limits" "ephemeral-storage" "" (default (dict) $daemon)) $dockerLimit) (ne (dig "resources" "limits" "ephemeral-storage" "" (default (dict) $sdk)) "4Gi") -}}
@@ -37,11 +37,11 @@
 {{- end -}}
 {{- if eq $name "bql" -}}
 {{- if ne (len $budgetEnv) 1 -}}
-{{- fail "ARC full boundary: BQL must declare one20Gi startup budget" -}}
+{{- fail "ARC full boundary: BQL must declare one34Gi startup budget" -}}
 {{- end -}}
 {{- $budget := index $budgetEnv 0 -}}
-{{- if or (hasKey $budget "valueFrom") (not (kindIs "string" $budget.value)) (ne (toString $budget.value) "20") -}}
-{{- fail "ARC full boundary: BQL startup budget must remain20Gi" -}}
+{{- if or (hasKey $budget "valueFrom") (not (kindIs "string" $budget.value)) (ne (toString $budget.value) "34") -}}
+{{- fail "ARC full boundary: BQL startup budget must remain34Gi" -}}
 {{- end -}}
 {{- else if ne (len $budgetEnv) 0 -}}
 {{- fail "ARC full boundary: Platform must retain its original16Gi startup budget" -}}
