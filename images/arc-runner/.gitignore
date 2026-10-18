@@ -1,0 +1,5 @@
+# Downloaded or generated build inputs; see inputs.lock.json and build.sh.
+base/vendor/
+web-tools/npm-cache/
+web-tools/fonts/
+.work/
