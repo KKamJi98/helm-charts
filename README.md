@@ -39,7 +39,7 @@ AppProject는 `argocd`, `management`, `automation`, `personal`로 역할을 나�
 | Root Application | 자식 선언 파일 | 선언 대상 예시 |
 |---|---|---|
 | `management-root` | [management_local_values.yaml](charts/argo-applications/management_local_values.yaml) | Argo CD, Cilium, MetalLB, Envoy Gateway, ESO, 관측 도구 |
-| `automation-root` | [automation_local_values.yaml](charts/argo-applications/automation_local_values.yaml) | n8n과 자동화 도구 |
+| `automation-root` | [automation_local_values.yaml](charts/argo-applications/automation_local_values.yaml) | 자동화 도구와 ARC CI runner |
 | `personal-root` | [personal_local_values.yaml](charts/argo-applications/personal_local_values.yaml) | 별도 저장소에서 관리하는 개인 애플리케이션 |
 
 이 저장소의 GitOps 기준 branch는 `main`입니다. 자식 Application은 다른 Git 저장소나 버전이 고정된 외부 Helm chart를 사용할 수도 있습니다. 실제 소스와 revision은 각 Application 선언에서 확인합니다.
@@ -48,7 +48,7 @@ root 동기화 정책에는 자동 동기화, `prune`, `selfHeal`, `ServerSideAp
 
 `enabled: false`인 항목은 생성 대상에서 제외됩니다. 반대로 `enabled: true`라도 runtime의 중단 상태나 실패가 있을 수 있습니다. `skip-reconcile`로 중단한 앱은 임의로 재개하지 않으며, 과거의 `Synced/Healthy`를 최신 실행 증적으로 보지 않습니다.
 
-예를 들어 OpenClaw는 선언상 비활성입니다. n8n은 선언상 활성이나, [2026-10-15 운영 기록](docs/argocd-upgrades.md#적용-결과)에서는 reconciliation 중단 상태였습니다. 이 기록은 확인 시점의 증거이며 실시간 상태판이 아닙니다.
+예를 들어 OpenClaw는 선언상 비활성입니다. n8n과 Kiali는 2026-10-18에 선언과 차트를 제거해 `_archived/`로 옮겼습니다. 과거 상태는 [2026-10-15 운영 기록](docs/argocd-upgrades.md#적용-결과)에 남아 있으며 실시간 상태판이 아닙니다.
 
 ## 디렉터리 안내
 
@@ -61,7 +61,7 @@ charts/
   envoy-gateway/          Gateway API 플랫폼 구성
   external-secrets/       ESO 구성
   cert-manager/           인증서 구성
-  n8n/, openclaw/         자동화 서비스 차트
+  openclaw/               자동화 서비스 차트
   alloy/, loki/           관측 도구 차트
   ...                     나머지 인프라와 서비스 차트
 

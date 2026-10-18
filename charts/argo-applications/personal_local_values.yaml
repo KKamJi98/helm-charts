@@ -13,7 +13,9 @@ syncPolicy:
 
 applications:
   real-life-rpg:
-    enabled: true
+    # Retired 2026-10-18: hosting stopped and DB PVC deleted (user request),
+    # code preserved in KKamJi98/real-life-rpg. Flip to true to redeploy empty.
+    enabled: false
     name: real-life-rpg
     annotations:
       # 전역 구독은 실패 계열만 받으므로, 배포 성공 알림은 워크로드 앱만 opt-in.

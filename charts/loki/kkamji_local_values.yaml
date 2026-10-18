@@ -40,6 +40,13 @@ loki:
 minio:
   enabled: false
 
+# canary 메트릭을 수집하는 ServiceMonitor 가 없어 결과를 쓰지 않는다.
+# helm test 는 canary 에 의존하므로 함께 끈다.
+lokiCanary:
+  enabled: false
+test:
+  enabled: false
+
 deploymentMode: SingleBinary
 
 singleBinary:

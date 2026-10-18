@@ -215,20 +215,6 @@ applications:
         valueFiles:
           - kkamji_local_values.yaml
 
-  kiali-operator:
-    enabled: true
-    name: kiali-operator
-    project: management
-    destination:
-      namespace: kiali-operator
-    source:
-      repoURL: https://github.com/KKamJi98/helm-charts.git
-      targetRevision: main
-      path: charts/kiali-operator
-      helm:
-        valueFiles:
-          - kkamji_local_values.yaml
-
   kube-prometheus-stack:
     enabled: true
     name: kube-prometheus-stack

@@ -12,20 +12,6 @@ syncPolicy:
     - ServerSideApply=true
 
 applications:
-  n8n:
-    enabled: true
-    name: n8n
-    project: automation
-    destination:
-      namespace: n8n
-    source:
-      repoURL: https://github.com/KKamJi98/helm-charts.git
-      targetRevision: main
-      path: charts/n8n
-      helm:
-        valueFiles:
-          - kkamji_local_values.yaml
-
   openclaw:
     enabled: false
     name: openclaw
