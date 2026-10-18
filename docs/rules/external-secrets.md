@@ -1,6 +1,6 @@
 ---
 title: External Secrets rules
-updated: 2026-10-18T00:14:12+09:00
+updated: 2026-10-18T15:55:36+09:00
 type: rule
 status: current
 ---
@@ -31,3 +31,10 @@ ARC foundation은 단일 `/kkamji/arc/github-app` 경로를 기존 `parameter-st
 - 사용자 보안 입력과 metadata 확인 전에는 auth를 켜거나 light Application을 활성화하지 않습니다. 실제 값 조회/로그 출력으로 검증하지 않습니다.
 - 로컬 회귀 검사는 Helm을 PATH에 둔 뒤 uv run --no-project python -m unittest discover -s tests -p test_arc_auth.py -v로 실행합니다. 기본 off, 확인 gate 누락, 단일 canonical ExternalSecret과 두 consumer 참조를 검사합니다.
 - Full-runner staging은 ci-full의 ESO가 같은 기존 SSM source를 참조합니다. Agent는 credential 값을 읽거나 복사하지 않습니다. 두 namespace는 하나의 App 권한을 공유하며 인증 격리라고 주장하지 않습니다. full chart의 기본 auth는 off이고 local reuse만 명시적으로 켭니다. Orphan/Retain과 기존 ci-pr source를 보존하며 새 IAM/Store/key를 만들지 않습니다.
+
+## ARC runner image pull
+
+- `ci-full`(arc-full)와 `ci-pr`(arc-foundation)의 `ghcr-pull-secret`은 `kubernetes.io/dockerconfigjson` ExternalSecret입니다. `imagePullSecret.enabled`가 true일 때만 렌더링되며 기본값은 false입니다.
+- 원본은 `kkamji-platform/ghcr-pull-secret`과 같은 `/kkamji/personal/kkamji-platform/ghcr/pull-token`(classic PAT, `read:packages`만)입니다. 새 credential, Store, IAM 권한을 추가하지 않습니다. 같은 토큰을 세 namespace가 공유하므로 credential 격리라고 주장하지 않습니다.
+- target은 `creationPolicy: Owner`입니다. ExternalSecret을 제거하면 pull Secret도 GC 됩니다. 원본 PAT는 SSM에 남습니다.
+- PAT를 교체하거나 삭제하면 세 namespace의 새 pull이 모두 영향을 받습니다. 교체 후 세 ExternalSecret에 `force-sync`를 적용합니다. 절차는 [ARC runner images](../arc-runner-images.md)를 따릅니다.
