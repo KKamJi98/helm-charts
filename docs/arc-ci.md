@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-18T22:31:36+09:00
+updated: 2026-10-19T00:53:23+09:00
 type: runbook
 status: current
 ---
@@ -833,3 +833,20 @@ ephemeral capacity).
 - Rollout: merge when no full runner is busy if possible. ARC skips busy runners
   when it replaces the runner sets; the device plugin restart keeps allocated
   devices. Rollback: revert the commit (the disk and memory growth stay).
+
+## Platform Docker data 30Gi
+
+On 2026-10-19 the Platform Rust backend PR evicted its api job twice: first
+the 6Gi `work` volume, then, after cargo moved into a Docker volume, the 12Gi
+`docker-data` volume (a fresh Rust debug build is 12G). The Platform side
+reduced the build to 2.4G with `CARGO_PROFILE_DEV_DEBUG=0`; this change is
+headroom, matching BQL.
+
+- Platform `docker-data` sizeLimit and the `dind` ephemeral limit are 30Gi and
+  the SDK declares `ARC_JOB_EPHEMERAL_GIB` 34, like BQL. The validator now
+  requires the 30Gi/34 budget for both pools; `work` stays 6Gi.
+- Start guard per job: 34Gi + max(5Gi, 15% + 1Gi) = 58.3GiB free on the 155GiB
+  root. One runner of each pool on a worker needs 34 + 34 + 24.3 = 92.3GiB next
+  to the 30-40GiB in use (free 110GiB and 119GiB after the disk growth).
+- `ci-full/full-budget` `limits.ephemeral-storage` is 138Gi (four Pods at 34Gi
+  plus control 768Mi and the 1280Mi margin). Other quota values are unchanged.

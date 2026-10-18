@@ -105,7 +105,7 @@ class ArcFullContractTests(unittest.TestCase):
             self.assertRegex(doc, rf"name: ARC_POD_MEMORY_MIB\s+value: \"{mib}\"")
         quota = next(doc for doc in r.stdout.split("---") if "kind: ResourceQuota" in doc)
         # Two arc-tun slots per worker; quota admits exactly four runners (two
-        # BQL 7Gi/34Gi, two Platform 3584Mi/16Gi; 500m/4 CPU, 2Gi ephemeral
+        # BQL 7Gi/34Gi, two Platform 3584Mi/34Gi; 500m/4 CPU, 2Gi ephemeral
         # requests each) plus control and surge.
         for line in [
             'pods: "8"',
@@ -114,7 +114,7 @@ class ArcFullContractTests(unittest.TestCase):
             "requests.memory: 22016Mi",
             "limits.memory: 22Gi",
             "requests.ephemeral-storage: 9Gi",
-            "limits.ephemeral-storage: 102Gi",
+            "limits.ephemeral-storage: 138Gi",
             'requests.kkamji.net/arc-tun: "4"',
         ]:
             self.assertIn(line, quota)
@@ -133,9 +133,12 @@ class ArcFullContractTests(unittest.TestCase):
         self.assertRegex(bql, r"ephemeral-storage:\s+30Gi")
         self.assertRegex(bql, r"name: ARC_JOB_EPHEMERAL_GIB\s+value: ['\"]?34")
         self.assertRegex(bql, r"ephemeral-storage:\s+4Gi")
-        self.assertRegex(platform, r"sizeLimit:\s+12Gi")
-        self.assertNotIn("ARC_JOB_EPHEMERAL_GIB", platform)
-        self.assertIn("limits.ephemeral-storage: 102Gi", r.stdout)
+        # Platform matches BQL since a fresh Rust debug build alone is 12G.
+        self.assertRegex(platform, r"sizeLimit:\s+30Gi")
+        self.assertRegex(platform, r"ephemeral-storage:\s+30Gi")
+        self.assertRegex(platform, r"name: ARC_JOB_EPHEMERAL_GIB\s+value: ['\"]?34")
+        self.assertNotRegex(platform, r"sizeLimit:\s+12Gi")
+        self.assertIn("limits.ephemeral-storage: 138Gi", r.stdout)
 
     def test_bql_private_scratch_is_disk_backed_within_same_pod_budget(self):
         r = self.render(local=True)
@@ -149,7 +152,7 @@ class ArcFullContractTests(unittest.TestCase):
         self.assertRegex(bql, r"emptyDir:\s+sizeLimit: 3Gi\s+name: daemon-tmp")
         self.assertNotIn("medium: Memory", bql)
         self.assertIn('value: "34"', bql)
-        self.assertIn("limits.ephemeral-storage: 102Gi", r.stdout)
+        self.assertIn("limits.ephemeral-storage: 138Gi", r.stdout)
 
     def test_bql_budget_requires_one_literal_value(self):
         values = (ROOT / "charts/arc-full/values.yaml").read_text()
@@ -212,7 +215,7 @@ class ArcFullContractTests(unittest.TestCase):
             "platform.template.spec.resources.limits.memory=6Gi",
             "platform.template.spec.resources.requests.memory=5Gi",
             "bql.template.spec.resources.limits.memory=5Gi",
-            "platform.template.spec.containers[0].env[7].value=7168",
+            "platform.template.spec.containers[0].env[8].value=7168",
             "bql.template.spec.containers[0].env[8].value=3584",
             "bql.template.spec.automountServiceAccountToken=true",
             "platform.template.spec.initContainers[1].resources.limits.ephemeral-storage=14Gi",
@@ -225,7 +228,10 @@ class ArcFullContractTests(unittest.TestCase):
             "bql.template.spec.volumes[6].emptyDir.sizeLimit=20Gi",
             "bql.template.spec.volumes[6].emptyDir.sizeLimit=16Gi",
             "bql.template.spec.initContainers[1].resources.limits.ephemeral-storage=16Gi",
-            "platform.template.spec.containers[0].env[7].name=ARC_JOB_EPHEMERAL_GIB",
+            "platform.template.spec.containers[0].env[7].value=16",
+            "platform.template.spec.containers[0].env[8].name=ARC_JOB_EPHEMERAL_GIB",
+            "platform.template.spec.volumes[6].emptyDir.sizeLimit=12Gi",
+            "platform.template.spec.initContainers[1].resources.limits.ephemeral-storage=12Gi",
         ]
         for flag in mutations:
             with self.subTest(flag=flag):
@@ -276,12 +282,12 @@ class DiskReserveTests(unittest.TestCase):
         self.assertGreater(required, 25 * gib)
         self.assertEqual(module.disk_required_bytes(20 * gib), 21 * gib)
 
-    def test_runtime_has_bounded_twelve_gib_private_data(self):
+    def test_runtime_has_bounded_thirty_gib_private_data(self):
         text = (ROOT / "charts/arc-full/values.yaml").read_text()
-        self.assertIn("sizeLimit: 12Gi", text)
-        self.assertIn("ephemeral-storage: 12Gi", text)
+        self.assertNotIn("sizeLimit: 12Gi", text)
+        self.assertEqual(text.count("sizeLimit: 30Gi"), 2)
         self.assertIn(
-            "limits.ephemeral-storage: 102Gi",
+            "limits.ephemeral-storage: 138Gi",
             (ROOT / "charts/arc-full/templates/foundation.yaml").read_text(),
         )
 
