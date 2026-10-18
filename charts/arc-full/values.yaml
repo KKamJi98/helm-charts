@@ -121,7 +121,7 @@ platform:
           cpu: 500m
           memory: 5Gi
         limits:
-          cpu: '2'
+          cpu: '4'
           memory: 5Gi
       volumes:
       - name: runtime-config
