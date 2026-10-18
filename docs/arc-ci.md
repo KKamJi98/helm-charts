@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-18T18:12:21+09:00
+updated: 2026-10-18T22:31:36+09:00
 type: runbook
 status: current
 ---
