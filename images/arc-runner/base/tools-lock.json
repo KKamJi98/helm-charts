@@ -1,0 +1,89 @@
+{
+  "platform_source": "6c37e38d27d2dc583c9bae3ee20d855614faccfc",
+  "runner_base": "ghcr.io/actions/actions-runner@sha256:4ffadc0002b2581327e06101fc8c06cd189232baf79fe561fac9caeb76f5e807",
+  "architecture": "linux/amd64",
+  "artifacts": [
+    {
+      "file": "node.tar.xz",
+      "version": "26.7.0",
+      "url": "https://nodejs.org/dist/v26.7.0/node-v26.7.0-linux-x64.tar.xz",
+      "resolved_url": "https://nodejs.org/dist/v26.7.0/node-v26.7.0-linux-x64.tar.xz",
+      "bytes": 33539588,
+      "sha256": "982aa24dd8be4c889c6a8ab337ddff3b0896645b20f4239356e80552c16277ee",
+      "checksum_provenance": "upstream-published-SHA256"
+    },
+    {
+      "file": "java.tar.gz",
+      "version": "25.0.4.10.1",
+      "url": "https://corretto.aws/downloads/resources/25.0.4.10.1/amazon-corretto-25.0.4.10.1-linux-x64.tar.gz",
+      "resolved_url": "https://corretto.aws/downloads/resources/25.0.4.10.1/amazon-corretto-25.0.4.10.1-linux-x64.tar.gz",
+      "bytes": 227557984,
+      "sha256": "a45f1d385da8221fe1225dde5b6afa8e932a6acb93571b55eff4a39a2ebe7378",
+      "checksum_provenance": "upstream-published-SHA256"
+    },
+    {
+      "file": "helm.tar.gz",
+      "version": "4.2.1",
+      "url": "https://get.helm.sh/helm-v4.2.1-linux-amd64.tar.gz",
+      "resolved_url": "https://get.helm.sh/helm-v4.2.1-linux-amd64.tar.gz",
+      "bytes": 19814675,
+      "sha256": "479dca836e5b45e8bd222400c5591b0e3a647378f03ff96597180db97c17fdae",
+      "checksum_provenance": "upstream-published-SHA256"
+    },
+    {
+      "file": "gradle.zip",
+      "version": "9.8.1",
+      "url": "https://downloads.gradle.org/distributions/gradle-9.8.1-bin.zip",
+      "resolved_url": "https://release-assets.githubusercontent.com/github-production-release-asset/696192900/7c52e2cd-94f6-45c1-b1f8-51510b404386",
+      "bytes": 151620101,
+      "sha256": "dce76f55f8e251a3a1f130eb120f30b3d271de2b76c9b0729d316b5a1b6dc01f",
+      "checksum_provenance": "upstream-published-SHA256"
+    },
+    {
+      "file": "docker.tgz",
+      "version": "29.9.1",
+      "url": "https://download.docker.com/linux/static/stable/x86_64/docker-29.9.1.tgz",
+      "resolved_url": "https://download.docker.com/linux/static/stable/x86_64/docker-29.9.1.tgz",
+      "bytes": 86364663,
+      "sha256": "c158ecc55adb3afb01bbd3539ed3b997d20c26dbdc418080506cc1bf5243ff57",
+      "checksum_provenance": "observed-public-TLS-artifact-only"
+    },
+    {
+      "file": "docker-rootless-extras.tgz",
+      "version": "29.9.1",
+      "url": "https://download.docker.com/linux/static/stable/x86_64/docker-rootless-extras-29.9.1.tgz",
+      "resolved_url": "https://download.docker.com/linux/static/stable/x86_64/docker-rootless-extras-29.9.1.tgz",
+      "bytes": 12012076,
+      "sha256": "c87668896a3fced2e715324e9fb6a0634aba3e5d8408a471f6bc23dc476662af",
+      "checksum_provenance": "observed-public-TLS-artifact-only"
+    },
+    {
+      "file": "gh.tar.gz",
+      "version": "2.102.0",
+      "url": "https://github.com/cli/cli/releases/download/v2.102.0/gh_2.102.0_linux_amd64.tar.gz",
+      "resolved_url": "https://release-assets.githubusercontent.com/github-production-release-asset/212613049/f96fead8-a5bf-43cb-8c26-c3243eea605e",
+      "bytes": 15319960,
+      "sha256": "bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386",
+      "checksum_provenance": "upstream-published-SHA256"
+    },
+    {
+      "file": "docker-buildx",
+      "version": "v0.38.0",
+      "url": "https://github.com/docker/buildx/releases/download/v0.38.0/buildx-v0.38.0.linux-amd64",
+      "resolved_url": "https://release-assets.githubusercontent.com/github-production-release-asset/177210627/fd019160-42f5-4bbc-b317-3e8ed6d4641b",
+      "bytes": 68350114,
+      "sha256": "4fe4cc38adf48169132749b6ca22a990928db0118e3407584ee553723115d287",
+      "checksum_provenance": "upstream-published-SHA256"
+    },
+    {
+      "file": "chrome.zip",
+      "version": "155.0.8059.79",
+      "url": "https://storage.googleapis.com/chrome-for-testing-public/155.0.8059.79/linux64/chrome-linux64.zip",
+      "resolved_url": "https://storage.googleapis.com/chrome-for-testing-public/155.0.8059.79/linux64/chrome-linux64.zip",
+      "bytes": 198413482,
+      "sha256": "bcd9a79130d7e44d70f93be87042e9bcee7fe0f0b3898e06b8c9bed5fb619dcd",
+      "checksum_provenance": "observed-public-TLS-artifact-only"
+    }
+  ],
+  "qualification": "NOT_QUALIFIED; measured artifacts are not full-CI success or a registry image digest"
+}

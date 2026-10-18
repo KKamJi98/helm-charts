@@ -1,0 +1,10 @@
+{
+  "features": {
+    "containerd-snapshotter": true
+  },
+  "storage-driver": "native",
+  "data-root": "/home/runner/.local/share/docker",
+  "hosts": [
+    "unix:///run/user/1001/docker.sock"
+  ]
+}
