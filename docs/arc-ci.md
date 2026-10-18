@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-19T01:48:28+09:00
+updated: 2026-10-19T02:04:44+09:00
 type: runbook
 status: current
 ---
@@ -867,6 +867,10 @@ limit). Its plan, apply, GitHub and destroy workflows need no Docker.
   1.19 `**.` matches several labels, which EKS endpoints need),
   `releases.hashicorp.com`, `registry.terraform.io` and `app.terraform.io` to
   those Pods only. Every other ci-pr Pod keeps the GitHub-only egress.
+- `arc-system/arc-control-budget` holds the controller, three listeners and one
+  controller rollout surge (pods 5, CPU 350m/1750m, memory 448Mi/896Mi,
+  ephemeral 320Mi/640Mi). The first rollout left it exactly full (4/4), so a
+  controller upgrade could not surge.
 - `ci-pr/arc-job-budget` now admits two Pods: one light job (1Gi/1536Mi, so two
   light Pods still never fit together) plus the terraform Pod (512Mi/2Gi).
 - AWS access stays per job through GitHub OIDC; the role trust policy is scoped
