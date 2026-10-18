@@ -1,3 +1,7 @@
+# kube-prometheus-stack 차트가 만드는 관측 스택 PriorityClass.
+controller:
+  priorityClassName: kkamji-observability
+
 alloy:
   extraEnv:
     - name: NODE_NAME

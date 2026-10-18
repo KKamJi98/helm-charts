@@ -6,6 +6,7 @@ kube-prometheus-stack:
       # starts and cannot parse webhook_url_file. ESO renders the complete
       # Alertmanager config with SSM values only inside the cluster.
       configSecret: alertmanager-discord-config
+      priorityClassName: kkamji-observability
       configMaps:
         - alertmanager-discord-template
       # Persist silences and notification state across pod replacements.
@@ -25,6 +26,7 @@ kube-prometheus-stack:
     # Runtime Alertmanager configuration and templates are rendered only by
     # templates/alertmanager-discord-ces.yaml. Keep no duplicate config here.
   grafana:
+    priorityClassName: kkamji-observability
     admin:
       existingSecret: grafana-auth
       userKey: admin-user
@@ -53,6 +55,7 @@ kube-prometheus-stack:
     prometheusSpec:
       # 알림의 Query 링크(.GeneratorURL)가 외부 도메인을 가리키도록 설정
       externalUrl: https://prometheus.kkamji.net
+      priorityClassName: kkamji-observability
       # Persist the local TSDB across pod replacements.
       storageSpec:
         volumeClaimTemplate:
@@ -163,6 +166,19 @@ kube-prometheus-stack:
   # KubeProxyDown 룰 자체를 생성하지 않는다 (영구 firing 노이즈 제거).
   kubeProxy:
     enabled: false
+
+  kube-state-metrics:
+    priorityClassName: kkamji-observability
+  prometheus-node-exporter:
+    priorityClassName: kkamji-observability
+
+# templates/priorityclass.yaml. 값은 system-*-critical(2e9)과 kubespray 의
+# k8s-cluster-critical(1e9)보다 낮고 기본값 0 보다 높게 둔다.
+observabilityPriorityClass:
+  enabled: true
+  name: kkamji-observability
+  value: 100000
+  description: "kkamji observability stack (prometheus, alertmanager, grafana, loki, alloy)"
 
 basicAuth:
   ssmKey: /kkamji/monitoring/ingress/basic-auth
