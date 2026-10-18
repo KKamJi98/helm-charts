@@ -61,7 +61,9 @@ applications:
       namespace: kkamji-platform
     source:
       repoURL: https://github.com/KKamJi98/kkamji-platform.git
-      targetRevision: main
+      # Platform CI moves `deploy` only with a digest pin (kkamji-platform decision 0006), so a merge
+      # commit with new chart and old digests is never synced on its own.
+      targetRevision: deploy
       path: helm/kkamji-platform
       helm:
         valueFiles:
