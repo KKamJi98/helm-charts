@@ -9,6 +9,8 @@ kube-prometheus-stack:
       configMaps:
         - alertmanager-discord-template
       # Persist silences and notification state across pod replacements.
+      # nflog 보존 기간. route 의 최대 repeat_interval(12h) 보다 길게 유지한다.
+      retention: 24h
       storage:
         volumeClaimTemplate:
           spec:
@@ -41,21 +43,7 @@ kube-prometheus-stack:
           httpHeaderName1: "X-Scope-OrgID"
         secureJsonData:
           httpHeaderValue1: "kube-rca"
-      - name: Tempo
-        uid: tempo
-        type: tempo
-        access: proxy
-        url: http://tempo.monitoring.svc.cluster.local:3200
-        jsonData:
-          httpMethod: GET
-          serviceMap:
-            datasourceUid: Prometheus
     sidecar:
-      datasources:
-        exemplarTraceIdDestinations:
-          datasourceUid: tempo
-          traceIdLabelName: trace_id
-          urlDisplayLabel: View Trace
       dashboards:
         folderAnnotation: "grafana_folder"
         defaultFolderName: "Default Dashboard"
@@ -65,9 +53,7 @@ kube-prometheus-stack:
     prometheusSpec:
       # 알림의 Query 링크(.GeneratorURL)가 외부 도메인을 가리키도록 설정
       externalUrl: https://prometheus.kkamji.net
-      enableRemoteWriteReceiver: true
-      # Persist the 14-day local TSDB across pod replacements. The current
-      # emptyDir data is intentionally not migrated during this cutover.
+      # Persist the local TSDB across pod replacements.
       storageSpec:
         volumeClaimTemplate:
           spec:
@@ -148,7 +134,9 @@ kube-prometheus-stack:
               target_label: namespace
             - source_labels: [__meta_kubernetes_pod_name]
               target_label: pod
-      retention: 14d
+      retention: 1d
+      # 시간 기준 retention 과 별개로 TSDB 블록 크기 상한을 둔다 (PVC 30Gi).
+      retentionSize: 10GB
   # CrashLoopBackOff 전용 알람을 복원한다 (이전에 disabled 였으나, pod 단위
   # crashloop 신호가 없으면 KubePodNotReady 등 간접 알람만 남아 추적이 어렵다).
   defaultRules: {}

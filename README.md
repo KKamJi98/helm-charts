@@ -62,7 +62,7 @@ charts/
   external-secrets/       ESO 구성
   cert-manager/           인증서 구성
   n8n/, openclaw/         자동화 서비스 차트
-  alloy/, loki/, tempo/   관측 도구 차트
+  alloy/, loki/           관측 도구 차트
   ...                     나머지 인프라와 서비스 차트
 
 eks-charts/               별도 EKS 환경용 구성

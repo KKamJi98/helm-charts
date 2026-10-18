@@ -18,21 +18,10 @@ global:
         cpu: 200m
         memory: 512Mi
 
-# Pilot tracing env (PILOT_TRACE_SAMPLING)
-traceSampling: 100
-
 # Mesh config used to generate istio configmap.
 meshConfig:
-  defaultConfig:
-    tracing:
-      sampling: 100.0
-  extensionProviders:
-    - name: otel-tracing
-      opentelemetry:
-        service: tempo.monitoring.svc.cluster.local
-        port: 4317
+  # Tempo 제거 후 trace 수신 백엔드가 없으므로 sidecar tracing 을 끈다.
+  enableTracing: false
   defaultProviders:
     metrics:
       - prometheus
-    tracing:
-      - otel-tracing

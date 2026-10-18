@@ -271,18 +271,4 @@ applications:
         valueFiles:
           - kkamji_local_values.yaml
 
-  tempo:
-    enabled: true
-    name: tempo
-    project: management
-    destination:
-      namespace: monitoring
-    source:
-      repoURL: https://github.com/KKamJi98/helm-charts.git
-      targetRevision: main
-      path: charts/tempo
-      helm:
-        valueFiles:
-          - kkamji_local_values.yaml
-
   # NOTE: openclaw → automation-root, play-hub & lf-oss-na-2026 → personal-root.
