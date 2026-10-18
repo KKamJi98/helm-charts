@@ -5,3 +5,5 @@ platform:
   maxRunners: 1
 bql:
   maxRunners: 1
+imagePullSecret:
+  enabled: true
