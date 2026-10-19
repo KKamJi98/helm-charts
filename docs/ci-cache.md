@@ -1,6 +1,6 @@
 ---
 title: CI cache registry (zot)
-updated: 2026-10-20T00:20:00+09:00
+updated: 2026-10-20T00:50:00+09:00
 type: architecture
 status: current
 ---
@@ -16,8 +16,13 @@ test archive hand-off under the same registry. Each stage changes this page.
 | Path | Source | Who writes |
 | --- | --- | --- |
 | `library/**` | Docker Hub, synced on demand | zot only (sync) |
+| `ci/**` | CI images keyed by input hash | main-only publish workflows |
 
-Anonymous clients have `read` only. There is no push access in stage 1.
+Anonymous clients have `read` everywhere and `create` under `ci/**`. Nobody
+has `update` or `delete`, so a pushed tag is immutable: the first writer wins.
+Keys are hashes of the image inputs, so a tag can only hold what those inputs
+build. Publishing from main only is a workflow rule, not an identity check
+(see No credentials below).
 
 ## Boundaries
 
@@ -62,6 +67,17 @@ of filling the node disk. A restart also starts cold.
 - Tag requests are checked against Docker Hub on every request, so moving
   tags such as `ubuntu:26.04` stay current. Digest requests are served locally.
 - Retention deletes `library/**` content not pulled for 14 days; GC runs hourly.
+- `ci/**` tags are kept while pulled or pushed within 14 days; untagged
+  manifests there go after 24 hours.
+
+## Default deny
+
+`cache-default-deny` uses `ingress: [{}]` and `egress: [{}]`. Cilium 1.19
+rejects `ingress: []` / `egress: []` as a rule with no sections (status
+`Valid: False`), so that form denies nothing. Stage 1 shipped the invalid
+form; zot itself was still locked down because its two valid policies put
+both directions into default deny. `full-default-deny` in `charts/arc-full`
+has the same invalid form (observed 2026-10-19, not changed here).
 
 ## Fail-open
 

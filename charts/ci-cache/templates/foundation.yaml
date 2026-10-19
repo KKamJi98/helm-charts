@@ -34,9 +34,10 @@ metadata:
   name: cache-default-deny
   namespace: ci-cache
 spec:
+  # An empty rule selects nothing; `ingress: []` would be rejected as invalid.
   endpointSelector: {}
-  ingress: []
-  egress: []
+  ingress: [{}]
+  egress: [{}]
 ---
 # Only ci-full job Pods reach the registry. Light (ci-pr) runners, other
 # namespaces and the outside cannot.
