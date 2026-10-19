@@ -1,6 +1,6 @@
 ---
 title: Docs index
-updated: 2026-10-18T07:44:52+09:00
+updated: 2026-10-20T00:10:00+09:00
 type: architecture
 status: current
 ---
@@ -27,4 +27,5 @@ status: current
 
 - [ARC rollout](arc-ci.md) - Qualified full SDK/JIT and BQL private scratch/ELF candidate within unchanged shared5Gi and20Gi Pod accounting.
 - [ARC GitHub App](arc-github-app.md) - Approved App installation, shared authority, separately approved secure input, rotation and recovery.
+- [CI cache registry](ci-cache.md) - zot for ci-full jobs: Docker Hub mirror, network boundary, sizing, fail-open timings and rollback.
 - [ARC runner images](arc-runner-images.md) - Recipe, content check, private GHCR publishing and rollback for the runner and rootless Docker images.

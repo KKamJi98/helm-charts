@@ -9,6 +9,7 @@ from pathlib import Path
 
 SOCKET_ROOT = Path("/run/arc-api")
 RUN_ROOT = Path("/run/arc-runtime")
+LAN_REGISTRY = "zot.ci-cache.svc.cluster.local:5000"
 
 
 def prepare_private_scratch(path):
@@ -107,6 +108,10 @@ def main():
             "--data-root=/var/lib/arc-docker/data",
             "--exec-root=/run/arc-runtime/exec",
             "--pidfile=/run/arc-runtime/daemon.pid",
+            # Docker Hub pulls go through the LAN registry first; dockerd falls
+            # back to Docker Hub when it is unreachable.
+            f"--registry-mirror=http://{LAN_REGISTRY}",
+            f"--insecure-registry={LAN_REGISTRY}",
         ],
         env=env,
         start_new_session=True,

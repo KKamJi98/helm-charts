@@ -16,6 +16,10 @@
   "docs/rules/gateway-api-routing.md": [
     "charts/envoy-gateway/templates/*.yaml"
   ],
+  "docs/ci-cache.md": [
+    "charts/ci-cache/*",
+    "charts/ci-cache/templates/*"
+  ],
   "docs/arc-runner-images.md": [
     "images/arc-runner/*",
     "images/arc-runner/*/*"

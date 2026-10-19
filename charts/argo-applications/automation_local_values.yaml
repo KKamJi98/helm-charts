@@ -150,3 +150,17 @@ applications:
         valueFiles:
         - kkamji_local_values.yaml
         skipCrds: true
+
+  ci-cache:
+    enabled: true
+    name: ci-cache
+    project: ci-cache
+    destination:
+      namespace: ci-cache
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/ci-cache
+      helm:
+        valueFiles:
+        - kkamji_local_values.yaml
