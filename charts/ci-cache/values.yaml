@@ -1,0 +1,104 @@
+# zot serves ci-full job Pods only (see templates/network.yaml). It is a cache:
+# losing it costs one cold refill, never a wrong result, because every client
+# falls back to the upstream registry and verifies content by digest.
+zot:
+  fullnameOverride: zot
+  image:
+    tag: "v2.1.22@sha256:96cda11459ce6f8c60da3b03f03e9f67fd11b3ae2d82c4c04c92b3c608996080"
+  service:
+    type: ClusterIP
+  strategy:
+    type: Recreate
+  podLabels:
+    arc.kkamji.net/role: cache
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+      ephemeral-storage: 30Gi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+      ephemeral-storage: 31Gi
+  env:
+  - name: GOMEMLIMIT
+    value: 768MiB
+  # The chart hardcodes its data volume as an unbounded emptyDir, so the store
+  # lives on this bounded one instead. kubelet evicts the Pod past sizeLimit,
+  # which resets the cache rather than filling the node disk.
+  extraVolumes:
+  - name: store
+    emptyDir:
+      sizeLimit: 30Gi
+  - name: tmp
+    emptyDir:
+      sizeLimit: 1Gi
+  extraVolumeMounts:
+  - name: store
+    mountPath: /var/lib/zot-store
+  - name: tmp
+    mountPath: /tmp
+  mountConfig: true
+  configFiles:
+    config.json: |-
+      {
+        "distSpecVersion": "1.1.1",
+        "storage": {
+          "rootDirectory": "/var/lib/zot-store",
+          "dedupe": true,
+          "gc": true,
+          "gcDelay": "1h",
+          "gcInterval": "1h",
+          "retention": {
+            "delay": "24h",
+            "policies": [
+              {
+                "repositories": ["library/**"],
+                "deleteReferrers": true,
+                "deleteUntagged": true,
+                "keepTags": [{"pulledWithin": "336h"}],
+                "keepUntagged": {"pulledWithin": "336h"}
+              }
+            ]
+          }
+        },
+        "http": {
+          "address": "0.0.0.0",
+          "port": "5000",
+          "compat": ["docker2s2"],
+          "accessControl": {
+            "repositories": {
+              "**": {"anonymousPolicy": ["read"]}
+            }
+          }
+        },
+        "log": {"level": "info"},
+        "extensions": {
+          "sync": {
+            "enable": true,
+            "registries": [
+              {
+                "urls": ["https://registry-1.docker.io"],
+                "onDemand": true,
+                "tlsVerify": true,
+                "maxRetries": 2,
+                "retryDelay": "5s",
+                "syncTimeout": "10m",
+                "content": [{"prefix": "library/**"}]
+              }
+            ]
+          }
+        }
+      }

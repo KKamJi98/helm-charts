@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-19T21:20:25+09:00
+updated: 2026-10-20T00:10:00+09:00
 type: runbook
 status: current
 ---
@@ -915,3 +915,12 @@ minute, so short spikes can be missed).
   job ran. The guard now accepts 11/34, and
   `test_start_guard_accepts_every_rendered_pool_budget` feeds every rendered
   pool's disk and memory budget to the real guard functions.
+
+## LAN registry mirror (2026-10-19)
+
+Per-job dockerd now starts with `--registry-mirror` and `--insecure-registry`
+for `zot.ci-cache.svc.cluster.local:5000`, and `full-jobs` allows egress to
+that Pod on port 5000 only. Docker Hub pulls go through the mirror and fall
+back to Docker Hub when it fails. Design, boundaries and fail-open timings are
+in [CI cache registry](ci-cache.md). Revert the flags and the egress rule
+together: flags without the rule blackhole for minutes per pull.

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: ci-cache
+description: LAN registry (zot) for ARC full-pool jobs - Docker Hub pull-through mirror and content-addressed CI cache
+type: application
+version: 0.1.0
+appVersion: "v2.1.22"
+dependencies:
+- name: zot
+  version: 0.1.128
+  repository: https://zotregistry.dev/helm-charts
