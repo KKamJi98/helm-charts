@@ -282,6 +282,28 @@ class DiskReserveTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 module.memory_required_bytes(unsupported)
 
+    def test_start_guard_accepts_every_rendered_pool_budget(self):
+        # helm-charts #47 set Platform to 11 while sdk-entry.py accepted only
+        # 16/34, so every Platform runner crash-looped at start.
+        spec = importlib.util.spec_from_file_location(
+            "sdk_entry", ROOT / "charts/arc-full/files/sdk-entry.py"
+        )
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        r = ArcFullContractTests.render(self, local=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        sets = [doc for doc in r.stdout.split("---") if "kind: AutoscalingRunnerSet" in doc]
+        self.assertEqual(len(sets), 2)
+        gib = 1024**3
+        for doc in sets:
+            disk = re.search(r"name: ARC_JOB_EPHEMERAL_GIB\s+value: ['\"]?(\d+)", doc)
+            memory = re.search(r"name: ARC_POD_MEMORY_MIB\s+value: ['\"]?(\d+)", doc)
+            self.assertIsNotNone(disk)
+            self.assertIsNotNone(memory)
+            module.disk_required_bytes(155 * gib, int(disk.group(1)))
+            module.memory_required_bytes(int(memory.group(1)))
+
     def test_bql_budget_retains_full_pressure_margin(self):
         spec = importlib.util.spec_from_file_location(
             "sdk_entry", ROOT / "charts/arc-full/files/sdk-entry.py"
@@ -292,7 +314,7 @@ class DiskReserveTests(unittest.TestCase):
         gib = 1024**3
         self.assertEqual(module.disk_required_bytes(100 * gib, 34), 50 * gib)
         self.assertEqual(module.disk_required_bytes(20 * gib, 34), 39 * gib)
-        for unsupported in (0, 15, 20, 30, 35):
+        for unsupported in (0, 15, 16, 20, 30, 35):
             with self.assertRaises(ValueError):
                 module.disk_required_bytes(100 * gib, unsupported)
 
@@ -304,9 +326,9 @@ class DiskReserveTests(unittest.TestCase):
         spec.loader.exec_module(module)
         gib = 1024**3
         required = module.disk_required_bytes(100 * gib)
-        self.assertEqual(required, 32 * gib)
-        self.assertGreater(required, 25 * gib)
-        self.assertEqual(module.disk_required_bytes(20 * gib), 21 * gib)
+        self.assertEqual(required, 27 * gib)
+        self.assertGreater(required, 20 * gib)
+        self.assertEqual(module.disk_required_bytes(20 * gib), 16 * gib)
 
     def test_runtime_has_bounded_per_pool_private_data(self):
         text = (ROOT / "charts/arc-full/values.yaml").read_text()

@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-19T19:37:51+09:00
+updated: 2026-10-19T21:20:25+09:00
 type: runbook
 status: current
 ---
@@ -909,3 +909,9 @@ minute, so short spikes can be missed).
   about 12GB per job, so BQL is measured again after it lands.
 - A Platform build that outgrows 7Gi is evicted and fails visibly; the fix is a
   new measurement, not a silent retry.
+- Incident (2026-10-19, about 21:00 KST): #47 changed the Platform budget to 11,
+  but `files/sdk-entry.py` still accepted only 16/34, so every Platform runner
+  failed its start guard (`ValueError`) and crash-looped; no Platform full-pool
+  job ran. The guard now accepts 11/34, and
+  `test_start_guard_accepts_every_rendered_pool_budget` feeds every rendered
+  pool's disk and memory budget to the real guard functions.
