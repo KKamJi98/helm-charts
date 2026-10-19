@@ -65,6 +65,13 @@ zot:
             "delay": "24h",
             "policies": [
               {
+                "repositories": ["ci/**"],
+                "deleteReferrers": true,
+                "deleteUntagged": true,
+                "keepTags": [{"pulledWithin": "336h"}, {"pushedWithin": "336h"}],
+                "keepUntagged": {"pushedWithin": "24h"}
+              },
+              {
                 "repositories": ["library/**"],
                 "deleteReferrers": true,
                 "deleteUntagged": true,
@@ -80,7 +87,8 @@ zot:
           "compat": ["docker2s2"],
           "accessControl": {
             "repositories": {
-              "**": {"anonymousPolicy": ["read"]}
+              "**": {"anonymousPolicy": ["read"]},
+              "ci/**": {"anonymousPolicy": ["read", "create"]}
             }
           }
         },

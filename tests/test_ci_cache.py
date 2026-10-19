@@ -62,13 +62,21 @@ class CiCacheChartTests(unittest.TestCase):
         self.assertIn("type: ClusterIP", doc(self.out, "Service", "zot"))
         self.assertNotIn("nodePort", doc(self.out, "Service", "zot"))
 
-    def test_anonymous_clients_only_read(self):
+    def test_anonymous_clients_read_and_add_ci_tags_but_never_overwrite(self):
         http = self.config["http"]
         self.assertNotIn("auth", http)
+        # create without update: a pushed content-addressed tag is immutable.
         self.assertEqual(
             http["accessControl"],
-            {"repositories": {"**": {"anonymousPolicy": ["read"]}}},
+            {
+                "repositories": {
+                    "**": {"anonymousPolicy": ["read"]},
+                    "ci/**": {"anonymousPolicy": ["read", "create"]},
+                }
+            },
         )
+        ci = next(p for p in self.config["storage"]["retention"]["policies"] if p["repositories"] == ["ci/**"])
+        self.assertEqual(ci["keepTags"], [{"pulledWithin": "336h"}, {"pushedWithin": "336h"}])
 
     def test_docker_hub_mirror_is_on_demand_only_and_keeps_digests(self):
         self.assertEqual(self.config["http"]["compat"], ["docker2s2"])
@@ -101,7 +109,8 @@ class CiCacheChartTests(unittest.TestCase):
     def test_only_ci_full_job_pods_reach_the_registry(self):
         self.assertIn("arc.kkamji.net/role: cache", self.deploy)
         deny = doc(self.out, "CiliumNetworkPolicy", "cache-default-deny")
-        self.assertRegex(deny, r"endpointSelector: \{\}\n\s+ingress: \[\]\n\s+egress: \[\]")
+        # Cilium rejects `ingress: []` as a rule with no sections.
+        self.assertRegex(deny, r"endpointSelector: \{\}\n\s+ingress: \[\{\}\]\n\s+egress: \[\{\}\]")
         ingress = doc(self.out, "CiliumNetworkPolicy", "cache-from-full-jobs")
         self.assertEqual(ingress.count("fromEndpoints:"), 1)
         self.assertRegex(
