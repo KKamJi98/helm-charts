@@ -26,9 +26,12 @@
 {{- $daemon := index $p.initContainers 1 -}}
 {{- $s := $sdk.securityContext -}}
 {{- $t := $daemon.securityContext -}}
-{{- $dockerLimit := "30Gi" -}}
+{{- $dockerLimit := "7Gi" -}}
+{{- $jobBudget := "11" -}}
 {{- $scratchLimit := "512Mi" -}}
 {{- if eq $name "bql" -}}
+{{- $dockerLimit = "30Gi" -}}
+{{- $jobBudget = "34" -}}
 {{- $scratchLimit = "3Gi" -}}
 {{- end -}}
 {{- if or (ne (dig "resources" "limits" "ephemeral-storage" "" (default (dict) $daemon)) $dockerLimit) (ne (dig "resources" "limits" "ephemeral-storage" "" (default (dict) $sdk)) "4Gi") -}}
@@ -50,11 +53,11 @@
 {{- fail "ARC full boundary: the memory start guard must use the pool Pod budget" -}}
 {{- end -}}
 {{- if ne (len $budgetEnv) 1 -}}
-{{- fail "ARC full boundary: each pool must declare one34Gi startup budget" -}}
+{{- fail "ARC full boundary: each pool must declare one startup budget (Platform11Gi, BQL34Gi)" -}}
 {{- end -}}
 {{- $budget := index $budgetEnv 0 -}}
-{{- if or (hasKey $budget "valueFrom") (not (kindIs "string" $budget.value)) (ne (toString $budget.value) "34") -}}
-{{- fail "ARC full boundary: startup budget must remain34Gi" -}}
+{{- if or (hasKey $budget "valueFrom") (not (kindIs "string" $budget.value)) (ne (toString $budget.value) $jobBudget) -}}
+{{- fail "ARC full boundary: startup budget must match the pool Docker data plus SDK4Gi (Platform11Gi, BQL34Gi)" -}}
 {{- end -}}
 {{- if or (ne $sdk.name "runner") (ne $s.procMount "Default") $s.allowPrivilegeEscalation $s.privileged (not $s.readOnlyRootFilesystem) (ne (len (default (list) $s.capabilities.add)) 0) (ne (join "," $s.capabilities.drop) "ALL") -}}
 {{- fail "ARC full boundary: SDK must keep Default/NNP1/cap0/read-only" -}}
