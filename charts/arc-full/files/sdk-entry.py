@@ -3,9 +3,10 @@ import os
 from pathlib import Path
 
 
-def disk_required_bytes(total, job_budget_gib=16):
-    if job_budget_gib not in (16, 34):
-        raise ValueError("job disk budget must match a qualified pool:16Gi or34Gi")
+def disk_required_bytes(total, job_budget_gib=11):
+    # Platform 7Gi Docker data plus SDK 4Gi; BQL 30Gi plus 4Gi (values.yaml).
+    if job_budget_gib not in (11, 34):
+        raise ValueError("job disk budget must match a qualified pool:11Gi or34Gi")
     gib = 1024**3
     imagefs_margin = (total * 15 + 99) // 100 + gib
     return job_budget_gib * gib + max(5 * gib, imagefs_margin)
