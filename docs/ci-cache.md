@@ -1,6 +1,6 @@
 ---
 title: CI cache registry (zot)
-updated: 2026-10-20T00:50:00+09:00
+updated: 2026-10-20T01:10:00+09:00
 type: architecture
 status: current
 ---
@@ -19,10 +19,17 @@ test archive hand-off under the same registry. Each stage changes this page.
 | `ci/**` | CI images keyed by input hash | main-only publish workflows |
 
 Anonymous clients have `read` everywhere and `create` under `ci/**`. Nobody
-has `update` or `delete`, so a pushed tag is immutable: the first writer wins.
-Keys are hashes of the image inputs, so a tag can only hold what those inputs
-build. Publishing from main only is a workflow rule, not an identity check
-(see No credentials below).
+has `update` or `delete`, so a pushed tag is immutable.
+
+A tag is not a trust anchor. Any ci-full job can reach zot, including PR jobs
+and third-party build scripts they run, and could push first under a
+predictable tag. Consumers therefore pull only by a digest that a main-only
+workflow recorded in the GitHub Actions cache: caches saved on the default
+branch are readable by pull requests, and caches a pull request saves stay in
+its own scope. The publisher pushes its own build under a unique per-run tag
+and records the digest of that build; if the tag already exists the push fails
+and nothing is recorded. Anonymous `create` leaves storage abuse (bounded by the
+30Gi store, fail-open) as the remaining risk.
 
 ## Boundaries
 
