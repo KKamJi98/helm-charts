@@ -412,6 +412,31 @@ argo-projects:
         kind: NetworkPolicy
       - group: cilium.io
         kind: CiliumNetworkPolicy
+
+    ci-cache:
+      enabled: true
+      description: LAN registry (zot) for ci-full jobs; Docker Hub mirror and CI cache, no credentials
+      sourceRepos:
+      - https://github.com/KKamJi98/helm-charts.git
+      destinations:
+      - server: https://kubernetes.default.svc
+        namespace: ci-cache
+      clusterResourceWhitelist:
+      - group: ''
+        kind: Namespace
+      namespaceResourceWhitelist:
+      - group: ''
+        kind: ServiceAccount
+      - group: ''
+        kind: ResourceQuota
+      - group: ''
+        kind: ConfigMap
+      - group: ''
+        kind: Service
+      - group: apps
+        kind: Deployment
+      - group: cilium.io
+        kind: CiliumNetworkPolicy
 rootApplications:
   enabled: true
   namespace: argocd

@@ -1,6 +1,6 @@
 ---
 title: CI cache registry (zot)
-updated: 2026-10-20T00:10:00+09:00
+updated: 2026-10-20T00:20:00+09:00
 type: architecture
 status: current
 ---
@@ -33,6 +33,12 @@ Anonymous clients have `read` only. There is no push access in stage 1.
   have none. The boundary is the network policy plus `read`-only access.
 - Transport is plain HTTP inside the cluster. Docker verifies every layer and
   manifest by digest.
+
+## Argo project
+
+The live AppProject `ci-cache` is rendered by the argocd umbrella from
+`charts/argocd/kkamji_local_values.yaml`. `charts/argo-projects/kkamji_local_values.yaml`
+keeps the same definition; `tests/test_ci_cache.py` checks both and the kinds.
 
 ## Sizing
 

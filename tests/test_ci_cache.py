@@ -123,8 +123,24 @@ class CiCacheChartTests(unittest.TestCase):
         self.assertIn('ports: [{port: "443", protocol: TCP}]', fqdns)
 
     def test_argo_project_allows_only_what_the_chart_renders(self):
-        values = (ROOT / "charts/argo-projects/kkamji_local_values.yaml").read_text()
-        project = values.split("\n  ci-cache:\n", 1)[1]
+        # The argocd umbrella renders the live AppProjects; argo-projects keeps
+        # the same definition.
+        rendered_projects = subprocess.run(
+            [HELM, "template", "argocd", str(ROOT / "charts/argocd"), "-n", "argocd",
+             "-f", str(ROOT / "charts/argocd/kkamji_local_values.yaml"),
+             "--show-only", "charts/argo-projects/templates/appproject.yaml"],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(rendered_projects.returncode, 0, rendered_projects.stderr)
+        self.assertIn("  name: ci-cache\n", rendered_projects.stdout)
+        live = (ROOT / "charts/argocd/kkamji_local_values.yaml").read_text()
+        copy = (ROOT / "charts/argo-projects/kkamji_local_values.yaml").read_text()
+        project = live.split("\n    ci-cache:\n", 1)[1].split("\nrootApplications:", 1)[0]
+        copied = copy.split("\n  ci-cache:\n", 1)[1]
+        self.assertEqual(
+            re.sub(r"\s+", " ", project.replace("enabled: true", "", 1)).strip(),
+            re.sub(r"\s+", " ", copied).strip(),
+        )
         allowed = set(re.findall(r"- group: '?([\w.]*)'?\n\s+kind: (\w+)", project))
         rendered = set()
         for d in self.out.split("\n---"):
