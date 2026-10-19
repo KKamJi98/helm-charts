@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-19T02:04:44+09:00
+updated: 2026-10-19T19:37:51+09:00
 type: runbook
 status: current
 ---
@@ -879,3 +879,33 @@ limit). Its plan, apply, GitHub and destroy workflows need no Docker.
   action) before the listener can register.
 - Rollback: set the Argo app `enabled: false` (or revert), then point the
   workflows back to `ubuntu-latest`.
+
+## Platform Docker data right-sized to 7Gi
+
+On 2026-10-19 the owner asked to size runner disks from measurement: the
+largest observed value per volume plus a small margin. A sampler read the
+kubelet volume stats of every `ci-full` runner Pod every 20 s for 8 hours
+(168 Pods: 100 Platform, 52 BQL; kubelet refreshes volume stats about once a
+minute, so short spikes can be missed).
+
+| Pool | Volume | Peak | Peak job |
+|---|---|---|---|
+| Platform | `docker-data` | 4.39GiB | api (image 4.29, image-pr 3.86) |
+| Platform | `work` / `sdk-home` | 0.75 / 0.71GiB | web, e2e |
+| BQL | `docker-data` | 17.13GiB | tier-a (others at most 6.73) |
+| BQL | `work` / `sdk-home` / `daemon-tmp` | 0.25 / 0.67 / 0.84GiB | |
+
+- Platform `docker-data` sizeLimit and the `dind` ephemeral limit are 7Gi
+  (peak 4.39GiB plus 59%), and the SDK declares `ARC_JOB_EPHEMERAL_GIB` 11
+  (7Gi plus the SDK 4Gi). The validator pins 7Gi/11 for Platform and 30Gi/34
+  for BQL and rejects the previous Platform 30Gi/34.
+- Start guard per Platform job: 11Gi + max(5Gi, 15% + 1Gi) = 35.3GiB free on
+  the 155GiB root. One runner of each pool on a worker needs at most
+  11 + 34 + 24.3 = 69.3GiB.
+- `ci-full/full-budget` `limits.ephemeral-storage` is 92Gi (two Platform Pods
+  at 11Gi, two BQL Pods at 34Gi, control and margin 2Gi). Other quota values
+  are unchanged.
+- BQL stays at 30Gi/34 for now: the build-once workflow keeps a test archive of
+  about 12GB per job, so BQL is measured again after it lands.
+- A Platform build that outgrows 7Gi is evicted and fails visibly; the fix is a
+  new measurement, not a silent retry.

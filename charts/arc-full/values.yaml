@@ -153,7 +153,7 @@ platform:
           sizeLimit: 256Mi
       - name: docker-data
         emptyDir:
-          sizeLimit: 30Gi
+          sizeLimit: 7Gi
       - name: sdk-tmp
         emptyDir:
           sizeLimit: 512Mi
@@ -229,7 +229,7 @@ platform:
             ephemeral-storage: 1Gi
             kkamji.net/arc-tun: '1'
           limits:
-            ephemeral-storage: 30Gi
+            ephemeral-storage: 7Gi
             kkamji.net/arc-tun: '1'
         startupProbe:
           exec:
@@ -303,7 +303,7 @@ platform:
         - name: DISABLE_RUNNER_UPDATE
           value: 'true'
         - name: ARC_JOB_EPHEMERAL_GIB
-          value: '34'
+          value: '11'
         - name: ARC_POD_MEMORY_MIB
           value: '3584'
         resources:
