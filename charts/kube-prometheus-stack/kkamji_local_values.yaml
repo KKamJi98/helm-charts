@@ -23,10 +23,19 @@ kube-prometheus-stack:
                 storage: 1Gi
       # Discord 메시지의 Silence 링크(.ExternalURL)가 외부 도메인을 가리키도록 설정
       externalUrl: https://alertmanager.kkamji.net
+      # resources: 2026-10-18 기준 24h working set p95 에 여유를 더한 값. CPU limit 은 두지 않는다.
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
     # Runtime Alertmanager configuration and templates are rendered only by
     # templates/alertmanager-discord-ces.yaml. Keep no duplicate config here.
   grafana:
     priorityClassName: kkamji-observability
+    resources:
+      requests:
+        cpu: 20m
+        memory: 512Mi
     admin:
       existingSecret: grafana-auth
       userKey: admin-user
@@ -46,6 +55,11 @@ kube-prometheus-stack:
         secureJsonData:
           httpHeaderValue1: "kube-rca"
     sidecar:
+      # dashboard/datasource sidecar 2개에 공통 적용된다.
+      resources:
+        requests:
+          cpu: 10m
+          memory: 96Mi
       dashboards:
         folderAnnotation: "grafana_folder"
         defaultFolderName: "Default Dashboard"
@@ -140,6 +154,13 @@ kube-prometheus-stack:
       retention: 1d
       # 시간 기준 retention 과 별개로 TSDB 블록 크기 상한을 둔다 (PVC 30Gi).
       retentionSize: 10GB
+      # TSDB compaction/WAL replay 때 메모리가 튀므로 memory limit 을 함께 둔다.
+      resources:
+        requests:
+          cpu: 50m
+          memory: 1Gi
+        limits:
+          memory: 2Gi
   # CrashLoopBackOff 전용 알람을 복원한다 (이전에 disabled 였으나, pod 단위
   # crashloop 신호가 없으면 KubePodNotReady 등 간접 알람만 남아 추적이 어렵다).
   defaultRules: {}
@@ -167,10 +188,26 @@ kube-prometheus-stack:
   kubeProxy:
     enabled: false
 
+  # 아래 requests 는 2026-10-18 기준 24h working set p95 에 여유를 더한 값. CPU limit 은 두지 않는다.
+  prometheusOperator:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 96Mi
+
   kube-state-metrics:
     priorityClassName: kkamji-observability
+    resources:
+      requests:
+        cpu: 10m
+        memory: 96Mi
+
   prometheus-node-exporter:
     priorityClassName: kkamji-observability
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
 
 # templates/priorityclass.yaml. 값은 system-*-critical(2e9)과 kubespray 의
 # k8s-cluster-critical(1e9)보다 낮고 기본값 0 보다 높게 둔다.

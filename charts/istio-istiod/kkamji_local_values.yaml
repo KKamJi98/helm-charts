@@ -18,6 +18,13 @@ global:
         cpu: 200m
         memory: 512Mi
 
+# istiod 기본값(500m/2Gi)은 실사용(p95 약 140Mi, CPU 수 m)보다 훨씬 크다.
+# CPU request 는 HPA(80%) 기준이 되므로 너무 낮추지 않는다.
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
 # Mesh config used to generate istio configmap.
 meshConfig:
   # Tempo 제거 후 trace 수신 백엔드가 없으므로 sidecar tracing 을 끈다.

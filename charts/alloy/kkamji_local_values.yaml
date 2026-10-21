@@ -3,6 +3,11 @@ controller:
   priorityClassName: kkamji-observability
 
 alloy:
+  # requests: 2026-10-18 기준 24h working set p95 에 여유를 더한 값. CPU limit 은 두지 않는다.
+  resources:
+    requests:
+      cpu: 10m
+      memory: 320Mi
   extraEnv:
     - name: NODE_NAME
       valueFrom:

@@ -43,8 +43,13 @@ argocd:
     networkPolicy:
       create: false
   
+  # 컴포넌트별 requests: 2026-10-18 기준 24h working set p95 에 여유를 더한 값. CPU limit 은 두지 않는다.
   server:
     replicas: 1
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
     certificate:
       enabled: true
       issuer:
@@ -81,18 +86,46 @@ argocd:
   
   redis-ha:
     enabled: false
-  
+
+  redis:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+
+  dex:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+
   controller:
     replicas: 1
-  
+    resources:
+      requests:
+        cpu: 100m
+        memory: 1Gi
+
   repoServer:
     replicas: 1
-  
+    resources:
+      requests:
+        cpu: 30m
+        memory: 256Mi
+
   applicationSet:
     replicas: 1
-  
+    resources:
+      requests:
+        cpu: 10m
+        memory: 160Mi
+
   notifications:
     enabled: true
+    resources:
+      requests:
+        cpu: 10m
+        memory: 128Mi
     secret:
       create: false
       # External-Secrets 에서 불러오도록
