@@ -1,0 +1,24 @@
+# Register only after the reviewed revision is on main; never auto-sync this app.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ai-gateway
+  namespace: argocd
+spec:
+  project: automation
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ai-system
+  source:
+    repoURL: https://github.com/KKamJi98/helm-charts.git
+    targetRevision: main
+    path: charts/ai-gateway
+    helm:
+      valueFiles: [kkamji_local_values.yaml]
+      skipTests: true
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/enforce-version: v1.36
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]

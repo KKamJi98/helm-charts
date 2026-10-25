@@ -1,0 +1,53 @@
+# Operator-only seed. Stop the proxy first and remove this Pod before restarting it.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ai-gateway-auth-seed
+  namespace: ai-system
+  labels: {app.kubernetes.io/part-of: ai-gateway}
+spec:
+  restartPolicy: Never
+  serviceAccountName: ai-gateway
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+    fsGroupChangePolicy: OnRootMismatch
+    seccompProfile: {type: RuntimeDefault}
+  containers:
+    - name: seed
+      image: "litellm/litellm:v1.106.4@sha256:c169fb3adc514fcf210377c203f3de406d54f10bfdacf13948a4a839db9af7de"
+      command: [python, -c]
+      args:
+        - |
+          import json, os
+          from pathlib import Path
+          os.umask(0o077)
+          payload = Path('/seed/auth.json').read_bytes()
+          auth = json.loads(payload)
+          assert isinstance(auth, dict) and all(isinstance(auth.get(key), str) and auth[key] for key in ('access_token', 'refresh_token', 'id_token', 'account_id')), 'A completed fresh login is required'
+          directory = Path('/auth/tokens')
+          assert not (directory / 'auth.json').exists(), 'Existing refresh authority must not be overwritten'
+          directory.mkdir(mode=0o700, exist_ok=True)
+          directory.chmod(0o700)
+          target = directory / '.auth.json.new'
+          target.write_bytes(payload)
+          target.chmod(0o600)
+          os.replace(target, directory / 'auth.json')
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: {drop: [ALL]}
+      resources:
+        requests: {cpu: 10m, memory: 64Mi}
+        limits: {cpu: 100m, memory: 128Mi}
+      volumeMounts:
+        - {name: auth, mountPath: /auth}
+        - {name: seed, mountPath: /seed, readOnly: true}
+  volumes:
+    - name: auth
+      persistentVolumeClaim: {claimName: ai-gateway-auth}
+    - name: seed
+      secret: {secretName: ai-gateway-auth-seed, defaultMode: 0440}

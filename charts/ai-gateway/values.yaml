@@ -1,0 +1,100 @@
+storageClass: ""
+serviceSecret: ai-gateway-keys
+proxy:
+  fullnameOverride: ai-gateway
+  replicaCount: 1
+  numWorkers: 1
+  strategy: {type: Recreate}
+  serviceAccount: {create: false, name: ai-gateway}
+  image:
+    repository: litellm/litellm
+    tag: "v1.106.4@sha256:c169fb3adc514fcf210377c203f3de406d54f10bfdacf13948a4a839db9af7de"
+    pullPolicy: IfNotPresent
+  command: [litellm]
+  args: [--config, /etc/litellm/config.yaml, --port, "4000", --num_workers, "1"]
+  masterkeySecretName: ai-gateway-keys
+  masterkeySecretKey: PROXY_MASTER_KEY
+  db: {deployStandalone: false, useExisting: false}
+  redis: {enabled: false}
+  migrationJob: {enabled: false}
+  ingress: {enabled: false}
+  service: {type: ClusterIP, port: 4000}
+  podLabels: {app.kubernetes.io/part-of: ai-gateway, ai.kkamji.net/component: proxy}
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+    fsGroupChangePolicy: OnRootMismatch
+    seccompProfile: {type: RuntimeDefault}
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities: {drop: [ALL]}
+  envVars:
+    CHATGPT_TOKEN_DIR: /data/chatgpt/tokens
+    CHATGPT_AUTH_FILE: auth.json
+    HOME: /tmp/litellm
+    TMPDIR: /tmp/litellm
+    XDG_CACHE_HOME: /tmp/litellm/.cache
+    LITELLM_TELEMETRY: "false"
+    LITELLM_LOCAL_MODEL_COST_MAP: "true"
+    DO_NOT_TRACK: "true"
+  proxy_config:
+    model_list:
+      - model_name: primary
+        litellm_params:
+          model: chatgpt/OPERATOR_MODEL_REQUIRED
+    general_settings:
+      master_key: os.environ/PROXY_MASTER_KEY
+      background_health_checks: false
+      store_model_in_db: false
+      disable_spend_logs: true
+      allow_client_side_credentials: false
+    litellm_settings:
+      telemetry: false
+      set_verbose: false
+      turn_off_message_logging: true
+      num_retries: 0
+      request_timeout: 90
+    router_settings: {num_retries: 0}
+  resources:
+    requests: {cpu: 100m, memory: 768Mi, ephemeral-storage: 128Mi}
+    limits: {cpu: "2", memory: 1536Mi, ephemeral-storage: 2Gi}
+  startupProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 60
+  volumeMounts:
+    - {name: chatgpt-auth, mountPath: /data/chatgpt}
+  volumes:
+    - name: chatgpt-auth
+      persistentVolumeClaim: {claimName: ai-gateway-auth}
+  extraInitContainers:
+    - name: require-private-auth
+      image: "litellm/litellm:v1.106.4@sha256:c169fb3adc514fcf210377c203f3de406d54f10bfdacf13948a4a839db9af7de"
+      command: [python, -c]
+      args:
+        - |
+          import os, stat
+          from pathlib import Path
+          os.umask(0o077)
+          private_tmp = Path('/tmp/litellm')
+          private_tmp.mkdir(mode=0o700, exist_ok=True)
+          private_tmp.chmod(0o700)
+          directory = os.stat('/data/chatgpt/tokens')
+          auth = os.stat('/data/chatgpt/tokens/auth.json')
+          assert directory.st_uid == 10001 and stat.S_IMODE(directory.st_mode) == 0o700
+          assert stat.S_ISREG(auth.st_mode) and auth.st_uid == 10001 and stat.S_IMODE(auth.st_mode) == 0o600
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: {drop: [ALL]}
+      resources:
+        requests: {cpu: 10m, memory: 64Mi}
+        limits: {cpu: 100m, memory: 128Mi}
+      volumeMounts:
+        - {name: chatgpt-auth, mountPath: /data/chatgpt, readOnly: true}
+        - {name: tmp, mountPath: /tmp}
