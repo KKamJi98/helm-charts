@@ -1,0 +1,9 @@
+# No HTTPRoute or external DNS registration is activated by this chart.
+storageClass: local-path
+proxy:
+  proxy_config:
+    model_list:
+      - model_name: primary
+        litellm_params:
+          model: chatgpt/gpt-6.1-sol
+          reasoning_effort: high

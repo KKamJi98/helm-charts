@@ -23,5 +23,12 @@
   "docs/arc-runner-images.md": [
     "images/arc-runner/*",
     "images/arc-runner/*/*"
+  ],
+  "docs/01_ai-gateway.md": [
+    "charts/ai-gateway/*",
+    "charts/ai-gateway/templates/*",
+    "examples/ai-gateway/*",
+    "tests/test_ai_gateway_chart.py",
+    ".github/workflows/ai-gateway-lint.yml"
   ]
 }
