@@ -109,6 +109,10 @@ spec:
               value: hindsight_api.extensions.builtin.tenant:ApiKeyTenantExtension
             - name: HINDSIGHT_API_TENANT_MCP_AUTH_DISABLED
               value: "false"
+            - name: HINDSIGHT_API_ENABLE_DOCUMENT_IMPORT_API
+              value: "true"
+            - name: HINDSIGHT_API_ENABLE_DOCUMENT_EXPORT_API
+              value: "true"
             - name: HINDSIGHT_API_LLM_PROVIDER
               value: chatgpt
             - name: HINDSIGHT_API_LLM_MODEL
