@@ -538,6 +538,19 @@ class ChartTests(unittest.TestCase):
                 ]
                 self.assertIn("**.cluster.local", patterns)
 
+    def test_authenticated_routes_allow_long_model_requests(self):
+        routes = [d for d in self.docs if d["kind"] == "HTTPRoute"]
+        self.assertEqual(
+            {r["metadata"]["name"] for r in routes}, {"hindsight-ui", "hindsight-api"}
+        )
+        for route in routes:
+            with self.subTest(route=route["metadata"]["name"]):
+                for rule in route["spec"]["rules"]:
+                    self.assertEqual(
+                        rule.get("timeouts"),
+                        {"request": "600s", "backendRequest": "600s"},
+                    )
+
     def test_native_bank_transfer_is_enabled_with_native_auth(self):
         for capability in ("IMPORT", "EXPORT"):
             self.assertEqual(

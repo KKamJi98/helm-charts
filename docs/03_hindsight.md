@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-10-27T06:03:41+09:00
+updated: 2026-10-27T06:46:22+09:00
 type: runbook
 status: current
 ---
@@ -9,7 +9,7 @@ status: current
 
 ## 상태와 범위
 
-이 문서는 `kkamji-lab`의 `hindsight.kkamji.net`에 배포한 UI/API/MCP의 설계와 인수 절차입니다. 모델 전체 체크섬, API/CP readiness, 소유자 API의 HTTPS 조회를 확인했습니다. 전용 OAuth 두 파일을 이전하기 전에 WSL 원본 writer를 정지했으며, 현재 runtime은 클러스터 단일 writer입니다. 합성 자료 복원, 실제 retain/recall/MCP와 seed 삭제 후 재생성 검증은 아직 남았습니다. `status: current`를 전체 인수 성공으로 해석하지 않습니다.
+이 문서는 `kkamji-lab`의 `hindsight.kkamji.net`에 배포한 UI/API/MCP의 설계와 인수 절차입니다. 모델 전체 체크섬, API/CP readiness, HTTPS 소유자 로그인/API 인증과 무인증 차단을 확인했습니다. 원본 합성 문서 14개를 두 bank로 복원했고, 새 합성 문서의 구독 비동기 retain/recall과 독립 MCP 클라이언트 2개의 조회도 성공했습니다. 전용 OAuth 이전 전에 WSL writer를 정지했으며, 갱신된 두 token이 PVC에 0600 파일/0700 디렉터리로 저장된 것을 값 노출 없이 확인했습니다. seed 삭제 후 새 Pod의 기억/MCP 조회와 인증 파일 보존도 확인했습니다. 긴 동기 요청의 Gateway 반영과 새 Pod에서 추가 구독 호출 검증은 아직 남았습니다. `status: current`를 전체 인수 성공으로 해석하지 않습니다.
 
 - 서비스 차트는 [charts/hindsight](../charts/hindsight)입니다. root Application 연결은 `automation-root`의 승인된 변경으로 반영하며, `main` 반영과 자동 sync는 실제 배포 경계입니다.
 - 새 Hindsight 전용 ChatGPT SIWC 로그인만 사용합니다. 기존 Hermes/Codex credential을 읽거나 복사하지 않으며, 전역 agent 설정/hook, 실제 대화 ingestion과 범용 model proxy는 추가하지 않습니다.
@@ -46,6 +46,7 @@ Gateway API key Secret에는 원본 key만 저장합니다. Envoy가 요청의 B
 공식 1.1.0의 bank transfer API는 기본 비활성입니다. 합성 자료 복원과 소유자 백업을 위해 `HINDSIGHT_API_ENABLE_DOCUMENT_IMPORT_API`와 `HINDSIGHT_API_ENABLE_DOCUMENT_EXPORT_API`를 명시적으로 켭니다. 기존 Gateway/native API key 검사는 유지하며 무인증 archive 업로드를 허용하지 않습니다.
 
 - TLS는 기존 `Gateway/envoy-gateway-system/kkamji`의 `https` listener와 wildcard 인증서를 재사용합니다. HTTPRoute/SecurityPolicy는 Hindsight 차트 소유이며 플랫폼 차트는 바꾸지 않습니다. [라우팅 규칙](rules/gateway-api-routing.md)을 따릅니다.
+- 인증된 UI와 API/MCP route의 request/backendRequest 상한은 각각 `600s`입니다. Envoy의 기본 request 제한은 15초이며 실제 구독 호출은 이를 넘을 수 있습니다. 동기 retain은 연결 종료 시 취소되므로 긴 retain은 `async: true`와 operation 조회를 우선합니다. 이 timeout은 클라이언트/LLM 자체 deadline을 늘리지 않으며 인증이나 외부 egress도 바꾸지 않습니다. [공식 timeout 문서](https://gateway.envoyproxy.io/docs/tasks/traffic/http-timeouts/)를 따릅니다.
 - Cilium 설계는 API/CP를 격리하고 Gateway -> UI/API, CP -> API만 허용합니다. API의 외부 egress는 OpenAI HTTPS와 DNS로 제한하며, public model downloader의 다운로드 egress는 auth 없는 별도 경계입니다. 실제 FQDN/DNS 허용과 차단은 live 인수 항목입니다.
 - DNS의 내부 검색 suffix는 `**.cluster.local`로 허용합니다. 현재 Cilium CRD에서 `*`는 한 단계만 매칭하므로 `*.cluster.local`은 `hindsight-api.hindsight.svc.cluster.local` 같은 이름을 포함하지 않습니다. 외부 FQDN/포트 허용 목록은 이 내부 DNS 규칙과 분리합니다.
 - 고정 ONNX의 다운로드 metadata가 반환한 `us.aws.cdn.hf.co`를 모델 준비 Job에만 DNS와 TCP 443으로 허용합니다. 단일 단계 `*.hf.co`는 이 다중 단계 CDN 이름을 포함하지 않습니다. API/CP의 외부 허용 목록과 `world` 권한은 늘리지 않습니다.
@@ -54,7 +55,7 @@ Gateway API key Secret에는 원본 key만 저장합니다. Envoy가 요청의 B
 
 ## Secret과 OAuth 소유권
 
-SSM `/kkamji/automation/hindsight/access`는 이미 존재하는 **SecureString version 2**입니다. JSON property는 `api_key`, `ui_access_key`, `ui_htpasswd`입니다. 재생성하거나 임의 초기화하지 않습니다. agent의 describe/write 권한과 Get 거부 상태에서 metadata를 확인했으며, IAM은 바꾸지 않았습니다. 실제 reader인 ESO 4개는 SecretSynced/Ready와 target Secret 생성을 확인했습니다. 실제 HTTP 인증 검증은 아직 남았습니다.
+SSM `/kkamji/automation/hindsight/access`는 이미 존재하는 **SecureString version 2**입니다. JSON property는 `api_key`, `ui_access_key`, `ui_htpasswd`입니다. 재생성하거나 임의 초기화하지 않습니다. agent의 describe/write 권한과 Get 거부 상태에서 metadata를 확인했으며, IAM은 바꾸지 않았습니다. 실제 reader인 ESO 4개는 SecretSynced/Ready와 target Secret 생성을 확인했습니다. 외부 HTTPS UI/API/MCP와 native API/MCP의 무인증/오키 거절 및 소유자 성공을 확인했습니다. CP의 cookie 없는 backend 조회도 거절됩니다.
 
 [ESO 규칙](rules/external-secrets.md)에 따라 기존 `parameter-store`를 사용하고 필요한 property만 명시적으로 매핑합니다. target은 Orphan/Retain입니다. API/CP runtime Secret과 Gateway용 Secret을 구분하며, Gateway API key source는 충분한 entropy가 있는 전용 key입니다. 기존 Envoy는 `{SHA}` htpasswd 형식을 요구하므로 UI 비밀번호는 고엔트로피로 유지합니다. 사람이 외우기 쉬운 비밀번호나 다른 서비스의 htpasswd를 재사용하지 않습니다.
 
