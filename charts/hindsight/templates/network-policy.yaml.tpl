@@ -53,7 +53,7 @@ spec:
               protocol: TCP
           rules:
             dns:
-              - matchPattern: "*.cluster.local"
+              - matchPattern: "**.cluster.local"
               {{- if eq $component "api" }}
               - matchName: api.openai.com
               - matchName: auth.openai.com
