@@ -18,6 +18,9 @@ spec:
         - path:
             type: PathPrefix
             value: /
+      timeouts:
+        request: 600s
+        backendRequest: 600s
       backendRefs:
         - group: ""
           kind: Service
@@ -47,6 +50,9 @@ spec:
         - path:
             type: PathPrefix
             value: /mcp
+      timeouts:
+        request: 600s
+        backendRequest: 600s
       backendRefs:
         - group: ""
           kind: Service
