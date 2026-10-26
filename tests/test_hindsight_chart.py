@@ -455,7 +455,7 @@ class ChartTests(unittest.TestCase):
         template = self.index["ExternalSecret", gateway_secret]["spec"]["target"][
             "template"
         ]
-        self.assertEqual(template["data"]["owner"], '{{ printf "Bearer %s" .api_key }}')
+        self.assertEqual(template["data"]["owner"], "{{ .api_key }}")
 
     def test_exposure_off_removes_routes_and_gateway_auth_policies(self):
         docs = objects(render("--set", "exposure.enabled=false"))

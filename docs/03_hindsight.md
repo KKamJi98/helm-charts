@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-10-27T04:53:18+09:00
+updated: 2026-10-27T05:10:05+09:00
 type: runbook
 status: current
 ---
@@ -40,6 +40,8 @@ PVC는 Argo prune/delete 방지 선언을 사용하지만 namespace/노드 삭�
 | 같은 host의 `/v1` API, `/mcp` MCP | 전용 API key, `Authorization: Bearer` | Hindsight ApiKeyTenantExtension의 같은 API key |
 
 UI access key와 API key는 서로 다릅니다. CP는 서버 측에서 API key를 소비합니다. API route의 Gateway 인증은 native 검사를 대체하지 않으며, CP의 browser backend도 native access key로 보호합니다. 키를 가진 사람과 관리자까지 차단하는 절대적인 "나만 접근" 보장이 아닙니다. namespace나 bank 이름은 ACL이 아닙니다.
+
+Gateway API key Secret에는 원본 key만 저장합니다. Envoy가 요청의 Bearer 접두사를 분리하므로 Secret 값에 접두사를 넣으면 정상 단일 Bearer 요청이 거절됩니다. `sanitize: false`는 원래 Authorization 헤더를 Hindsight의 native 검사에도 전달합니다. 키 재발급 없이 이 표현만 정렬합니다.
 
 - TLS는 기존 `Gateway/envoy-gateway-system/kkamji`의 `https` listener와 wildcard 인증서를 재사용합니다. HTTPRoute/SecurityPolicy는 Hindsight 차트 소유이며 플랫폼 차트는 바꾸지 않습니다. [라우팅 규칙](rules/gateway-api-routing.md)을 따릅니다.
 - Cilium 설계는 API/CP를 격리하고 Gateway -> UI/API, CP -> API만 허용합니다. API의 외부 egress는 OpenAI HTTPS와 DNS로 제한하며, public model downloader의 다운로드 egress는 auth 없는 별도 경계입니다. 실제 FQDN/DNS 허용과 차단은 live 인수 항목입니다.

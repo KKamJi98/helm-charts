@@ -53,7 +53,7 @@ spec:
       mergePolicy: Replace
       type: Opaque
       data:
-        owner: {{ `{{ printf "Bearer %s" .api_key }}` | quote }}
+        owner: {{ `{{ .api_key }}` | quote }}
   data:
     - secretKey: api_key
       remoteRef:
