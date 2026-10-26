@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-10-27T06:46:22+09:00
+updated: 2026-10-27T07:07:40+09:00
 type: runbook
 status: current
 ---
@@ -9,7 +9,7 @@ status: current
 
 ## 상태와 범위
 
-이 문서는 `kkamji-lab`의 `hindsight.kkamji.net`에 배포한 UI/API/MCP의 설계와 인수 절차입니다. 모델 전체 체크섬, API/CP readiness, HTTPS 소유자 로그인/API 인증과 무인증 차단을 확인했습니다. 원본 합성 문서 14개를 두 bank로 복원했고, 새 합성 문서의 구독 비동기 retain/recall과 독립 MCP 클라이언트 2개의 조회도 성공했습니다. 전용 OAuth 이전 전에 WSL writer를 정지했으며, 갱신된 두 token이 PVC에 0600 파일/0700 디렉터리로 저장된 것을 값 노출 없이 확인했습니다. seed 삭제 후 새 Pod의 기억/MCP 조회와 인증 파일 보존도 확인했습니다. 긴 동기 요청의 Gateway 반영과 새 Pod에서 추가 구독 호출 검증은 아직 남았습니다. `status: current`를 전체 인수 성공으로 해석하지 않습니다.
+2026-10-27에 승인된 `kkamji-lab` 배포, 도메인, 전용 UI/API/MCP 인증과 합성 인수를 완료했습니다. 구독 retain/recall, OAuth 갱신의 PVC 저장, seed 삭제 후 Pod 재생성과 추가 구독 호출을 실제 확인했습니다. 실제 대화 자동 수집, 프로젝트 hook, 전역 Hermes/Claude Code 통합은 켜지 않았습니다. 아래 잔여 High 취약점과 관리자/키 신뢰 경계는 기능 인수 성공과 별개로 유지됩니다.
 
 - 서비스 차트는 [charts/hindsight](../charts/hindsight)입니다. root Application 연결은 `automation-root`의 승인된 변경으로 반영하며, `main` 반영과 자동 sync는 실제 배포 경계입니다.
 - 새 Hindsight 전용 ChatGPT SIWC 로그인만 사용합니다. 기존 Hermes/Codex credential을 읽거나 복사하지 않으며, 전역 agent 설정/hook, 실제 대화 ingestion과 범용 model proxy는 추가하지 않습니다.
@@ -96,6 +96,23 @@ python3 docs/_meta/docs_lint.py --root . --base origin/main
 5. API/MCP는 key 없음/오류를 외부 경로와 native 경로에서 각각 거절해야 합니다. loopback port-forward를 사용하되 credential을 콘솔에 출력하지 않습니다. CP backend의 native access key 우회 여부와 승인되지 않은 Pod의 API/CP 접근 차단도 확인합니다.
 6. 전용 synthetic bank에서 retain 작업 완료, 의미 있는 recall과 MCP 요청을 검증합니다. 실제 OpenAI 추출 실패/계정 제한을 숨기거나 다른 model/provider로 우회하지 않습니다. readiness와 retain 접수 200만으로 합격시키지 않습니다.
 7. 승인된 Pod 교체 뒤 DB/recall/auth 지속성을 검사하고 seed를 삭제합니다. seed 없는 추가 재시작 성공, refresh 후 현재 PVC 재사용과 단일 writer를 확인합니다. 실 대화 ingestion은 이 인수와 별도 승인입니다.
+
+## 2026-10-27 live 인수 결과
+
+기능 배포 기준은 [timeout 수정 PR 59](https://github.com/KKamJi98/helm-charts/pull/59)의 main `db8822d1cb855fc1c13f4d94a773cb6d7f5fc247`입니다. 최종 문서 커밋은 같은 manifest를 유지합니다.
+
+| 항목 | 실제 확인 |
+|---|---|
+| GitOps/저장소 | Hindsight `Synced`/`Healthy`, API/CP Ready, model Job의 6개 파일 SHA 검증 완료, PVC 3개 Bound |
+| DNS/TLS | 소유자 HTTPS 호출 성공, 시스템 trust와 hostname 검사 활성, TLSv1.3. 관측 인증서 만료는 2027-01-08 UTC이며 자동 갱신은 기존 Gateway 소유입니다. |
+| UI HTTP 흐름 | BasicAuth 무인증/오키 401, native CP 로그인 오키 401/소유자 200, dashboard 200. 인증 cookie는 Secure/HttpOnly이며 cookie 없는 CP backend 조회는 401입니다. |
+| API/MCP | 외부 Gateway와 loopback native 경로 각각 무인증/오키 401, 소유자 200. 단일 Bearer는 성공하고 이중 Bearer는 거절됩니다. |
+| 내부 우회 | 승인되지 않은 Pod에서 API 8888/CP 3000 직접 접속이 차단됐고 Hubble `POLICY_DENIED`를 확인했습니다. |
+| 합성 기억 | 원본 14문서를 두 bank로 복원하고 별도 인수 bank에 2문서를 추가했습니다. 3개 bank 총 16문서의 조회와 기대 document recall이 성공했습니다. 일반 품질/성능 benchmark는 아닙니다. |
+| 구독 추론 | 동일 `chatgpt` provider의 실제 추출이 성공했습니다. 비동기 operation 완료 뒤 recall, seed 없는 새 Pod의 HTTPS 동기 retain 21.173초 완료와 새 document recall을 확인했습니다. |
+| OAuth 지속성 | WSL 원본 writer는 정지했습니다. PVC의 access/refresh 값이 모두 초기 seed와 달라진 상태와 file 0600/home 0700을 값/해시 노출 없이 확인했습니다. seed 삭제 후 새 Pod가 Ready이고 PVC UID 3개와 기존 기억이 보존됐습니다. |
+| MCP 공유 | 독립 protocol client 2개가 `2025-11-25`로 연결하고 같은 bank의 `f01`을 recall했습니다. 36개 tool 목록과 recall의 single-bank schema를 확인했으며 실제 Hermes/Claude Code 설정 활성화는 아닙니다. |
+| 검증/정리 | 회귀 39개와 Helm/Ruff/strict server dry-run/source secret scan, 독립 검토와 PR/main CI를 통과했습니다. 임시 진단 Pod/정책과 이 작업의 port-forward를 정리했습니다. |
 
 ## 복구
 
