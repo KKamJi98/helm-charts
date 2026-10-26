@@ -538,6 +538,17 @@ class ChartTests(unittest.TestCase):
                 ]
                 self.assertIn("**.cluster.local", patterns)
 
+    def test_native_bank_transfer_is_enabled_with_native_auth(self):
+        for capability in ("IMPORT", "EXPORT"):
+            self.assertEqual(
+                self.env[f"HINDSIGHT_API_ENABLE_DOCUMENT_{capability}_API"], "true"
+            )
+        self.assertEqual(
+            self.env["HINDSIGHT_API_TENANT_EXTENSION"],
+            "hindsight_api.extensions.builtin.tenant:ApiKeyTenantExtension",
+        )
+        self.assertEqual(self.env["HINDSIGHT_API_TENANT_MCP_AUTH_DISABLED"], "false")
+
     def test_public_model_cdn_is_allowed_only_for_model_bootstrap(self):
         host = "us.aws.cdn.hf.co"
         policies = [d for d in self.docs if d["kind"] == "CiliumNetworkPolicy"]

@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-10-27T05:37:13+09:00
+updated: 2026-10-27T06:03:41+09:00
 type: runbook
 status: current
 ---
@@ -9,7 +9,7 @@ status: current
 
 ## 상태와 범위
 
-이 문서는 `kkamji-lab`의 `hindsight.kkamji.net`에 UI/API/MCP를 제공하기 위한 설계와 인수 절차입니다. namespace와 ExternalSecret 4개의 bootstrap 및 SecretSynced/Ready 확인을 마쳤습니다. **서비스 Pod와 외부 경로는 아직 배포하지 않았습니다.** `status: current`는 문서의 유효성을 뜻하며, 운영 성공을 뜻하지 않습니다. 로컬 PoC나 ESO 성공을 HTTP 인증, Cilium enforcement나 재시작 지속성 검증으로 대신하지 않습니다.
+이 문서는 `kkamji-lab`의 `hindsight.kkamji.net`에 배포한 UI/API/MCP의 설계와 인수 절차입니다. 모델 전체 체크섬, API/CP readiness, 소유자 API의 HTTPS 조회를 확인했습니다. 전용 OAuth 두 파일을 이전하기 전에 WSL 원본 writer를 정지했으며, 현재 runtime은 클러스터 단일 writer입니다. 합성 자료 복원, 실제 retain/recall/MCP와 seed 삭제 후 재생성 검증은 아직 남았습니다. `status: current`를 전체 인수 성공으로 해석하지 않습니다.
 
 - 서비스 차트는 [charts/hindsight](../charts/hindsight)입니다. root Application 연결은 `automation-root`의 승인된 변경으로 반영하며, `main` 반영과 자동 sync는 실제 배포 경계입니다.
 - 새 Hindsight 전용 ChatGPT SIWC 로그인만 사용합니다. 기존 Hermes/Codex credential을 읽거나 복사하지 않으며, 전역 agent 설정/hook, 실제 대화 ingestion과 범용 model proxy는 추가하지 않습니다.
@@ -42,6 +42,8 @@ PVC는 Argo prune/delete 방지 선언을 사용하지만 namespace/노드 삭�
 UI access key와 API key는 서로 다릅니다. CP는 서버 측에서 API key를 소비합니다. API route의 Gateway 인증은 native 검사를 대체하지 않으며, CP의 browser backend도 native access key로 보호합니다. 키를 가진 사람과 관리자까지 차단하는 절대적인 "나만 접근" 보장이 아닙니다. namespace나 bank 이름은 ACL이 아닙니다.
 
 Gateway API key Secret에는 원본 key만 저장합니다. Envoy가 요청의 Bearer 접두사를 분리하므로 Secret 값에 접두사를 넣으면 정상 단일 Bearer 요청이 거절됩니다. `sanitize: false`는 원래 Authorization 헤더를 Hindsight의 native 검사에도 전달합니다. 키 재발급 없이 이 표현만 정렬합니다.
+
+공식 1.1.0의 bank transfer API는 기본 비활성입니다. 합성 자료 복원과 소유자 백업을 위해 `HINDSIGHT_API_ENABLE_DOCUMENT_IMPORT_API`와 `HINDSIGHT_API_ENABLE_DOCUMENT_EXPORT_API`를 명시적으로 켭니다. 기존 Gateway/native API key 검사는 유지하며 무인증 archive 업로드를 허용하지 않습니다.
 
 - TLS는 기존 `Gateway/envoy-gateway-system/kkamji`의 `https` listener와 wildcard 인증서를 재사용합니다. HTTPRoute/SecurityPolicy는 Hindsight 차트 소유이며 플랫폼 차트는 바꾸지 않습니다. [라우팅 규칙](rules/gateway-api-routing.md)을 따릅니다.
 - Cilium 설계는 API/CP를 격리하고 Gateway -> UI/API, CP -> API만 허용합니다. API의 외부 egress는 OpenAI HTTPS와 DNS로 제한하며, public model downloader의 다운로드 egress는 auth 없는 별도 경계입니다. 실제 FQDN/DNS 허용과 차단은 live 인수 항목입니다.
@@ -84,7 +86,7 @@ python3 docs/_meta/docs_lint.py --root . --base origin/main
 
 ## 반영과 live 인수 조건
 
-아래 서비스 인수 항목은 **배포 후 검증 대기**입니다. namespace/ESO bootstrap의 부분 성공과 구분합니다. 기존에 승인된 Hindsight 대상과 범위에서만 반영하며, 새 권한/대상/데이터 안전성 경계는 먼저 확인합니다. `helm install/upgrade`나 Makefile bootstrap 재실행으로 GitOps를 우회하지 않습니다.
+아래 항목은 최종 인수 조건입니다. 위 상태에 기록한 부분 성공과 아직 남은 검증을 구분합니다. 기존에 승인된 Hindsight 대상과 범위에서만 반영하며, 새 권한/대상/데이터 안전성 경계는 먼저 확인합니다. `helm install/upgrade`나 Makefile bootstrap 재실행으로 GitOps를 우회하지 않습니다.
 
 1. `kubectl config current-context`가 `kkamji-lab`인지 확인하고 모든 조회/변경에 context와 namespace를 명시합니다. root/child Application의 실제 namespace/revision, node/storage 여유, CRD/admission, ESO와 Gateway 의존성을 확인한 뒤 대상만 diff/dry-run합니다.
 2. 최종 chart/test/문서/Secret scan 결과와 변경 영향을 검토하고 이미 승인된 main 반영 범위에서 진행합니다. 자동 sync로 생성되는 route가 인증 실패 시 fail-closed인지 확인합니다. SSM version 2는 유지합니다.
