@@ -59,6 +59,7 @@ spec:
               - matchName: auth.openai.com
               {{- else if eq $component "model-init" }}
               - matchName: huggingface.co
+              - matchName: us.aws.cdn.hf.co
               - matchPattern: "*.huggingface.co"
               - matchPattern: "*.hf.co"
               - matchPattern: "*.xethub.hf.co"
@@ -81,6 +82,7 @@ spec:
         - matchName: auth.openai.com
       {{- else }}
         - matchName: huggingface.co
+        - matchName: us.aws.cdn.hf.co
         - matchPattern: "*.huggingface.co"
         - matchPattern: "*.hf.co"
         - matchPattern: "*.xethub.hf.co"

@@ -538,6 +538,31 @@ class ChartTests(unittest.TestCase):
                 ]
                 self.assertIn("**.cluster.local", patterns)
 
+    def test_public_model_cdn_is_allowed_only_for_model_bootstrap(self):
+        host = "us.aws.cdn.hf.co"
+        policies = [d for d in self.docs if d["kind"] == "CiliumNetworkPolicy"]
+        for policy in policies:
+            with self.subTest(policy=policy["metadata"]["name"]):
+                dns_hosts = [
+                    rule.get("matchName")
+                    for egress in policy["spec"]["egress"]
+                    for port in egress.get("toPorts", [])
+                    for rule in port.get("rules", {}).get("dns", [])
+                ]
+                https_hosts = [
+                    rule.get("matchName")
+                    for egress in policy["spec"]["egress"]
+                    for rule in egress.get("toFQDNs", [])
+                    if any(
+                        p.get("port") == "443"
+                        for port in egress.get("toPorts", [])
+                        for p in port.get("ports", [])
+                    )
+                ]
+                expected = policy["metadata"]["name"] == "hindsight-model-init"
+                self.assertEqual(host in dns_hosts, expected)
+                self.assertEqual(host in https_hosts, expected)
+
     def test_vendored_upstream_archive_pin(self):
         archive = CHART / "charts/hindsight-1.1.0.tgz"
         self.assertEqual(
