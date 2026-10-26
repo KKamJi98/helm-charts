@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-10-27T03:50:25+09:00
+updated: 2026-10-27T04:53:18+09:00
 type: runbook
 status: current
 ---
@@ -43,6 +43,7 @@ UI access key와 API key는 서로 다릅니다. CP는 서버 측에서 API key�
 
 - TLS는 기존 `Gateway/envoy-gateway-system/kkamji`의 `https` listener와 wildcard 인증서를 재사용합니다. HTTPRoute/SecurityPolicy는 Hindsight 차트 소유이며 플랫폼 차트는 바꾸지 않습니다. [라우팅 규칙](rules/gateway-api-routing.md)을 따릅니다.
 - Cilium 설계는 API/CP를 격리하고 Gateway -> UI/API, CP -> API만 허용합니다. API의 외부 egress는 OpenAI HTTPS와 DNS로 제한하며, public model downloader의 다운로드 egress는 auth 없는 별도 경계입니다. 실제 FQDN/DNS 허용과 차단은 live 인수 항목입니다.
+- DNS의 내부 검색 suffix는 `**.cluster.local`로 허용합니다. 현재 Cilium CRD에서 `*`는 한 단계만 매칭하므로 `*.cluster.local`은 `hindsight-api.hindsight.svc.cluster.local` 같은 이름을 포함하지 않습니다. 외부 FQDN/포트 허용 목록은 이 내부 DNS 규칙과 분리합니다.
 - shared `parameter-store`, 해당 Store를 소비할 수 있는 ExternalSecret 작성자, cluster/namespace 관리자와 key 보유자는 신뢰 범위에 남습니다. 새 IAM/Store를 추가하지 않았다는 사실을 독점 접근 증명으로 해석하지 않습니다.
 - 공식 API/AIO와 CP digest의 signature 검증을 마쳤습니다. 현재 Grype 결과는 API/AIO Critical 0, OS High 59(58 wont-fix, 1 not-fixed), CP Critical/High 0입니다. 잔여 High를 제거하거나 완전한 보안으로 주장하지 않습니다. API는 Gateway와 native 인증 및 namespace 한정 Cilium 정책으로 제한합니다. provenance와 취약점 검사는 별개의 gate입니다.
 

@@ -522,6 +522,22 @@ class ChartTests(unittest.TestCase):
                             )
                         )
 
+    def test_dns_rules_cover_multilevel_kubernetes_search_names(self):
+        policies = [d for d in self.docs if d["kind"] == "CiliumNetworkPolicy"]
+        self.assertEqual(
+            {p["metadata"]["name"] for p in policies},
+            {"hindsight-api", "hindsight-control-plane", "hindsight-model-init"},
+        )
+        for policy in policies:
+            with self.subTest(policy=policy["metadata"]["name"]):
+                patterns = [
+                    rule.get("matchPattern")
+                    for egress in policy["spec"]["egress"]
+                    for port in egress.get("toPorts", [])
+                    for rule in port.get("rules", {}).get("dns", [])
+                ]
+                self.assertIn("**.cluster.local", patterns)
+
     def test_vendored_upstream_archive_pin(self):
         archive = CHART / "charts/hindsight-1.1.0.tgz"
         self.assertEqual(
