@@ -1,6 +1,6 @@
 ---
 title: External Secrets rules
-updated: 2026-10-18T15:55:36+09:00
+updated: 2026-10-27T03:50:25+09:00
 type: rule
 status: current
 ---
@@ -38,3 +38,11 @@ ARC foundation은 단일 `/kkamji/arc/github-app` 경로를 기존 `parameter-st
 - 원본은 `kkamji-platform/ghcr-pull-secret`과 같은 `/kkamji/personal/kkamji-platform/ghcr/pull-token`(classic PAT, `read:packages`만)입니다. 새 credential, Store, IAM 권한을 추가하지 않습니다. 같은 토큰을 세 namespace가 공유하므로 credential 격리라고 주장하지 않습니다.
 - target은 `creationPolicy: Owner`입니다. ExternalSecret을 제거하면 pull Secret도 GC 됩니다. 원본 PAT는 SSM에 남습니다.
 - PAT를 교체하거나 삭제하면 세 namespace의 새 pull이 모두 영향을 받습니다. 교체 후 세 ExternalSecret에 `force-sync`를 적용합니다. 절차는 [ARC runner images](../arc-runner-images.md)를 따릅니다.
+
+## Hindsight private access
+
+- [Hindsight runbook](../03_hindsight.md)의 전용 원본은 `/kkamji/automation/hindsight/access` SecureString JSON입니다. version 2가 이미 존재하므로 재생성/초기화하지 않습니다. property는 `api_key`, `ui_access_key`, `ui_htpasswd`이며 값은 조회/출력/커밋하지 않습니다.
+- 기존 `parameter-store`를 재사용하고 target은 `creationPolicy: Orphan` / `deletionPolicy: Retain`입니다. API, CP와 Gateway consumer별 `data[].remoteRef.property`를 명시하며, 이 구성에서는 `dataFrom.extract`로 전체 JSON을 모든 consumer에 복제하지 않습니다. API key는 CP의 서버 측 dataplane 접근에도 필요하므로 이 둘 사이의 credential 분리를 주장하지 않습니다.
+- agent의 SSM Get은 거부되며 기존 IAM은 변경하지 않습니다. 실제 ESO reader 4개의 SecretSynced/Ready와 target Secret 생성을 확인했습니다. Gateway/native 인증은 별도 live 인수 대기이며, metadata 존재를 HTTP 인증 성공으로 표시하지 않습니다.
+- UI는 고엔트로피 전용 비밀번호와 Envoy가 지원하는 `{SHA}` htpasswd 형식을 사용합니다. API key도 고엔트로피 전용 값이며 다른 서비스 인증을 재사용하지 않습니다. shared Store 권한, ExternalSecret 작성자, 관리자와 key 보유자는 신뢰 범위에 남습니다.
+- ChatGPT OAuth `credentials.json`/`host_id`는 이 SSM JSON에 넣지 않습니다. 전용 세션의 일회성 seed에서 writable PVC로 옮기고, 현재 refresh authority를 stale Secret으로 덮어쓰지 않습니다. 로컬 writer 종료, 재시작 지속성 확인과 seed 삭제 순서는 runbook을 따릅니다.

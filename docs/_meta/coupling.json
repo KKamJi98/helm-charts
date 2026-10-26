@@ -11,7 +11,8 @@
   ],
   "docs/rules/external-secrets.md": [
     "charts/external-secrets/templates/*.yaml",
-    "charts/*/templates/external-secret.yaml"
+    "charts/*/templates/external-secret.yaml",
+    "charts/*/templates/external-secret.yaml.tpl"
   ],
   "docs/rules/gateway-api-routing.md": [
     "charts/envoy-gateway/templates/*.yaml"
@@ -30,5 +31,10 @@
     "examples/ai-gateway/*",
     "tests/test_ai_gateway_chart.py",
     ".github/workflows/ai-gateway-lint.yml"
+  ],
+  "docs/03_hindsight.md": [
+    "charts/hindsight/**",
+    "tests/test_hindsight*.py",
+    ".github/workflows/hindsight*.yml"
   ]
 }

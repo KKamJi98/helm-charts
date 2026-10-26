@@ -1,0 +1,6 @@
+dependencies:
+- name: hindsight
+  repository: oci://ghcr.io/vectorize-io/charts
+  version: 1.1.0
+digest: sha256:bfbd5531cbd8d5a84a78c6c7e8d4e05ca294dd0fdab59e398c8b3528e52f97ac
+generated: "2026-10-27T02:52:17.028218104+09:00"
