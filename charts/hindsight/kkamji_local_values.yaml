@@ -1,0 +1,7 @@
+# Generated from agents/hermes/model-lane.sh; do not independently retune.
+# Policy SHA256: df77109bb964f09e3933c08e74b0d3b015a878b420390701504ea480e00f8863
+runtime:
+  model: "gpt-6.1-sol"
+  reasoningEffort: "xhigh"
+exposure:
+  enabled: true

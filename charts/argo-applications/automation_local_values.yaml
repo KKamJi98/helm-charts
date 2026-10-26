@@ -164,3 +164,17 @@ applications:
       helm:
         valueFiles:
         - kkamji_local_values.yaml
+
+  hindsight:
+    enabled: true
+    name: hindsight
+    project: automation
+    destination:
+      namespace: hindsight
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/hindsight
+      helm:
+        valueFiles:
+        - kkamji_local_values.yaml
