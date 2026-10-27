@@ -1,0 +1,16 @@
+{
+  "chart": {
+    "version": "1.1.3",
+    "source": "https://github.com/BerriAI/litellm/tree/4fa8bf1ff5515e2cb98908c62ba84c87ef938620/helm/litellm-helm",
+    "archive_sha256": "6a14575bc1b8d1e6c1b823c7aec8c3ccd6c9b866ed47c04f6bcf9499a3a7734a",
+    "packaged_with": "Helm 4.2.1",
+    "notes": "Unchanged upstream source, Helm-normalized Chart.yaml metadata only; bundled PostgreSQL/Redis are disabled."
+  },
+  "runtime": {
+    "image": "litellm/litellm:v1.106.4@sha256:c169fb3adc514fcf210377c203f3de406d54f10bfdacf13948a4a839db9af7de",
+    "upstream_release": "https://github.com/BerriAI/litellm/releases/tag/v1.106.4",
+    "signature_verified": true,
+    "signing_source": "https://raw.githubusercontent.com/BerriAI/litellm/e82a3c646908ba0a6ee0beddc4310d7a6cac4065/cosign.pub",
+    "modified_application_or_dependencies": false
+  }
+}

@@ -11,13 +11,30 @@
   ],
   "docs/rules/external-secrets.md": [
     "charts/external-secrets/templates/*.yaml",
-    "charts/*/templates/external-secret.yaml"
+    "charts/*/templates/external-secret.yaml",
+    "charts/*/templates/external-secret.yaml.tpl"
   ],
   "docs/rules/gateway-api-routing.md": [
     "charts/envoy-gateway/templates/*.yaml"
   ],
+  "docs/ci-cache.md": [
+    "charts/ci-cache/*",
+    "charts/ci-cache/templates/*"
+  ],
   "docs/arc-runner-images.md": [
     "images/arc-runner/*",
     "images/arc-runner/*/*"
+  ],
+  "docs/01_ai-gateway.md": [
+    "charts/ai-gateway/*",
+    "charts/ai-gateway/templates/*",
+    "examples/ai-gateway/*",
+    "tests/test_ai_gateway_chart.py",
+    ".github/workflows/ai-gateway-lint.yml"
+  ],
+  "docs/03_hindsight.md": [
+    "charts/hindsight/**",
+    "tests/test_hindsight*.py",
+    ".github/workflows/hindsight*.yml"
   ]
 }

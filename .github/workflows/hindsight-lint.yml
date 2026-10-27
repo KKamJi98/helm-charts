@@ -1,0 +1,42 @@
+name: Hindsight chart
+on:
+  pull_request:
+    paths:
+      - "charts/hindsight/**"
+      - "tests/test_hindsight_chart.py"
+      - ".github/workflows/hindsight-lint.yml"
+  push:
+    branches: [main]
+    paths:
+      - "charts/hindsight/**"
+      - "tests/test_hindsight_chart.py"
+      - ".github/workflows/hindsight-lint.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.2.1
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.5"
+          python-version: "3.12"
+      - name: Offline Helm lint
+        run: helm lint charts/hindsight -n hindsight -f charts/hindsight/kkamji_local_values.yaml
+      - name: Offline Helm render
+        run: >-
+          helm template hindsight charts/hindsight -n hindsight --skip-tests
+          --kube-version 1.36.1 -f charts/hindsight/kkamji_local_values.yaml
+          > "$RUNNER_TEMP/hindsight-rendered.yaml"
+      - name: Private chart and bootstrap contracts
+        run: >-
+          uv run --no-project --python 3.12 --with pyyaml python -m unittest discover
+          -s tests -p test_hindsight_chart.py -v

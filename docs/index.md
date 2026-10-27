@@ -1,6 +1,6 @@
 ---
 title: Docs index
-updated: 2026-10-18T07:44:52+09:00
+updated: 2026-10-27T09:44:13+09:00
 type: architecture
 status: current
 ---
@@ -11,8 +11,13 @@ status: current
 
 ## Operations
 
+- [Platform resource baseline](04_resource-baseline.md) - 실제 사용량, Grafana 데이터 보존, HPA와 memory limit 경계, 렌더 및 GitOps rollout 검증.
+
 - [Makefile operations](operations.md) - Makefile 타깃 표와 기본 변수. `Makefile` 이나 `scripts/` 를 고치면 같이 고친다.
 - [Argo CD upgrades](argocd-upgrades.md) - 버전 핀, Helm 4/확장 호환성, 검증 및 롤백 경로.
+- [Official AI gateway](01_ai-gateway.md) - 공식 LiteLLM 이미지, 내부 접근, 새 OAuth와 수동 GitOps 운영.
+- [Memory API adoption status](02_memory-api-status.md) - Mem0 운영 보류 근거와 공식 경로 재개 조건.
+- [Private Hindsight](03_hindsight.md) - 개인 UI/API/MCP 설계, 전용 인증과 단일 writer, 배포 후 인수 및 복구 절차.
 
 ## Rules
 
@@ -27,4 +32,5 @@ status: current
 
 - [ARC rollout](arc-ci.md) - Qualified full SDK/JIT and BQL private scratch/ELF candidate within unchanged shared5Gi and20Gi Pod accounting.
 - [ARC GitHub App](arc-github-app.md) - Approved App installation, shared authority, separately approved secure input, rotation and recovery.
+- [CI cache registry](ci-cache.md) - zot for ci-full jobs: Docker Hub mirror, network boundary, sizing, fail-open timings and rollback.
 - [ARC runner images](arc-runner-images.md) - Recipe, content check, private GHCR publishing and rollback for the runner and rootless Docker images.

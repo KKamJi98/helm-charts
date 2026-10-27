@@ -14,7 +14,10 @@ syncPolicy:
 applications:
   litellm:
     # PoC 용 LLM gateway. 2026-10-18 수동 Helm release 에서 이전했다.
-    enabled: true
+    # Paused 2026-10-18 (user request): chart 는 유지하고 DB PVC 는 삭제했다.
+    # true 로 되돌리면 빈 DB 로 뜬다. Secret litellm-postgresql(existingSecret)은
+    # namespace 에 남아 있어야 하며, 없으면 같은 이름/키로 먼저 만든다.
+    enabled: false
     name: litellm
     project: automation
     destination:
@@ -105,6 +108,19 @@ applications:
       helm:
         valueFiles:
         - kkamji_local_values.yaml
+  arc-terraform-lab-light:
+    enabled: true
+    name: arc-terraform-lab-light
+    project: arc-ci
+    destination:
+      namespace: ci-pr
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/arc-light
+      helm:
+        valueFiles:
+        - terraform_lab_values.yaml
 
   arc-runtime:
     enabled: true
@@ -134,3 +150,31 @@ applications:
         valueFiles:
         - kkamji_local_values.yaml
         skipCrds: true
+
+  ci-cache:
+    enabled: true
+    name: ci-cache
+    project: ci-cache
+    destination:
+      namespace: ci-cache
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/ci-cache
+      helm:
+        valueFiles:
+        - kkamji_local_values.yaml
+
+  hindsight:
+    enabled: true
+    name: hindsight
+    project: automation
+    destination:
+      namespace: hindsight
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/hindsight
+      helm:
+        valueFiles:
+        - kkamji_local_values.yaml

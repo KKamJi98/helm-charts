@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-18T07:44:52+09:00
+updated: 2026-10-20T00:10:00+09:00
 type: runbook
 status: current
 ---
@@ -739,3 +739,188 @@ or controller/auth change. Disk3Gi/never-memory and pool budgets fail closed.
 Keep the actual20Gi+pressure/memory6Gi start guards. Deploy this preparation
 before its workflow; roll back the workflow before shrinking scratch, drain only
 owned work, and preserve other repositories and controller/finalizer cleanup.
+
+## Two full runner slots across both workers
+
+Measured on 2026-10-18: one BQL gate run on ARC took about two hours because
+its six jobs ran one after another (Tier A 34m, Tier B 13m, release 8m, proof
+receipts 8m), while the same jobs on hosted runners ran in parallel in about
+25 minutes. Each full pool had `maxRunners: 1`, the namespace quota admitted
+one 5Gi runner, and runners were pinned to k8s-w2 only because the runner
+images existed only there. The images now come from GHCR
+([ARC runner images](arc-runner-images.md)), so that pin is gone.
+
+- Runner Pods require `kubernetes.io/hostname` In `k8s-w1`, `k8s-w2`. Both
+  workers run `arc-runtime` (same seccomp profile hash, one
+  `kkamji.net/arc-tun` slot each), so the slot request keeps one runner per
+  node. Listeners and the controller stay on k8s-w1.
+- Each pool allows `maxRunners: 2`. `ci-full/full-budget` admits exactly two
+  runners: `requests.kkamji.net/arc-tun` 2, pods 6, CPU 1400m/6, memory
+  10752Mi/11Gi, ephemeral 5Gi/42Gi. These are the live single-runner usage
+  (control 200m/1, 256Mi/512Mi, 192Mi/768Mi; BQL runner 500m/2, 5Gi/5Gi,
+  2Gi/20Gi) times two runners plus the same margins as before.
+- A third runner is rejected by quota, not left Pending on a node. ARC 0.15
+  requeues a quota-rejected runner Pod every 30s and recreates the ephemeral
+  runner before its JIT registration expires, so the job waits instead of
+  failing. The two pools share the two slots without a fairness guarantee.
+- Per-Pod budgets, security contexts, the 5Gi memory and 20Gi disk start
+  guards and the validator are unchanged. Before this change k8s-w1 had
+  8.0GiB MemAvailable and 65GB free disk, above both guards.
+- Rollback: revert the commit. Running jobs keep their Pods; ARC skips busy
+  runners when it replaces an outdated runner set.
+
+## Runner CPU limit 4 after the 8 vCPU workers
+
+Before 2026-10-18 the workers had 3 vCPU (2.4 allocatable) and runner Pods a
+CPU limit of 2. Over three days runner Pods were CFS-throttled in 14-21% of
+periods (Platform runner containers, BQL up to 19%), BQL peaked at 1.95 cores
+and node busy time reached 84-86% while hypervisor steal stayed 0%. The owner
+raised k8s-w1 and k8s-w2 to 8 vCPU (7400m allocatable). The runner Pod CPU
+limit is now 4 for both pools; requests stay 500m, so scheduling and the
+guarantees of other workloads are unchanged. `ci-full/full-budget`
+`limits.cpu` is 10 (two runners at 4 plus control 1 and the same 1 margin).
+BQL keeps `CARGO_BUILD_JOBS=1` until memory headroom for parallel builds is
+measured; its memory peak was 4.98GiB of the 5Gi limit.
+
+## BQL Docker data 30Gi (owner decision)
+
+On 2026-10-18 the owner raised the BQL Docker data budget from 16Gi to 30Gi.
+Measured peaks in the last full gate run were below the old limit (Docker data
+6.71GiB in source qualification, 3.87GiB in Tier B; Tier A was not sampled),
+so this adds headroom; it does not fix a measured failure.
+
+- BQL `docker-data` sizeLimit and the `dind` ephemeral limit are 30Gi. With the
+  SDK 4Gi the Pod aggregate and `ARC_JOB_EPHEMERAL_GIB` are 34. Platform keeps
+  12Gi/16. The validator, `sdk-entry.py` and tests pin 30Gi/34 and reject 16Gi/20.
+- The start guard now needs free disk >= 34Gi + max(5Gi, 15% + 1Gi), 49.4GiB on
+  the 95.7GiB worker root filesystems. Free disk at the change: k8s-w1 57.7GiB,
+  k8s-w2 63.0GiB. A node below the guard fails the job before any repository
+  code runs; it does not wait. Watch node free disk: kubelet image GC starts only
+  at 85% usage, well after this guard trips.
+- `ci-full/full-budget` `limits.ephemeral-storage` is 70Gi (two BQL Pods at 34Gi
+  plus control 768Mi and the same 1280Mi margin). Other quota values are unchanged.
+
+## Sized slots: one Platform and one BQL runner per worker
+
+With two shared slots the pools still waited on each other: on 2026-10-18 a
+Platform runner sat quota-rejected while two BQL jobs held both slots. The owner
+then raised k8s-w1 and k8s-w2 to 16GiB memory (14.77GiB allocatable) and the
+worker disks from 100GB to 160GB (root filesystem 155GiB, grown online with
+`growpart`, `pvresize` and `lvextend -r`; kubelet restarted to report the new
+ephemeral capacity).
+
+- `arc-runtime` advertises two `kkamji.net/arc-tun` slots per worker (the device
+  plugin group `count` is 2; both share `/dev/net/tun`).
+- Each pool requires anti-affinity against its own runners on
+  `kubernetes.io/hostname`, so a worker holds at most one Platform and one BQL
+  runner. Both pools keep `maxRunners: 2`.
+- Pod memory is per pool: Platform 3584Mi (measured peak 2.76GiB), BQL 7Gi
+  (peak 4.98GiB at the old 5Gi limit with `CARGO_BUILD_JOBS=1`; the headroom is
+  for parallel builds after it is measured). One of each plus the 4.19GiB that
+  other workloads requested on the busiest worker is 14.69GiB. A runner that
+  does not fit waits as Pending; it does not fail.
+- The memory start guard reads `ARC_POD_MEMORY_MIB` and needs node
+  MemAvailable >= Pod budget + 1Gi (4.5GiB Platform, 8GiB BQL). The validator
+  pins the variable to each pool's Pod memory. A Pod from the old template has
+  no variable and keeps the old 6GiB guard during the rollout.
+- Disk start guards are unchanged (Platform 16Gi, BQL 34Gi plus max(5Gi, 15% +
+  1Gi)): 40.3GiB and 58.3GiB on the 155GiB root. Both budgets plus the margin
+  (74.3GiB) fit next to the 30-40GiB already used (110GiB and 119GiB free after
+  the growth).
+- `ci-full/full-budget` admits four runners: pods 8, CPU 2400m/18, memory
+  22016Mi/22Gi, ephemeral 9Gi/102Gi, `arc-tun` 4 (two BQL and two Platform Pods
+  plus control and the same margins as before).
+- Rollout: merge when no full runner is busy if possible. ARC skips busy runners
+  when it replaces the runner sets; the device plugin restart keeps allocated
+  devices. Rollback: revert the commit (the disk and memory growth stay).
+
+## Platform Docker data 30Gi
+
+On 2026-10-19 the Platform Rust backend PR evicted its api job twice: first
+the 6Gi `work` volume, then, after cargo moved into a Docker volume, the 12Gi
+`docker-data` volume (a fresh Rust debug build is 12G). The Platform side
+reduced the build to 2.4G with `CARGO_PROFILE_DEV_DEBUG=0`; this change is
+headroom, matching BQL.
+
+- Platform `docker-data` sizeLimit and the `dind` ephemeral limit are 30Gi and
+  the SDK declares `ARC_JOB_EPHEMERAL_GIB` 34, like BQL. The validator now
+  requires the 30Gi/34 budget for both pools; `work` stays 6Gi.
+- Start guard per job: 34Gi + max(5Gi, 15% + 1Gi) = 58.3GiB free on the 155GiB
+  root. One runner of each pool on a worker needs 34 + 34 + 24.3 = 92.3GiB next
+  to the 30-40GiB in use (free 110GiB and 119GiB after the disk growth).
+- `ci-full/full-budget` `limits.ephemeral-storage` is 138Gi (four Pods at 34Gi
+  plus control 768Mi and the 1280Mi margin). Other quota values are unchanged.
+
+## terraform-lab runner
+
+On 2026-10-19 the owner moved terraform-lab (private) to the homelab because
+GitHub-hosted jobs of private repositories no longer start (account spending
+limit). Its plan, apply, GitHub and destroy workflows need no Docker.
+
+- Scale set `terraform-lab-light` in `ci-pr`, rendered from `charts/arc-light`
+  with `terraform_lab_values.yaml` (Argo app `arc-terraform-lab-light`).
+  `maxRunners: 1`, web-tools image (unzip, python3, curl, git, jq), no Docker,
+  no Kubernetes API token, 512Mi/2Gi memory and a 3Gi work volume for provider
+  plugins, either worker.
+- Only its Pods carry `arc.kkamji.net/egress: terraform`. The foundation policy
+  `arc-terraform-egress` adds DNS and HTTPS for `**.amazonaws.com` (Cilium
+  1.19 `**.` matches several labels, which EKS endpoints need),
+  `releases.hashicorp.com`, `registry.terraform.io` and `app.terraform.io` to
+  those Pods only. Every other ci-pr Pod keeps the GitHub-only egress.
+- `arc-system/arc-control-budget` holds the controller, three listeners and one
+  controller rollout surge (pods 5, CPU 350m/1750m, memory 448Mi/896Mi,
+  ephemeral 320Mi/640Mi). The first rollout left it exactly full (4/4), so a
+  controller upgrade could not surge.
+- `ci-pr/arc-job-budget` now admits two Pods: one light job (1Gi/1536Mi, so two
+  light Pods still never fit together) plus the terraform Pod (512Mi/2Gi).
+- AWS access stays per job through GitHub OIDC; the role trust policy is scoped
+  to `repo:KKamJi98/terraform-lab:*` and needs no change for self-hosted
+  runners. The ARC GitHub App installation must include terraform-lab (owner
+  action) before the listener can register.
+- Rollback: set the Argo app `enabled: false` (or revert), then point the
+  workflows back to `ubuntu-latest`.
+
+## Platform Docker data right-sized to 7Gi
+
+On 2026-10-19 the owner asked to size runner disks from measurement: the
+largest observed value per volume plus a small margin. A sampler read the
+kubelet volume stats of every `ci-full` runner Pod every 20 s for 8 hours
+(168 Pods: 100 Platform, 52 BQL; kubelet refreshes volume stats about once a
+minute, so short spikes can be missed).
+
+| Pool | Volume | Peak | Peak job |
+|---|---|---|---|
+| Platform | `docker-data` | 4.39GiB | api (image 4.29, image-pr 3.86) |
+| Platform | `work` / `sdk-home` | 0.75 / 0.71GiB | web, e2e |
+| BQL | `docker-data` | 17.13GiB | tier-a (others at most 6.73) |
+| BQL | `work` / `sdk-home` / `daemon-tmp` | 0.25 / 0.67 / 0.84GiB | |
+
+- Platform `docker-data` sizeLimit and the `dind` ephemeral limit are 7Gi
+  (peak 4.39GiB plus 59%), and the SDK declares `ARC_JOB_EPHEMERAL_GIB` 11
+  (7Gi plus the SDK 4Gi). The validator pins 7Gi/11 for Platform and 30Gi/34
+  for BQL and rejects the previous Platform 30Gi/34.
+- Start guard per Platform job: 11Gi + max(5Gi, 15% + 1Gi) = 35.3GiB free on
+  the 155GiB root. One runner of each pool on a worker needs at most
+  11 + 34 + 24.3 = 69.3GiB.
+- `ci-full/full-budget` `limits.ephemeral-storage` is 92Gi (two Platform Pods
+  at 11Gi, two BQL Pods at 34Gi, control and margin 2Gi). Other quota values
+  are unchanged.
+- BQL stays at 30Gi/34 for now: the build-once workflow keeps a test archive of
+  about 12GB per job, so BQL is measured again after it lands.
+- A Platform build that outgrows 7Gi is evicted and fails visibly; the fix is a
+  new measurement, not a silent retry.
+- Incident (2026-10-19, about 21:00 KST): #47 changed the Platform budget to 11,
+  but `files/sdk-entry.py` still accepted only 16/34, so every Platform runner
+  failed its start guard (`ValueError`) and crash-looped; no Platform full-pool
+  job ran. The guard now accepts 11/34, and
+  `test_start_guard_accepts_every_rendered_pool_budget` feeds every rendered
+  pool's disk and memory budget to the real guard functions.
+
+## LAN registry mirror (2026-10-19)
+
+Per-job dockerd now starts with `--registry-mirror` and `--insecure-registry`
+for `zot.ci-cache.svc.cluster.local:5000`, and `full-jobs` allows egress to
+that Pod on port 5000 only. Docker Hub pulls go through the mirror and fall
+back to Docker Hub when it fails. Design, boundaries and fail-open timings are
+in [CI cache registry](ci-cache.md). Revert the flags and the egress rule
+together: flags without the rule blackhole for minutes per pull.

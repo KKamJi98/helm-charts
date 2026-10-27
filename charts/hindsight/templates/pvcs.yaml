@@ -1,0 +1,22 @@
+{{- $name := required "name is required" .Values.name -}}
+{{- range $claim := list (dict "suffix" "models" "size" .Values.storage.modelSize "wave" "-5" "component" "model-init") (dict "suffix" "data" "size" .Values.storage.databaseSize "wave" "0" "component" "api") (dict "suffix" "chatgpt" "size" .Values.storage.authSize "wave" "0" "component" "api") }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $name }}-{{ $claim.suffix }}
+  annotations:
+    # Keep the models claim with its first consumer for local-path WFFC.
+    argocd.argoproj.io/sync-wave: {{ $claim.wave | quote }}
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    app.kubernetes.io/name: {{ $name | quote }}
+    app.kubernetes.io/instance: {{ $.Release.Name | quote }}
+    app.kubernetes.io/component: {{ $claim.component }}
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: {{ required "storage.storageClass is required" $.Values.storage.storageClass | quote }}
+  resources:
+    requests:
+      storage: {{ required "all storage claim sizes are required" $claim.size | quote }}
+{{- end }}

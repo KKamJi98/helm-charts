@@ -1,0 +1,35 @@
+name: AI gateway chart
+on:
+  pull_request:
+    paths:
+      - "charts/ai-gateway/**"
+      - "examples/ai-gateway/**"
+      - "tests/test_ai_gateway_chart.py"
+      - ".github/workflows/ai-gateway-lint.yml"
+  push:
+    branches: [main]
+    paths:
+      - "charts/ai-gateway/**"
+      - "examples/ai-gateway/**"
+      - "tests/test_ai_gateway_chart.py"
+      - ".github/workflows/ai-gateway-lint.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.2.1
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.5"
+          python-version: "3.12"
+      - name: Offline Helm lint
+        run: helm lint charts/ai-gateway -n ai-system -f charts/ai-gateway/kkamji_local_values.yaml
+      - name: Official image and isolation contracts
+        run: uv run --no-project --python 3.12 --with pytest --with pyyaml pytest -q tests/test_ai_gateway_chart.py

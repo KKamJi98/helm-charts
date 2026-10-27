@@ -41,15 +41,19 @@ metadata:
   name: full-budget
   namespace: ci-full
 spec:
+  # Four runner Pods (two arc-tun slots on each worker: one Platform 3584Mi/11Gi
+  # and one BQL 7Gi/34Gi per node) plus the controller, two listeners and one rollout
+  # surge. A fifth runner waits here: ARC requeues a quota-rejected Pod every
+  # 30s instead of failing the job.
   hard:
-    pods: "5"
-    requests.cpu: 900m
-    limits.cpu: "4"
-    requests.memory: 5632Mi
-    limits.memory: 6Gi
-    requests.ephemeral-storage: 3Gi
-    limits.ephemeral-storage: 22Gi
-    requests.kkamji.net/arc-tun: "1"
+    pods: "8"
+    requests.cpu: 2400m
+    limits.cpu: "18"
+    requests.memory: 22016Mi
+    limits.memory: 22Gi
+    requests.ephemeral-storage: 9Gi
+    limits.ephemeral-storage: 92Gi
+    requests.kkamji.net/arc-tun: "4"
     persistentvolumeclaims: "0"
 ---
 {{- if .Values.githubAuth.enabled }}
@@ -141,6 +145,13 @@ spec:
         k8s:k8s-app: kube-dns
     toPorts:
     - ports: [{port: "53", protocol: UDP}, {port: "53", protocol: TCP}]
+  # The LAN registry (charts/ci-cache) is the only private destination.
+  - toEndpoints:
+    - matchLabels:
+        k8s:io.kubernetes.pod.namespace: ci-cache
+        arc.kkamji.net/role: cache
+    toPorts:
+    - ports: [{port: "5000", protocol: TCP}]
   - toCIDRSet:
     - cidr: 0.0.0.0/0
       except: [0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16, 198.18.0.0/15, 224.0.0.0/4, 240.0.0.0/4]
