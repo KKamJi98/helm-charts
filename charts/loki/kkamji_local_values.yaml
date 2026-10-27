@@ -53,6 +53,22 @@ deploymentMode: SingleBinary
 
 singleBinary:
   replicas: 1
+  resources:
+    requests:
+      cpu: 20m
+      memory: 640Mi
+
+gateway:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+
+sidecar:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 128Mi
 
 # Zero out replica counts of other deployment modes
 backend:

@@ -1,6 +1,6 @@
 ---
 title: Docs index
-updated: 2026-10-27T03:11:52+09:00
+updated: 2026-10-27T09:44:13+09:00
 type: architecture
 status: current
 ---
@@ -10,6 +10,8 @@ status: current
 문서 하나당 한 줄. 여기 없는 `docs/**/*.md` 는 CI 가 막는다.
 
 ## Operations
+
+- [Platform resource baseline](04_resource-baseline.md) - 실제 사용량, Grafana 데이터 보존, HPA와 memory limit 경계, 렌더 및 GitOps rollout 검증.
 
 - [Makefile operations](operations.md) - Makefile 타깃 표와 기본 변수. `Makefile` 이나 `scripts/` 를 고치면 같이 고친다.
 - [Argo CD upgrades](argocd-upgrades.md) - 버전 핀, Helm 4/확장 호환성, 검증 및 롤백 경로.

@@ -3,6 +3,10 @@ controller:
   priorityClassName: kkamji-observability
 
 alloy:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 320Mi
   extraEnv:
     - name: NODE_NAME
       valueFrom:

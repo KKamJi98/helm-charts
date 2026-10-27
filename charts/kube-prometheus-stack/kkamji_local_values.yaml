@@ -23,6 +23,10 @@ kube-prometheus-stack:
                 storage: 1Gi
       # Discord 메시지의 Silence 링크(.ExternalURL)가 외부 도메인을 가리키도록 설정
       externalUrl: https://alertmanager.kkamji.net
+      resources:
+        requests:
+          cpu: 10m
+          memory: 200Mi
     # Runtime Alertmanager configuration and templates are rendered only by
     # templates/alertmanager-discord-ces.yaml. Keep no duplicate config here.
   grafana:
@@ -140,6 +144,10 @@ kube-prometheus-stack:
       retention: 1d
       # 시간 기준 retention 과 별개로 TSDB 블록 크기 상한을 둔다 (PVC 30Gi).
       retentionSize: 10GB
+      resources:
+        requests:
+          cpu: 50m
+          memory: 1Gi
   # CrashLoopBackOff 전용 알람을 복원한다 (이전에 disabled 였으나, pod 단위
   # crashloop 신호가 없으면 KubePodNotReady 등 간접 알람만 남아 추적이 어렵다).
   defaultRules: {}
@@ -167,10 +175,25 @@ kube-prometheus-stack:
   kubeProxy:
     enabled: false
 
+  prometheusOperator:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 96Mi
+
   kube-state-metrics:
     priorityClassName: kkamji-observability
+    resources:
+      requests:
+        cpu: 10m
+        memory: 96Mi
+
   prometheus-node-exporter:
     priorityClassName: kkamji-observability
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
 
 # templates/priorityclass.yaml. 값은 system-*-critical(2e9)과 kubespray 의
 # k8s-cluster-critical(1e9)보다 낮고 기본값 0 보다 높게 둔다.

@@ -18,6 +18,11 @@ global:
         cpu: 200m
         memory: 512Mi
 
+resources:
+  requests:
+    cpu: 500m
+    memory: 256Mi
+
 # Mesh config used to generate istio configmap.
 meshConfig:
   # Tempo 제거 후 trace 수신 백엔드가 없으므로 sidecar tracing 을 끈다.

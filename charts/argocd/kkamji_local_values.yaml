@@ -45,6 +45,10 @@ argocd:
   
   server:
     replicas: 1
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
     certificate:
       enabled: true
       issuer:
@@ -81,18 +85,46 @@ argocd:
   
   redis-ha:
     enabled: false
-  
+
+  redis:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+
+  dex:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+
   controller:
     replicas: 1
-  
+    resources:
+      requests:
+        cpu: 100m
+        memory: 1Gi
+
   repoServer:
     replicas: 1
-  
+    resources:
+      requests:
+        cpu: 30m
+        memory: 256Mi
+
   applicationSet:
     replicas: 1
-  
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+
   notifications:
     enabled: true
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
     secret:
       create: false
       # External-Secrets 에서 불러오도록
