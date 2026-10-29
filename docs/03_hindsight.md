@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-10-29T18:03:03+09:00
+updated: 2026-10-29T20:13:22+09:00
 type: runbook
 status: current
 ---
@@ -19,7 +19,7 @@ status: current
 
 | 구성 | 고정값과 이유 |
 |---|---|
-| API/worker/DB | 공식 AIO `ghcr.io/vectorize-io/hindsight:1.1.0@sha256:50311d02b4d5d2b7c5242bd336edf8735df8374eaad496a92f49c83b37d2aa06`, embedded pg0 |
+| API/worker/DB | AIO 보안 파생 후보 `ghcr.io/kkamji98/hindsight-security:1.1.0-20261029@sha256:99f91e62f5e870d91a2e03bb3fce695541dff694dac6dcdb692319f462060074`, embedded pg0. [빌드 및 서명 절차](../images/hindsight-security/README.md)를 따릅니다. |
 | UI | upstream Hindsight chart `1.1.0`, alias `server`의 Control Plane(CP). [values](../charts/hindsight/values.yaml)의 별도 공식 digest를 사용합니다. |
 | vendor | [hindsight-1.1.0.tgz](../charts/hindsight/charts/hindsight-1.1.0.tgz), SHA256 `5199851d7c998c14517d43d70d15f5c87756388acc8128621fd3504c77c275bd`. Chart.lock의 dependency digest와 archive checksum은 서로 다른 값입니다. |
 | writer | API StatefulSet 1 replica, OrderedReady. upstream API Deployment/독립 worker/PostgreSQL은 비활성입니다. surge, 강제 Pod 삭제나 병렬 OAuth writer를 허용하지 않습니다. |
@@ -49,9 +49,11 @@ Google must register exactly `https://hindsight.kkamji.net/oauth2/callback`. Cal
 
 The API policy consumes only `X-Hindsight-Client-Key`, sets `sanitize: true` to remove that header, and forwards the authenticated Secret data-key name as `X-Hindsight-Client-ID`, replacing a caller-supplied value. It neither injects nor removes native Authorization. Both credentials are required externally; CP -> API internal calls keep their existing native boundary. Per-client Gateway keys support independent rotation, not native tenant or bank isolation.
 
-Route-local BackendTrafficPolicies cap each request body at `1Mi` (413 when exceeded); larger imports must be split. Buffering increases Envoy memory use and does not support streaming uploads or protocol upgrades. Response streaming is not buffered; WSL Claude Code and the Hermes native MCP dispatcher completed live recall after deployment. No connection/listener limit is changed. Rate limiting is NOT enabled: live admission rejects the installed CRD's `requests` schema (`format: int32`, `maximum: 4294967295`) even for small limits. Buffer-only policies pass server dry-run. Repairing this shared CRD is outside the Hindsight-only change; do not claim login brute-force or request-rate protection.
+요청 본문 제한은 `1Mi`이며 초과 요청은 413으로 거절합니다. 응답 streaming은 buffer하지 않습니다. 후속 후보의 local rate limit은 UI 300회/분, API/MCP 120회/분입니다. Envoy 인스턴스별 token bucket이며 사용자별 전역 quota가 아닙니다. 인증 필터에서 먼저 거절한 요청은 limiter에 도달하지 않으므로 로그인 brute-force 방어라고 주장하지 않습니다. 플랫폼 소유 CRD의 공식 `int32 -> int64` 두 줄 backport를 먼저 반영하고 실제 경계값 admission을 확인한 뒤 Hindsight를 배포합니다.
 
-Both HTTPRoutes set `Strict-Transport-Security: max-age=86400`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`. HSTS does not use `includeSubDomains` or `preload`. Live 200 responses carried HSTS, but Envoy-local 302/401 authentication responses did not. This coverage gap remains unresolved; HTTPRoute header modifiers alone do not harden those local responses.
+기존 HTTPRoute response header modifier에 더해 두 route 전용 `EnvoyExtensionPolicy`의 `envoy_on_response`가 HSTS `max-age=86400`, nosniff, Referrer-Policy `no-referrer`만 replace합니다. status, Location, Set-Cookie, body, 요청과 필터 순서는 바꾸지 않습니다. `includeSubDomains`와 `preload`는 사용하지 않습니다. 임시 경로의 OAuth 302/nonce cookie, API 401과 보안 헤더, 타 앱 6개의 응답 불변을 검증했습니다. 첫 Lua slot은 공유 listener를 갱신하므로 본 배포에서 장시간 연결의 재접속도 확인합니다. route 선택 전 TLS/codec 오류까지 보장하는 설정은 아닙니다. 본 경로 적용과 413/429/MCP 재검증은 후속 인수 항목입니다.
+
+`BackendTrafficPolicy.responseOverride`는 사용하지 않습니다. header-only처럼 보여도 새 응답을 만들면서 OAuth Location/Set-Cookie를 없애는 문제가 실제 canary에서 재현됐습니다. 실패 후보와 임시 리소스는 폐기했습니다.
 
 This design is pinned to [Envoy Gateway v1.8.1 filter ordering](https://github.com/envoyproxy/gateway/blob/v1.8.1/internal/xds/translator/httpfilters.go), its [OIDC/JWT/RBAC fixture](https://github.com/envoyproxy/gateway/blob/v1.8.1/internal/xds/translator/testdata/in/xds-ir/securitypolicy-with-oidc-jwt-authz.yaml), and [Envoy v1.38.1 OAuth2 cookie handling](https://github.com/envoyproxy/envoy/blob/v1.38.1/source/extensions/filters/http/oauth2/filter.cc). API/CRD acceptance alone does not prove runtime filter behavior. The boolean `email_verified` claim is not incorrectly treated as a string; Google `sub` is not guessed. Cookie theft and privileged administrators remain trust boundaries. Do not log Cookie, Authorization or client-key values.
 
@@ -63,11 +65,19 @@ This design is pinned to [Envoy Gateway v1.8.1 filter ordering](https://github.c
 - DNS의 내부 검색 suffix는 `**.cluster.local`로 허용합니다. 현재 Cilium CRD에서 `*`는 한 단계만 매칭하므로 `*.cluster.local`은 `hindsight-api.hindsight.svc.cluster.local` 같은 이름을 포함하지 않습니다. 외부 FQDN/포트 허용 목록은 이 내부 DNS 규칙과 분리합니다.
 - 고정 ONNX의 다운로드 metadata가 반환한 `us.aws.cdn.hf.co`를 모델 준비 Job에만 DNS와 TCP 443으로 허용합니다. 단일 단계 `*.hf.co`는 이 다중 단계 CDN 이름을 포함하지 않습니다. API/CP의 외부 허용 목록과 `world` 권한은 늘리지 않습니다.
 - shared `parameter-store`, 해당 Store를 소비할 수 있는 ExternalSecret 작성자, cluster/namespace 관리자와 key 보유자는 신뢰 범위에 남습니다. 새 IAM/Store를 추가하지 않았다는 사실을 독점 접근 증명으로 해석하지 않습니다.
-- 공식 API/AIO와 CP digest의 signature 검증을 마쳤습니다. 현재 Grype 결과는 API/AIO Critical 0, OS High 59(58 wont-fix, 1 not-fixed), CP Critical/High 0입니다. 잔여 High를 제거하거나 완전한 보안으로 주장하지 않습니다. API는 Gateway와 native 인증 및 namespace 한정 Cilium 정책으로 제한합니다. provenance와 취약점 검사는 별개의 gate입니다.
+- 2026-10-29의 동일 Grype 0.121.0/DB v6.1.10 재검사에서 원본 AIO는 Critical 1/High 62, 파생 후보는 Critical 0/High 59입니다. Authlib/dnspython의 대상 advisory 4개를 제거했고 joserfc 의존성만 추가했습니다. OS High 59(58 wont-fix, 1 not-fixed)는 그대로이며 Debian stable 갱신 simulation도 tzdata 외 수정 패키지를 제공하지 않았습니다. CP는 별도 재스캔에서 Critical/High 0입니다. 취약점 ignore는 추가하지 않았습니다.
+- 공개 GHCR 파생 digest와 로컬 검사 이미지가 일치하며 전용 로컬 key 서명을 [signing.pub](../images/hindsight-security/signing.pub)로 검증했습니다. upstream 공식 서명이나 공개 transparency-log 인증이 아닙니다. 서명과 취약점 검사는 별개이며, 기존 OS 위험과 압축된 pg0 library/PVC cache의 검증 한계는 남습니다.
 
-## 2026-10-29 접근 고도화 인수
+## 2026-10-29 후속 보안 후보와 계정 점검
 
-- Google 개인 계정 로그인 후 기존 CP access key로 `/dashboard` 진입과 합성 bank 목록을 확인했습니다. 다른 Google 계정의 실제 로그인은 시험하지 않았습니다. 배포된 JWT audience와 exact-email default-deny 규칙, 익명/위조 헤더/위조 cookie 거절을 확인했으며, MFA 설정을 새로 강제하거나 검증한 것은 아닙니다.
+- authlib 1.9.1, dnspython 2.9.0, 새 의존성 joserfc 1.6.8만 변경했습니다. API source/schema, Python, pg0, ONNX, CP, 모델과 provider는 유지합니다. `uv pip check`, 정상/위조 서명 회귀와 격리 pg0 재시작을 검증했습니다. 공식 원본과 승인된 파생 digest만 공통 guard로 허용합니다. 새 image는 model Job 이름도 바꾸므로 기존 공개 모델 checksum을 재확인하는 Job이 선행합니다. model Job은 DB/auth PVC에 접근하지 않습니다.
+- source 후보와 image 게시를 운영 rollout 완료로 해석하지 않습니다. 실제 적용 뒤 단일 writer 종료/기동, PVC UID와 seed 부재, CP/API/MCP, E5 recall, 같은 provider의 합성 retain과 auth 저장 경계를 확인합니다. 이전 OAuth snapshot으로 rollback하지 않습니다.
+- Google 계정 보안 화면에서 소유자의 2단계 인증 활성화와 패스키 등록을 읽기 전용으로 확인했습니다. 계정 설정은 변경하지 않았습니다. 기존 Google 세션 재사용은 매 Hindsight 접속마다 MFA challenge가 발생한다는 뜻이 아닙니다. CP access key와 Google 로그인을 합쳐 MFA라고 부르지 않습니다.
+- 실제 다른 개인 Google 계정의 로그인 시험은 사용자가 직접 로그인하는 단계입니다. 회사 계정은 사용하지 않았으며, 403 실제 확인 전에는 완료로 표시하지 않습니다.
+
+## 2026-10-29 최초 접근 고도화 인수 (후속 계정 점검 이전)
+
+- 최초 인수에서는 Google 개인 계정과 기존 CP access key로 `/dashboard` 진입을 확인했고, 다른 계정/MFA는 시험하지 않았습니다. 이후 위 후속 계정 점검에서 Google 2단계 인증 활성 상태를 읽기 전용으로 확인했습니다. 계정 설정 변경이나 매 접속 시 MFA challenge를 검증했다는 뜻은 아닙니다.
 - 외부 API는 키 없음, native 키만 있음, Gateway 키만 있음, 각각 잘못된 키의 다섯 조합에서 모두 401을 반환했습니다. 네 클라이언트 키는 올바른 native 키와 함께 각각 200을 반환했습니다.
 - `1Mi` 초과 요청은 413으로 차단됐습니다. HTTP 인증/크기 검사 14개를 통과했습니다. 요청 빈도 제한과 인증 응답 HSTS 누락은 위에 명시한 잔여 항목입니다.
 - 실제 xDS에서 OAuth2 -> JWT -> buffer -> RBAC 순서와 API의 `X-Hindsight-Client-Key` 추출, credential 제거, 검증된 `X-Hindsight-Client-ID` 전달을 확인했습니다. admin config 원문은 저장하거나 출력하지 않았습니다.

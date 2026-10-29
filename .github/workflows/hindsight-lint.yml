@@ -4,12 +4,16 @@ on:
     paths:
       - "charts/hindsight/**"
       - "tests/test_hindsight_chart.py"
+      - "tests/test_hindsight_image.py"
+      - "images/hindsight-security/**"
       - ".github/workflows/hindsight-lint.yml"
   push:
     branches: [main]
     paths:
       - "charts/hindsight/**"
       - "tests/test_hindsight_chart.py"
+      - "tests/test_hindsight_image.py"
+      - "images/hindsight-security/**"
       - ".github/workflows/hindsight-lint.yml"
   workflow_dispatch:
 permissions:
@@ -40,3 +44,7 @@ jobs:
         run: >-
           uv run --no-project --python 3.12 --with pyyaml python -m unittest discover
           -s tests -p test_hindsight_chart.py -v
+      - name: Pinned image recipe contracts only
+        run: >-
+          uv run --no-project --python 3.12 python -m unittest discover
+          -s tests -p test_hindsight_image.py -v

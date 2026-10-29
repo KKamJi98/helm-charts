@@ -1,5 +1,5 @@
 {{- if .Values.exposure.enabled }}
-{{- range $suffix := list "ui" "api" }}
+{{- range $suffix, $requests := dict "ui" 300 "api" 120 }}
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
@@ -15,5 +15,12 @@ spec:
   # Buffers request bodies only. Streaming uploads/upgrades are not supported.
   requestBuffer:
     limit: 1Mi
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        - limit:
+            requests: {{ $requests }}
+            unit: Minute
 {{- end }}
 {{- end }}

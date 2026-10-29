@@ -5,10 +5,7 @@
 {{- fail "model bootstrap accepts only the approved exact public E5 revision" -}}
 {{- end -}}
 {{- $manifest := required "model.filesSha256 must supply the public file checksums" .Values.model.filesSha256 -}}
-{{- $image := required "runtime.image must be a digest-pinned official image" .Values.runtime.image -}}
-{{- if not (regexMatch "^ghcr[.]io/vectorize-io/hindsight(:[^@]+)?@sha256:[a-f0-9]{64}$" $image) -}}
-{{- fail "runtime.image must be the full official ghcr.io/vectorize-io/hindsight image with @sha256" -}}
-{{- end -}}
+{{- $image := include "kkamji-hindsight.approvedImage" . -}}
 {{- /* All input changes select a new Job identity instead of patching an immutable Pod spec. */ -}}
 {{- /* Bump schemaVersion for literal Pod-spec changes (resources, volumes, env). */ -}}
 {{- $jobSpec := dict "schemaVersion" 1 "image" $image "repo" $repo "revision" $revision "manifest" $manifest "nodeSelector" .Values.runtime.nodeSelector "script" (.Files.Get "files/prepare_model.py") -}}
