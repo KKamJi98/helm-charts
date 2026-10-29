@@ -450,7 +450,11 @@ class ChartTests(unittest.TestCase):
             {
                 "provider": {"issuer": "https://accounts.google.com"},
                 "clientID": client_id,
-                "clientSecret": {"name": "hindsight-google-oidc"},
+                "clientSecret": {
+                    "name": "hindsight-google-oidc",
+                    "group": "",
+                    "kind": "Secret",
+                },
                 "scopes": ["openid", "email"],
                 "redirectURL": "https://hindsight.kkamji.net/oauth2/callback",
                 "logoutPath": "/oauth2/logout",
@@ -459,6 +463,7 @@ class ChartTests(unittest.TestCase):
                 "forwardAccessToken": False,
                 "passThroughAuthHeader": False,
                 "disableTokenEncryption": False,
+                "refreshToken": True,
             },
         )
         self.assertEqual(
@@ -471,7 +476,8 @@ class ChartTests(unittest.TestCase):
                         "issuer": "https://accounts.google.com",
                         "audiences": [client_id],
                         "remoteJWKS": {
-                            "uri": "https://www.googleapis.com/oauth2/v3/certs"
+                            "uri": "https://www.googleapis.com/oauth2/v3/certs",
+                            "cacheDuration": "300s",
                         },
                         "extractFrom": {"cookies": ["HindsightGoogleIdToken"]},
                     }

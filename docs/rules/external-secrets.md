@@ -1,6 +1,6 @@
 ---
 title: External Secrets rules
-updated: 2026-10-29T17:28:32+09:00
+updated: 2026-10-29T18:03:03+09:00
 type: rule
 status: current
 ---
@@ -41,7 +41,7 @@ ARC foundation은 단일 `/kkamji/arc/github-app` 경로를 기존 `parameter-st
 
 ## Hindsight private access
 
-The Google OIDC/per-client edge configuration is a source candidate, pending live acceptance. Existing four readers and native credentials below are preserved for rollback; historical Ready results do not validate the new edge readers.
+Google OIDC/per-client edge 설정은 2026-10-29에 배포했습니다. 신규 SSM SecureString v1, ESO reader 2개의 Ready 상태와 target/source 일치, 실제 소유자 인증을 검증했습니다. 기존 reader 4개와 native credential은 유지합니다.
 
 - `auth.edgeSsmKey` is the separate `/kkamji/automation/hindsight/edge-auth` SecureString JSON. It must not replace or overwrite `auth.ssmKey=/kkamji/automation/hindsight/access`.
 - When exposure is enabled, `hindsight-google-oidc` maps only `client-secret <- oidc_client_secret`. `hindsight-gateway-client-keys` maps exactly `wsl_claude`, `wsl_hermes`, `mac_claude`, `mac_hermes` from the identically named properties. Each client needs an independent high-entropy raw key, without a Bearer prefix. No values are committed.
