@@ -59,3 +59,37 @@ spec:
       remoteRef:
         key: {{ .Values.auth.ssmKey }}
         property: api_key
+{{- if .Values.exposure.enabled }}
+{{- range $entry := list
+  (dict "name" (printf "%s-google-oidc" .Values.name) "keys" (dict "client-secret" "oidc_client_secret"))
+  (dict "name" (printf "%s-gateway-client-keys" .Values.name) "keys" (dict "wsl_claude" "wsl_claude" "wsl_hermes" "wsl_hermes" "mac_claude" "mac_claude" "mac_hermes" "mac_hermes"))
+}}
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: {{ $entry.name }}
+  labels:
+    {{- include "kkamji-hindsight.labels" $root | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  refreshInterval: {{ $root.Values.auth.refreshInterval }}
+  secretStoreRef:
+    name: {{ $root.Values.auth.secretStoreName }}
+    kind: ClusterSecretStore
+  target:
+    name: {{ $entry.name }}
+    creationPolicy: Orphan
+    deletionPolicy: Retain
+    template:
+      type: Opaque
+  data:
+  {{- range $key, $property := $entry.keys }}
+    - secretKey: {{ $key | quote }}
+      remoteRef:
+        key: {{ required "exposure requires auth.edgeSsmKey" $root.Values.auth.edgeSsmKey | quote }}
+        property: {{ $property }}
+  {{- end }}
+{{- end }}
+{{- end }}
