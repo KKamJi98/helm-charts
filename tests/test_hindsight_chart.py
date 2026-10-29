@@ -440,27 +440,235 @@ class ChartTests(unittest.TestCase):
             if d["kind"] == "SecurityPolicy"
         }
         self.assertEqual(set(policies), {"hindsight-ui", "hindsight-api"})
-        ui = policies["hindsight-ui"]["basicAuth"]["users"]["name"]
-        self.assertIn(("ExternalSecret", ui), self.index)
+        ui = policies["hindsight-ui"]
+        self.assertNotIn("basicAuth", ui)
+        client_id = (
+            "47443292322-rlsttvfbbvbp3lg5icerudodded0i7ev.apps.googleusercontent.com"
+        )
+        self.assertEqual(
+            ui.get("oidc"),
+            {
+                "provider": {"issuer": "https://accounts.google.com"},
+                "clientID": client_id,
+                "clientSecret": {"name": "hindsight-google-oidc"},
+                "scopes": ["openid", "email"],
+                "redirectURL": "https://hindsight.kkamji.net/oauth2/callback",
+                "logoutPath": "/oauth2/logout",
+                "cookieNames": {"idToken": "HindsightGoogleIdToken"},
+                "cookieConfig": {"sameSite": "Lax"},
+                "forwardAccessToken": False,
+                "passThroughAuthHeader": False,
+                "disableTokenEncryption": False,
+            },
+        )
+        self.assertEqual(
+            ui.get("jwt"),
+            {
+                "optional": False,
+                "providers": [
+                    {
+                        "name": "google-owner",
+                        "issuer": "https://accounts.google.com",
+                        "audiences": [client_id],
+                        "remoteJWKS": {
+                            "uri": "https://www.googleapis.com/oauth2/v3/certs"
+                        },
+                        "extractFrom": {"cookies": ["HindsightGoogleIdToken"]},
+                    }
+                ],
+            },
+        )
+        self.assertEqual(
+            ui.get("authorization"),
+            {
+                "defaultAction": "Deny",
+                "rules": [
+                    {
+                        "name": "exact-owner-email",
+                        "action": "Allow",
+                        "principal": {
+                            "jwt": {
+                                "provider": "google-owner",
+                                "claims": [
+                                    {
+                                        "name": "email",
+                                        "valueType": "String",
+                                        "values": ["rlaxowl5460@gmail.com"],
+                                    }
+                                ],
+                            }
+                        },
+                    }
+                ],
+            },
+        )
         auth = policies["hindsight-api"]["apiKeyAuth"]
-        self.assertIs(
-            auth["sanitize"],
-            False,
-            "native ApiKeyTenantExtension must still see Authorization",
+        self.assertEqual(
+            auth,
+            {
+                "credentialRefs": [
+                    {
+                        "group": "",
+                        "kind": "Secret",
+                        "name": "hindsight-gateway-client-keys",
+                    }
+                ],
+                "extractFrom": [{"headers": ["X-Hindsight-Client-Key"]}],
+                "sanitize": True,
+                "forwardClientIDHeader": "X-Hindsight-Client-ID",
+            },
+            "only the gateway key header is consumed; native Authorization is preserved",
         )
-        self.assertTrue(
-            any("Authorization" in e.get("headers", []) for e in auth["extractFrom"])
+        self.assertEqual(set(policies["hindsight-api"]), {"targetRefs", "apiKeyAuth"})
+
+    def test_edge_secrets_are_separate_from_unchanged_native_and_rollback_secrets(self):
+        expected = {
+            "hindsight-google-oidc": {"client-secret": "oidc_client_secret"},
+            "hindsight-gateway-client-keys": {
+                key: key
+                for key in ("wsl_claude", "wsl_hermes", "mac_claude", "mac_hermes")
+            },
+        }
+        for name, mapping in expected.items():
+            with self.subTest(secret=name):
+                self.assertIn(("ExternalSecret", name), set(self.index))
+                spec = self.index["ExternalSecret", name]["spec"]
+                self.assertNotIn("dataFrom", spec)
+                self.assertEqual(
+                    spec["target"],
+                    {
+                        "name": name,
+                        "creationPolicy": "Orphan",
+                        "deletionPolicy": "Retain",
+                        "template": {"type": "Opaque"},
+                    },
+                )
+                self.assertEqual(
+                    spec["secretStoreRef"],
+                    {
+                        "name": "parameter-store",
+                        "kind": "ClusterSecretStore",
+                    },
+                )
+                self.assertEqual(
+                    {e["secretKey"]: e["remoteRef"]["property"] for e in spec["data"]},
+                    mapping,
+                )
+                self.assertEqual(
+                    {e["remoteRef"]["key"] for e in spec["data"]},
+                    {"/kkamji/automation/hindsight/edge-auth"},
+                )
+        legacy = {
+            "hindsight-api-auth",
+            "hindsight-control-plane-auth",
+            "hindsight-gateway-ui-auth",
+            "hindsight-gateway-api-auth",
+        }
+        secrets = {
+            d["metadata"]["name"]: d["spec"]
+            for d in self.docs
+            if d["kind"] == "ExternalSecret"
+        }
+        self.assertEqual(set(secrets), legacy | set(expected))
+        for name in legacy:
+            self.assertEqual(
+                {e["remoteRef"]["key"] for e in secrets[name]["data"]},
+                {"/kkamji/automation/hindsight/access"},
+            )
+        self.assertEqual(
+            secrets["hindsight-gateway-api-auth"]["target"]["template"]["data"],
+            {"owner": "{{ .api_key }}"},
         )
-        gateway_secret = auth["credentialRefs"][0]["name"]
-        template = self.index["ExternalSecret", gateway_secret]["spec"]["target"][
-            "template"
-        ]
-        self.assertEqual(template["data"]["owner"], "{{ .api_key }}")
+        self.assertEqual(
+            secrets["hindsight-gateway-ui-auth"]["data"],
+            [
+                {
+                    "secretKey": ".htpasswd",
+                    "remoteRef": {
+                        "key": "/kkamji/automation/hindsight/access",
+                        "property": "ui_htpasswd",
+                    },
+                }
+            ],
+        )
+
+    def test_oidc_client_must_be_the_approved_public_id(self):
+        for override in (
+            "exposure.oidc.clientID=",
+            "exposure.oidc.clientID=null",
+            "exposure.oidc=null",
+            "exposure.oidc.clientID=synthetic-wrong-client.apps.googleusercontent.com",
+        ):
+            with self.subTest(override=override):
+                result = render("--set", override)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("approved Google OIDC clientID", result.stderr)
+
+    def test_route_local_limits_and_response_headers_are_bounded(self):
+        policies = {
+            d["metadata"]["name"]: d["spec"]
+            for d in self.docs
+            if d["kind"] == "BackendTrafficPolicy"
+        }
+        self.assertEqual(set(policies), {"hindsight-ui-limits", "hindsight-api-limits"})
+        for suffix in ("ui", "api"):
+            self.assertEqual(
+                policies[f"hindsight-{suffix}-limits"],
+                {
+                    "targetRefs": [
+                        {
+                            "group": "gateway.networking.k8s.io",
+                            "kind": "HTTPRoute",
+                            "name": f"hindsight-{suffix}",
+                        }
+                    ],
+                    "requestBuffer": {"limit": "1Mi"},
+                },
+            )
+        for doc in self.docs:
+            if doc["kind"] != "HTTPRoute":
+                continue
+            for rule in doc["spec"]["rules"]:
+                self.assertEqual(
+                    rule.get("filters"),
+                    [
+                        {
+                            "type": "ResponseHeaderModifier",
+                            "responseHeaderModifier": {
+                                "set": [
+                                    {
+                                        "name": "Strict-Transport-Security",
+                                        "value": "max-age=86400",
+                                    },
+                                    {
+                                        "name": "X-Content-Type-Options",
+                                        "value": "nosniff",
+                                    },
+                                    {"name": "Referrer-Policy", "value": "no-referrer"},
+                                ]
+                            },
+                        }
+                    ],
+                )
+        self.assertFalse(
+            {"Gateway", "EnvoyProxy", "ClientTrafficPolicy"}
+            & {d["kind"] for d in self.docs}
+        )
 
     def test_exposure_off_removes_routes_and_gateway_auth_policies(self):
         docs = objects(render("--set", "exposure.enabled=false"))
         self.assertFalse(
-            {"HTTPRoute", "Ingress", "SecurityPolicy"} & {d["kind"] for d in docs}
+            {"HTTPRoute", "Ingress", "SecurityPolicy", "BackendTrafficPolicy"}
+            & {d["kind"] for d in docs}
+        )
+        self.assertEqual(
+            {d["metadata"]["name"] for d in docs if d["kind"] == "ExternalSecret"},
+            {
+                "hindsight-api-auth",
+                "hindsight-control-plane-auth",
+                "hindsight-gateway-ui-auth",
+                "hindsight-gateway-api-auth",
+            },
         )
 
     def test_unsafe_runtime_and_upstream_defaults_fail_closed(self):

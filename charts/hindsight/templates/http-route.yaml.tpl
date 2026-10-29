@@ -1,4 +1,8 @@
 {{- if .Values.exposure.enabled }}
+{{- $oidc := .Values.exposure.oidc | default dict }}
+{{- if ne ($oidc.clientID | default "") "47443292322-rlsttvfbbvbp3lg5icerudodded0i7ev.apps.googleusercontent.com" }}
+{{- fail "exposure requires the approved Google OIDC clientID" }}
+{{- end }}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -18,6 +22,16 @@ spec:
         - path:
             type: PathPrefix
             value: /
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - name: Strict-Transport-Security
+                value: max-age=86400
+              - name: X-Content-Type-Options
+                value: nosniff
+              - name: Referrer-Policy
+                value: no-referrer
       timeouts:
         request: 600s
         backendRequest: 600s
@@ -50,6 +64,16 @@ spec:
         - path:
             type: PathPrefix
             value: /mcp
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - name: Strict-Transport-Security
+                value: max-age=86400
+              - name: X-Content-Type-Options
+                value: nosniff
+              - name: Referrer-Policy
+                value: no-referrer
       timeouts:
         request: 600s
         backendRequest: 600s
@@ -69,9 +93,44 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: {{ .Values.name }}-ui
-  basicAuth:
-    users:
-      name: {{ .Values.name }}-gateway-ui-auth
+  oidc:
+    provider:
+      issuer: https://accounts.google.com
+    clientID: {{ .Values.exposure.oidc.clientID | quote }}
+    clientSecret:
+      name: {{ .Values.name }}-google-oidc
+    scopes: [openid, email]
+    redirectURL: {{ printf "https://%s/oauth2/callback" .Values.exposure.hostname | quote }}
+    logoutPath: /oauth2/logout
+    cookieNames:
+      idToken: HindsightGoogleIdToken
+    cookieConfig:
+      sameSite: Lax
+    forwardAccessToken: false
+    passThroughAuthHeader: false
+    disableTokenEncryption: false
+  jwt:
+    optional: false
+    providers:
+      - name: google-owner
+        issuer: https://accounts.google.com
+        audiences: [{{ .Values.exposure.oidc.clientID | quote }}]
+        remoteJWKS:
+          uri: https://www.googleapis.com/oauth2/v3/certs
+        extractFrom:
+          cookies: [HindsightGoogleIdToken]
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: exact-owner-email
+        action: Allow
+        principal:
+          jwt:
+            provider: google-owner
+            claims:
+              - name: email
+                valueType: String
+                values: [rlaxowl5460@gmail.com]
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
@@ -84,10 +143,11 @@ spec:
       name: {{ .Values.name }}-api
   apiKeyAuth:
     credentialRefs:
-      - name: {{ .Values.name }}-gateway-api-auth
+      - name: {{ .Values.name }}-gateway-client-keys
         group: ""
         kind: Secret
     extractFrom:
-      - headers: [Authorization]
-    sanitize: false
+      - headers: [X-Hindsight-Client-Key]
+    sanitize: true
+    forwardClientIDHeader: X-Hindsight-Client-ID
 {{- end }}

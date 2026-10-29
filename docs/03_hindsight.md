@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-10-27T07:07:40+09:00
+updated: 2026-10-29T17:28:32+09:00
 type: runbook
 status: current
 ---
@@ -34,14 +34,26 @@ PVC는 Argo prune/delete 방지 선언을 사용하지만 namespace/노드 삭�
 
 ## 접근과 신뢰 경계
 
+The access-hardening changes below are a source candidate, pending live acceptance. The 2026-10-27 results later in this document describe the previous BasicAuth/shared Gateway key deployment, not Google OIDC or per-client keys. Route53, the shared Gateway/listener, workloads, PVCs, model settings, native authentication and Cilium policies are unchanged. No Cloudflare or Tunnel is introduced.
+
 | 경로 | Gateway 인증 | native 인증 |
 |---|---|---|
-| `https://hindsight.kkamji.net/` UI | 전용 BasicAuth, username `kkamji` | 별도 CP access key |
-| 같은 host의 `/v1` API, `/mcp` MCP | 전용 API key, `Authorization: Bearer` | Hindsight ApiKeyTenantExtension의 같은 API key |
+| `https://hindsight.kkamji.net/` UI | Google OIDC, cookie JWT and exact owner email RBAC | Existing CP access key |
+| Same host `/v1` API, `/mcp` MCP | Per-client raw key in `X-Hindsight-Client-Key` | Existing Hindsight API key via the `Authorization` Bearer scheme |
 
 UI access key와 API key는 서로 다릅니다. CP는 서버 측에서 API key를 소비합니다. API route의 Gateway 인증은 native 검사를 대체하지 않으며, CP의 browser backend도 native access key로 보호합니다. 키를 가진 사람과 관리자까지 차단하는 절대적인 "나만 접근" 보장이 아닙니다. namespace나 bank 이름은 ACL이 아닙니다.
 
-Gateway API key Secret에는 원본 key만 저장합니다. Envoy가 요청의 Bearer 접두사를 분리하므로 Secret 값에 접두사를 넣으면 정상 단일 Bearer 요청이 거절됩니다. `sanitize: false`는 원래 Authorization 헤더를 Hindsight의 native 검사에도 전달합니다. 키 재발급 없이 이 표현만 정렬합니다.
+The UI policy uses Google issuer `https://accounts.google.com`, JWKS `https://www.googleapis.com/oauth2/v3/certs`, and public client ID `47443292322-rlsttvfbbvbp3lg5icerudodded0i7ev.apps.googleusercontent.com` for both OIDC and the JWT audience. An empty, missing or different client ID fails Helm rendering when exposure is enabled. JWT reads only `HindsightGoogleIdToken`; default-deny RBAC permits exactly `email=rlaxowl5460@gmail.com`. Client email/token headers are not authorization inputs. The OIDC ID-token cookie stays encrypted, host-only and SameSite=Lax. Native Authorization is preserved; `forwardIDToken` and `clientIDRef` are not used.
+
+Google must register exactly `https://hindsight.kkamji.net/oauth2/callback`. Callback and `/oauth2/logout` use the same UI catch-all policy, not an unauthenticated bypass route. OAuth callback 302 alone does not prove owner access: a different Google account must receive 403 on the original UI resource. Logout clears the Gateway session, not necessarily the native CP or Google session. Controller discovery and Envoy token/JWKS HTTPS reachability, refresh and expiry require live verification without widening API/CP egress.
+
+The API policy consumes only `X-Hindsight-Client-Key`, sets `sanitize: true` to remove that header, and forwards the authenticated Secret data-key name as `X-Hindsight-Client-ID`, replacing a caller-supplied value. It neither injects nor removes native Authorization. Both credentials are required externally; CP -> API internal calls keep their existing native boundary. Per-client Gateway keys support independent rotation, not native tenant or bank isolation.
+
+Route-local BackendTrafficPolicies cap each request body at `1Mi` (413 when exceeded); larger imports must be split. Buffering increases Envoy memory use and does not support streaming uploads or protocol upgrades. Response streaming is not intentionally buffered, but MCP streaming compatibility remains a live acceptance gate. No connection/listener limit is changed. Rate limiting is NOT enabled: live admission rejects the installed CRD's `requests` schema (`format: int32`, `maximum: 4294967295`) even for small limits. Buffer-only policies pass server dry-run. Repairing this shared CRD is outside the Hindsight-only change; do not claim login brute-force or request-rate protection.
+
+Both HTTPRoutes set `Strict-Transport-Security: max-age=86400`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`. HSTS does not use `includeSubDomains` or `preload`. Verify the headers on both upstream and local authentication/error responses in live acceptance; render evidence alone does not prove response coverage.
+
+This design is pinned to [Envoy Gateway v1.8.1 filter ordering](https://github.com/envoyproxy/gateway/blob/v1.8.1/internal/xds/translator/httpfilters.go), its [OIDC/JWT/RBAC fixture](https://github.com/envoyproxy/gateway/blob/v1.8.1/internal/xds/translator/testdata/in/xds-ir/securitypolicy-with-oidc-jwt-authz.yaml), and [Envoy v1.38.1 OAuth2 cookie handling](https://github.com/envoyproxy/envoy/blob/v1.38.1/source/extensions/filters/http/oauth2/filter.cc). API/CRD acceptance alone does not prove runtime filter behavior. The boolean `email_verified` claim is not incorrectly treated as a string; Google `sub` is not guessed. Cookie theft and privileged administrators remain trust boundaries. Do not log Cookie, Authorization or client-key values.
 
 공식 1.1.0의 bank transfer API는 기본 비활성입니다. 합성 자료 복원과 소유자 백업을 위해 `HINDSIGHT_API_ENABLE_DOCUMENT_IMPORT_API`와 `HINDSIGHT_API_ENABLE_DOCUMENT_EXPORT_API`를 명시적으로 켭니다. 기존 Gateway/native API key 검사는 유지하며 무인증 archive 업로드를 허용하지 않습니다.
 
@@ -55,9 +67,15 @@ Gateway API key Secret에는 원본 key만 저장합니다. Envoy가 요청의 B
 
 ## Secret과 OAuth 소유권
 
-SSM `/kkamji/automation/hindsight/access`는 이미 존재하는 **SecureString version 2**입니다. JSON property는 `api_key`, `ui_access_key`, `ui_htpasswd`입니다. 재생성하거나 임의 초기화하지 않습니다. agent의 describe/write 권한과 Get 거부 상태에서 metadata를 확인했으며, IAM은 바꾸지 않았습니다. 실제 reader인 ESO 4개는 SecretSynced/Ready와 target Secret 생성을 확인했습니다. 외부 HTTPS UI/API/MCP와 native API/MCP의 무인증/오키 거절 및 소유자 성공을 확인했습니다. CP의 cookie 없는 backend 조회도 거절됩니다.
+Candidate edge credentials use a separate SecureString JSON at `auth.edgeSsmKey=/kkamji/automation/hindsight/edge-auth`. `hindsight-google-oidc` maps `client-secret` from `oidc_client_secret`; `hindsight-gateway-client-keys` maps exactly `wsl_claude`, `wsl_hermes`, `mac_claude`, `mac_hermes` to identically named properties. Each client key must be independent and high entropy. The new ExternalSecrets render only with exposure enabled, use the existing `parameter-store`, explicit property mappings, Opaque targets and Orphan/Retain. Provisioning, ESO Ready and Google client-secret validity are pending live gates; no credential value belongs in the chart.
 
-[ESO 규칙](rules/external-secrets.md)에 따라 기존 `parameter-store`를 사용하고 필요한 property만 명시적으로 매핑합니다. target은 Orphan/Retain입니다. API/CP runtime Secret과 Gateway용 Secret을 구분하며, Gateway API key source는 충분한 entropy가 있는 전용 key입니다. 기존 Envoy는 `{SHA}` htpasswd 형식을 요구하므로 UI 비밀번호는 고엔트로피로 유지합니다. 사람이 외우기 쉬운 비밀번호나 다른 서비스의 htpasswd를 재사용하지 않습니다.
+The original `auth.ssmKey` and all four existing ExternalSecrets stay unchanged for native consumers and rollback. The old Gateway UI/API Secrets are not referenced by the candidate SecurityPolicies. Rollback is a reviewed Git reversal, not an automatic BasicAuth fallback on OIDC failure, and must not reset native keys or the refreshed ChatGPT PVC.
+
+To revoke one client, rotate only its edge JSON property to a new independent value and verify ESO reconciliation plus rejection of the old key. Removing a required SSM property or deleting an Orphan/Retain ExternalSecret can leave the previous Kubernetes Secret active; neither action proves revocation. Verify the other three client keys and native authentication remain valid. Do not dump Secret data during checks. Google UI OIDC is separate from the existing ChatGPT model OAuth authority below.
+
+SSM `/kkamji/automation/hindsight/access`는 이미 존재하는 **SecureString version 2**입니다. JSON property는 `api_key`, `ui_access_key`, `ui_htpasswd`입니다. 재생성하거나 임의 초기화하지 않습니다. agent의 describe/write 권한과 Get 거부 상태에서 metadata를 확인했으며, IAM은 바꾸지 않았습니다. The four original ESO readers were verified SecretSynced/Ready with target Secrets in the previous deployment; this is not evidence for the two new edge readers. 외부 HTTPS UI/API/MCP와 native API/MCP의 무인증/오키 거절 및 소유자 성공을 확인했습니다. CP의 cookie 없는 backend 조회도 거절됩니다.
+
+[ESO 규칙](rules/external-secrets.md)에 따라 기존 `parameter-store`를 사용하고 필요한 property만 명시적으로 매핑합니다. target은 Orphan/Retain입니다. API/CP runtime Secret과 Gateway용 Secret을 구분합니다. Legacy rollback keeps the high-entropy `{SHA}` htpasswd and raw shared API key; the candidate uses the separate edge credentials above. 사람이 외우기 쉬운 비밀번호나 다른 서비스의 htpasswd를 재사용하지 않습니다.
 
 소유자 전달 파일은 `/home/kkamji/.local/share/hindsight-k8s-private/owner-access.json`의 mode 0600 파일입니다. 승인된 이전과 인증 검증에서는 부모 프로세스만 필요한 Hindsight 전용 값을 메모리에서 소비합니다. worker에게 전달하거나 콘솔/문서/CI/일반 로그/셸 인자에 출력하지 않습니다. 다른 앱의 credential은 읽지 않습니다. metadata 존재 확인은 property 내용이나 HTTP 인증 성공 검증이 아닙니다.
 
@@ -92,8 +110,8 @@ python3 docs/_meta/docs_lint.py --root . --base origin/main
 1. `kubectl config current-context`가 `kkamji-lab`인지 확인하고 모든 조회/변경에 context와 namespace를 명시합니다. root/child Application의 실제 namespace/revision, node/storage 여유, CRD/admission, ESO와 Gateway 의존성을 확인한 뒤 대상만 diff/dry-run합니다.
 2. 최종 chart/test/문서/Secret scan 결과와 변경 영향을 검토하고 이미 승인된 main 반영 범위에서 진행합니다. 자동 sync로 생성되는 route가 인증 실패 시 fail-closed인지 확인합니다. SSM version 2는 유지합니다.
 3. ESO Ready와 정확한 property/target 참조, model 준비 완료, API StatefulSet 단일 writer, CP readiness와 실제 image ID를 확인합니다. OAuth 이전은 위 순서대로 진행합니다. Secret 값 dump나 Pod exec는 하지 않습니다.
-4. DNS/TLS와 HTTPRoute Accepted/ResolvedRefs, SecurityPolicy 상태를 확인합니다. UI는 BasicAuth 없음/오류와 CP key 없음/오류를 각각 거절해야 합니다. 올바른 UI 인증으로만 화면이 동작하는지 확인합니다.
-5. API/MCP는 key 없음/오류를 외부 경로와 native 경로에서 각각 거절해야 합니다. loopback port-forward를 사용하되 credential을 콘솔에 출력하지 않습니다. CP backend의 native access key 우회 여부와 승인되지 않은 Pod의 API/CP 접근 차단도 확인합니다.
+4. Verify DNS/TLS, HTTPRoute Accepted/ResolvedRefs, SecurityPolicy and BackendTrafficPolicy status and final route xDS. Confirm the live Envoy version and OAuth2 -> JWT -> RBAC ordering. Requests without a UI session, including spoofed email/token headers, must not bypass OIDC; wrong/tampered/expired/audience-mismatched cookies must not reach CP. Verify owner login, wrong-account resource 403, callback state rejection, logout/refresh/expiry and native CP key denial independently. Do not treat callback 302 as owner acceptance.
+5. Verify API/MCP denial with neither key, native key only, Gateway key only and either wrong key. With both valid, verify Gateway key removal, native Authorization preservation and spoofed client-ID replacement without logging values. Exercise all four client identities, bounded 413 behavior, MCP response streaming and HSTS. Test individual revocation when a key is actually rotated; no 429 acceptance is claimed while rate limiting is deferred. Use loopback port-forward for native checks; retain CP native checks and unauthorized-Pod network denial.
 6. 전용 synthetic bank에서 retain 작업 완료, 의미 있는 recall과 MCP 요청을 검증합니다. 실제 OpenAI 추출 실패/계정 제한을 숨기거나 다른 model/provider로 우회하지 않습니다. readiness와 retain 접수 200만으로 합격시키지 않습니다.
 7. 승인된 Pod 교체 뒤 DB/recall/auth 지속성을 검사하고 seed를 삭제합니다. seed 없는 추가 재시작 성공, refresh 후 현재 PVC 재사용과 단일 writer를 확인합니다. 실 대화 ingestion은 이 인수와 별도 승인입니다.
 

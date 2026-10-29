@@ -25,6 +25,7 @@ auth:
   controlPlaneSecretName: hindsight-control-plane-auth
   seedSecretName: hindsight-chatgpt-seed
   ssmKey: /kkamji/automation/hindsight/access
+  edgeSsmKey: /kkamji/automation/hindsight/edge-auth
   secretStoreName: parameter-store
   refreshInterval: 1h
 
@@ -42,6 +43,9 @@ model:
 exposure:
   enabled: false
   hostname: hindsight.kkamji.net
+  oidc:
+    # Public Google client ID, shared by OIDC and the JWT audience restriction.
+    clientID: 47443292322-rlsttvfbbvbp3lg5icerudodded0i7ev.apps.googleusercontent.com
   gateway:
     name: kkamji
     namespace: envoy-gateway-system
