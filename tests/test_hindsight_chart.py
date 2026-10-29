@@ -24,8 +24,8 @@ HELM = os.environ.get("HELM", "helm")
 REPO = "intfloat/multilingual-e5-small"
 REVISION = "614241f622f53c4eeff9890bdc4f31cfecc418b3"
 API_IMAGE = (
-    "ghcr.io/vectorize-io/hindsight:1.1.0@sha256:"
-    "50311d02b4d5d2b7c5242bd336edf8735df8374eaad496a92f49c83b37d2aa06"
+    "ghcr.io/kkamji98/hindsight-security:1.1.0-20261029@sha256:"
+    "99f91e62f5e870d91a2e03bb3fce695541dff694dac6dcdb692319f462060074"
 )
 CP_IMAGE = (
     "ghcr.io/vectorize-io/hindsight-control-plane:1.1.0@sha256:"
@@ -150,7 +150,7 @@ class ChartTests(unittest.TestCase):
             & {d["kind"] for d in self.docs}
         )
 
-    def test_official_digest_pins_and_nonroot_no_serviceaccount_authority(self):
+    def test_approved_digest_pins_and_nonroot_no_serviceaccount_authority(self):
         accounts = {
             d["metadata"]["name"]: d for d in self.docs if d["kind"] == "ServiceAccount"
         }
@@ -617,7 +617,7 @@ class ChartTests(unittest.TestCase):
             if d["kind"] == "BackendTrafficPolicy"
         }
         self.assertEqual(set(policies), {"hindsight-ui-limits", "hindsight-api-limits"})
-        for suffix in ("ui", "api"):
+        for suffix, requests in (("ui", 300), ("api", 120)):
             self.assertEqual(
                 policies[f"hindsight-{suffix}-limits"],
                 {
@@ -629,6 +629,14 @@ class ChartTests(unittest.TestCase):
                         }
                     ],
                     "requestBuffer": {"limit": "1Mi"},
+                    "rateLimit": {
+                        "type": "Local",
+                        "local": {
+                            "rules": [
+                                {"limit": {"requests": requests, "unit": "Minute"}}
+                            ]
+                        },
+                    },
                 },
             )
         for doc in self.docs:
@@ -661,10 +669,51 @@ class ChartTests(unittest.TestCase):
             & {d["kind"] for d in self.docs}
         )
 
+    def test_response_only_lua_preserves_authentication_and_streaming(self):
+        policy = self.index[
+            "EnvoyExtensionPolicy", "hindsight-response-security-headers"
+        ]["spec"]
+        self.assertEqual(
+            policy["targetRefs"],
+            [
+                {
+                    "group": "gateway.networking.k8s.io",
+                    "kind": "HTTPRoute",
+                    "name": f"hindsight-{suffix}",
+                }
+                for suffix in ("ui", "api")
+            ],
+        )
+        self.assertEqual(
+            policy["lua"],
+            [
+                {
+                    "type": "Inline",
+                    "inline": (
+                        "function envoy_on_response(response_handle)\n"
+                        "  local headers = response_handle:headers()\n"
+                        '  headers:replace("strict-transport-security", "max-age=86400")\n'
+                        '  headers:replace("x-content-type-options", "nosniff")\n'
+                        '  headers:replace("referrer-policy", "no-referrer")\n'
+                        "end\n"
+                    ),
+                }
+            ],
+        )
+        for doc in self.docs:
+            if doc["kind"] == "BackendTrafficPolicy":
+                self.assertNotIn("responseOverride", doc["spec"])
+
     def test_exposure_off_removes_routes_and_gateway_auth_policies(self):
         docs = objects(render("--set", "exposure.enabled=false"))
         self.assertFalse(
-            {"HTTPRoute", "Ingress", "SecurityPolicy", "BackendTrafficPolicy"}
+            {
+                "HTTPRoute",
+                "Ingress",
+                "SecurityPolicy",
+                "BackendTrafficPolicy",
+                "EnvoyExtensionPolicy",
+            }
             & {d["kind"] for d in docs}
         )
         self.assertEqual(
@@ -680,6 +729,9 @@ class ChartTests(unittest.TestCase):
     def test_unsafe_runtime_and_upstream_defaults_fail_closed(self):
         overrides = (
             "runtime.image=ghcr.io/vectorize-io/hindsight:latest",
+            "runtime.image=ghcr.io/vectorize-io/hindsight:1.1.0@sha256:" + "d" * 64,
+            "runtime.image=ghcr.io/kkamji98/hindsight-security:1.1.0-20261029@sha256:"
+            + "d" * 64,
             "runtime.image=example.invalid/untrusted@sha256:" + "d" * 64,
             "model.repo=synthetic-other/model",
             "model.revision=main",
@@ -1200,6 +1252,8 @@ class WorkflowTests(unittest.TestCase):
         expected = {
             "charts/hindsight/**",
             "tests/test_hindsight_chart.py",
+            "tests/test_hindsight_image.py",
+            "images/hindsight-security/**",
             ".github/workflows/hindsight-lint.yml",
         }
         for trigger in ("pull_request", "push"):
@@ -1214,6 +1268,7 @@ class WorkflowTests(unittest.TestCase):
             commands,
         )
         self.assertIn("-p test_hindsight_chart.py", commands)
+        self.assertIn("-p test_hindsight_image.py", commands)
         self.assertNotIn("helm dependency", commands)
         self.assertNotIn("kubectl", commands)
         self.assertFalse(any("secrets." in str(step) for step in steps))

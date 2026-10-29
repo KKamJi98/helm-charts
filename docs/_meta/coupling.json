@@ -39,6 +39,7 @@
   ],
   "docs/03_hindsight.md": [
     "charts/hindsight/**",
+    "images/hindsight-security/**",
     "tests/test_hindsight*.py",
     ".github/workflows/hindsight*.yml"
   ]

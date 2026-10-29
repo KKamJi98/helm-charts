@@ -1,0 +1,4 @@
+# PyPI wheel SHA256, no source builds or implicit dependency resolution.
+authlib==1.9.1 --hash=sha256:8b9be8b1e5174dcbf5520e984f1a22dc2edae5b6e40a61d4cedbf86b97e9e69b
+dnspython==2.9.0 --hash=sha256:9a4aedb833c3c1b49214d04d44d3032ab7a9135f7c1d29a549b4ff78fd82fda9
+joserfc==1.6.8 --hash=sha256:22fb31a69094a5e6f44632002a9df2c30c941fc6c8ce1b037e92c03de954cf9f
