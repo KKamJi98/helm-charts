@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-10-29T20:13:22+09:00
+updated: 2026-10-29T21:00:16+09:00
 type: runbook
 status: current
 ---
@@ -19,7 +19,7 @@ status: current
 
 | 구성 | 고정값과 이유 |
 |---|---|
-| API/worker/DB | AIO 보안 파생 후보 `ghcr.io/kkamji98/hindsight-security:1.1.0-20261029@sha256:99f91e62f5e870d91a2e03bb3fce695541dff694dac6dcdb692319f462060074`, embedded pg0. [빌드 및 서명 절차](../images/hindsight-security/README.md)를 따릅니다. |
+| API/worker/DB | 배포한 AIO 보안 파생 이미지 `ghcr.io/kkamji98/hindsight-security:1.1.0-20261029@sha256:99f91e62f5e870d91a2e03bb3fce695541dff694dac6dcdb692319f462060074`, embedded pg0. [빌드 및 서명 절차](../images/hindsight-security/README.md)를 따릅니다. |
 | UI | upstream Hindsight chart `1.1.0`, alias `server`의 Control Plane(CP). [values](../charts/hindsight/values.yaml)의 별도 공식 digest를 사용합니다. |
 | vendor | [hindsight-1.1.0.tgz](../charts/hindsight/charts/hindsight-1.1.0.tgz), SHA256 `5199851d7c998c14517d43d70d15f5c87756388acc8128621fd3504c77c275bd`. Chart.lock의 dependency digest와 archive checksum은 서로 다른 값입니다. |
 | writer | API StatefulSet 1 replica, OrderedReady. upstream API Deployment/독립 worker/PostgreSQL은 비활성입니다. surge, 강제 Pod 삭제나 병렬 OAuth writer를 허용하지 않습니다. |
@@ -49,9 +49,9 @@ Google must register exactly `https://hindsight.kkamji.net/oauth2/callback`. Cal
 
 The API policy consumes only `X-Hindsight-Client-Key`, sets `sanitize: true` to remove that header, and forwards the authenticated Secret data-key name as `X-Hindsight-Client-ID`, replacing a caller-supplied value. It neither injects nor removes native Authorization. Both credentials are required externally; CP -> API internal calls keep their existing native boundary. Per-client Gateway keys support independent rotation, not native tenant or bank isolation.
 
-요청 본문 제한은 `1Mi`이며 초과 요청은 413으로 거절합니다. 응답 streaming은 buffer하지 않습니다. 후속 후보의 local rate limit은 UI 300회/분, API/MCP 120회/분입니다. Envoy 인스턴스별 token bucket이며 사용자별 전역 quota가 아닙니다. 인증 필터에서 먼저 거절한 요청은 limiter에 도달하지 않으므로 로그인 brute-force 방어라고 주장하지 않습니다. 플랫폼 소유 CRD의 공식 `int32 -> int64` 두 줄 backport를 먼저 반영하고 실제 경계값 admission을 확인한 뒤 Hindsight를 배포합니다.
+요청 본문 제한은 `1Mi`이며 초과 요청은 413으로 거절합니다. 응답 streaming은 buffer하지 않습니다. 배포한 local rate limit은 UI 300회/분, API/MCP 120회/분의 token bucket입니다. Envoy 인스턴스별 token bucket이며 사용자별 전역 quota가 아닙니다. 인증 필터에서 먼저 거절한 요청은 limiter에 도달하지 않으므로 로그인 brute-force 방어라고 주장하지 않습니다. 플랫폼 소유 CRD의 공식 `int32 -> int64` 두 줄 backport를 먼저 반영하고 18개 경계값 admission을 통과한 뒤 Hindsight를 배포했습니다.
 
-기존 HTTPRoute response header modifier에 더해 두 route 전용 `EnvoyExtensionPolicy`의 `envoy_on_response`가 HSTS `max-age=86400`, nosniff, Referrer-Policy `no-referrer`만 replace합니다. status, Location, Set-Cookie, body, 요청과 필터 순서는 바꾸지 않습니다. `includeSubDomains`와 `preload`는 사용하지 않습니다. 임시 경로의 OAuth 302/nonce cookie, API 401과 보안 헤더, 타 앱 6개의 응답 불변을 검증했습니다. 첫 Lua slot은 공유 listener를 갱신하므로 본 배포에서 장시간 연결의 재접속도 확인합니다. route 선택 전 TLS/codec 오류까지 보장하는 설정은 아닙니다. 본 경로 적용과 413/429/MCP 재검증은 후속 인수 항목입니다.
+기존 HTTPRoute response header modifier에 더해 두 route 전용 `EnvoyExtensionPolicy`의 `envoy_on_response`가 HSTS `max-age=86400`, nosniff, Referrer-Policy `no-referrer`만 replace합니다. status, Location, Set-Cookie, body, 요청과 필터 순서는 바꾸지 않습니다. `includeSubDomains`와 `preload`는 사용하지 않습니다. 임시 경로의 OAuth 302/nonce cookie, API 401과 보안 헤더, 타 앱 6개의 응답 불변을 검증했습니다. 첫 Lua slot은 공유 listener를 갱신하므로 본 배포에서 장시간 연결의 재접속도 확인합니다. route 선택 전 TLS/codec 오류까지 보장하는 설정은 아닙니다. 본 경로의 302/401/413/429 보안 헤더와 실제 MCP를 후속 인수에서 확인했습니다.
 
 `BackendTrafficPolicy.responseOverride`는 사용하지 않습니다. header-only처럼 보여도 새 응답을 만들면서 OAuth Location/Set-Cookie를 없애는 문제가 실제 canary에서 재현됐습니다. 실패 후보와 임시 리소스는 폐기했습니다.
 
@@ -68,10 +68,15 @@ This design is pinned to [Envoy Gateway v1.8.1 filter ordering](https://github.c
 - 2026-10-29의 동일 Grype 0.121.0/DB v6.1.10 재검사에서 원본 AIO는 Critical 1/High 62, 파생 후보는 Critical 0/High 59입니다. Authlib/dnspython의 대상 advisory 4개를 제거했고 joserfc 의존성만 추가했습니다. OS High 59(58 wont-fix, 1 not-fixed)는 그대로이며 Debian stable 갱신 simulation도 tzdata 외 수정 패키지를 제공하지 않았습니다. CP는 별도 재스캔에서 Critical/High 0입니다. 취약점 ignore는 추가하지 않았습니다.
 - 공개 GHCR 파생 digest와 로컬 검사 이미지가 일치하며 전용 로컬 key 서명을 [signing.pub](../images/hindsight-security/signing.pub)로 검증했습니다. upstream 공식 서명이나 공개 transparency-log 인증이 아닙니다. 서명과 취약점 검사는 별개이며, 기존 OS 위험과 압축된 pg0 library/PVC cache의 검증 한계는 남습니다.
 
-## 2026-10-29 후속 보안 후보와 계정 점검
+## 2026-10-29 후속 보안 인수와 잔여 항목
 
 - authlib 1.9.1, dnspython 2.9.0, 새 의존성 joserfc 1.6.8만 변경했습니다. API source/schema, Python, pg0, ONNX, CP, 모델과 provider는 유지합니다. `uv pip check`, 정상/위조 서명 회귀와 격리 pg0 재시작을 검증했습니다. 공식 원본과 승인된 파생 digest만 공통 guard로 허용합니다. 새 image는 model Job 이름도 바꾸므로 기존 공개 모델 checksum을 재확인하는 Job이 선행합니다. model Job은 DB/auth PVC에 접근하지 않습니다.
-- source 후보와 image 게시를 운영 rollout 완료로 해석하지 않습니다. 실제 적용 뒤 단일 writer 종료/기동, PVC UID와 seed 부재, CP/API/MCP, E5 recall, 같은 provider의 합성 retain과 auth 저장 경계를 확인합니다. 이전 OAuth snapshot으로 rollback하지 않습니다.
+- [PR63](https://github.com/KKamJi98/helm-charts/pull/63)의 CRD 수정은 main `aa185b8ea8cd05415c0f0310aed2c56a989699de`에서 반영했습니다. CRD UID/storedVersions, Envoy Pod UID와 기존 policy spec을 유지했고 local/global 각각 허용 4개와 거절 5개, 총 18개 admission 검사가 통과했습니다.
+- [PR64](https://github.com/KKamJi98/helm-charts/pull/64)의 기능 배포 revision은 `8404bc32a6427437d59607a73bd6f875bb95683c`입니다. 독립 리뷰와 수정분 재검토, exact-head CI, chart 43개 테스트 및 격리 이미지 검증을 통과했습니다. Argo Synced/Healthy와 새 API Pod의 실제 imageID를 확인했습니다. 새 model Job `hindsight-model-0b796a721cfa`는 Complete이며 PVC UID 3개, seed 부재와 단일 writer를 유지합니다.
+- 기존 bank 3개를 비공개 logical ZIP으로 export하고 CRC/해시/0600을 확인했습니다. PostgreSQL physical backup이나 복원 시험을 새로 수행한 것은 아닙니다. 새 Pod가 기존 auth PVC를 사용해 실제 구독의 합성 `security_fix_20261029` retain을 완료했고, E5 recall로 문서와 Discord 사실을 조회했습니다. OAuth 파일 복사, stale seed 복원이나 실제 대화 ingestion은 하지 않았습니다.
+- 인증/크기 HTTP 검사 14개 모두에서 정상 상태와 보안 헤더가 확인됐습니다. API 429를 실제 재현했고 429에도 HSTS가 있었습니다. UI/익명 API의 기존 인증은 각각 302/401을 유지했고 재충전 뒤 API 200으로 회복했습니다. token은 시험 중에도 채워지므로 capacity+1 요청만으로 포화를 가정하지 않습니다. 이 검증은 LLM 호출 없는 bank 목록 GET만 사용했습니다.
+- WSL Claude Code의 실제 MCP 도구 호출과 Hermes native dispatcher가 기존 합성 `f01`을 다시 조회했습니다. 다른 공유 Gateway 앱 6개의 상태/헤더는 동일했고 임시 route/policy와 관리용 port-forward를 제거했습니다. Mac은 기존 실행 지침만 제공한 상태입니다.
+- OS High 59건은 미해소입니다. 안정판 저장소는 관련 수정 패키지를 제공하지 않았으며, 자체 glibc/libstdc++ 등 핵심 OS 교체나 배포판 이전을 무검증으로 수행하지 않았습니다. 이 상태를 완전한 취약점 해소로 보고하지 않습니다. 복구는 검토한 image/config Git 역변경이며 최신 OAuth PVC와 DB는 보존합니다.
 - Google 계정 보안 화면에서 소유자의 2단계 인증 활성화와 패스키 등록을 읽기 전용으로 확인했습니다. 계정 설정은 변경하지 않았습니다. 기존 Google 세션 재사용은 매 Hindsight 접속마다 MFA challenge가 발생한다는 뜻이 아닙니다. CP access key와 Google 로그인을 합쳐 MFA라고 부르지 않습니다.
 - 실제 다른 개인 Google 계정의 로그인 시험은 사용자가 직접 로그인하는 단계입니다. 회사 계정은 사용하지 않았으며, 403 실제 확인 전에는 완료로 표시하지 않습니다.
 

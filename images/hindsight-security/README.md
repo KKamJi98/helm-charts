@@ -1,8 +1,8 @@
 ---
 title: Hindsight 1.1.0 Python security image
-updated: 2026-10-29T20:13:22+09:00
+updated: 2026-10-29T21:00:16+09:00
 type: runbook
-status: candidate
+status: current
 ---
 
 # Hindsight 1.1.0 최소 보안 파생 이미지
@@ -116,4 +116,4 @@ cosign verify --key images/hindsight-security/signing.pub \
 
 이 옵션은 애초 업로드하지 않은 transparency log 검사만 제외합니다. TLS, 서명과 image digest 검사는 유지합니다. 공개 key를 임의 교체하거나 서명 확인 실패를 우회하지 않습니다. 본문 signature와 registry digest를 재조회해 성공을 확인했지만 서명이 OS High를 없애지는 않습니다.
 
-운영 rollout은 별도 인수 단계입니다. 실제 auth/model/PVC 검증 전 배포 완료로 표시하지 않습니다. 현재 credential을 복사해서 병렬 OAuth canary를 시작하지 않습니다. 새 image를 쓰는 model Job은 공개 checksum 재검증만 하며, API StatefulSet은 이전 writer 종료 뒤 하나만 시작합니다. [운영 정본](../../docs/03_hindsight.md)을 따릅니다.
+운영 rollout은 PR64/main `8404bc32a6427437d59607a73bd6f875bb95683c`에서 완료했습니다. 새 API Pod의 digest, model Job Complete, 기존 PVC UID 3개와 seed 부재를 확인했습니다. 실제 구독의 합성 retain/E5 recall과 두 WSL native MCP 조회가 성공했습니다. credential 복사나 병렬 OAuth writer는 만들지 않았습니다. OS High 59건과 다른 개인 Google 계정 시험은 별도 잔여 항목이며 [운영 정본](../../docs/03_hindsight.md)을 따릅니다.
