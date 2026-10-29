@@ -1,0 +1,48 @@
+name: Envoy Gateway CRD backport
+on:
+  pull_request:
+    paths:
+      - "charts/envoy-gateway/**"
+      - "scripts/patch_envoy_gateway_crd.py"
+      - "tests/test_envoy_gateway_crd.py"
+      - ".github/workflows/envoy-gateway-lint.yml"
+  push:
+    branches: [main]
+    paths:
+      - "charts/envoy-gateway/**"
+      - "scripts/patch_envoy_gateway_crd.py"
+      - "tests/test_envoy_gateway_crd.py"
+      - ".github/workflows/envoy-gateway-lint.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          # Reuse the pristine vendor blob as the regression fixture.
+          fetch-depth: 0
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.2.1
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.5"
+          python-version: "3.12"
+      - name: Reject missing or noncanonical backport
+        run: python3 scripts/patch_envoy_gateway_crd.py --check
+      - name: Offline Helm lint
+        run: helm lint charts/envoy-gateway -n envoy-gateway-system -f charts/envoy-gateway/kkamji_local_values.yaml
+      - name: Offline Helm render including shared CRDs
+        run: >-
+          helm template envoy-gateway charts/envoy-gateway -n envoy-gateway-system
+          --include-crds --skip-tests --kube-version 1.36.1
+          -f charts/envoy-gateway/kkamji_local_values.yaml > /dev/null
+      - name: Backport reproducibility and full render contracts
+        run: >-
+          uv run --no-project --python 3.12 --with pyyaml python -m unittest discover
+          -s tests -p test_envoy_gateway_crd.py -v
