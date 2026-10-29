@@ -1,6 +1,6 @@
 ---
 title: Makefile operations
-updated: 2026-10-15T21:15:47+09:00
+updated: 2026-10-29T19:34:10+09:00
 type: runbook
 status: current
 ---
@@ -60,6 +60,12 @@ render 출력을 버리는 이유는 Secret 값을 터미널이나 증거 파일
 문서만 바꾸면 metadata, 상대 링크/anchor와 실제 소스 일치 여부를 검증합니다. `updated`는 본문을 변경한 실제 시각으로 갱신합니다. [coupling.json](_meta/coupling.json)에 연결된 코드가 바뀌면 해당 문서도 함께 바꿉니다.
 
 PR 검사는 [docs-lint workflow](../.github/workflows/docs-lint.yml)와 같은 `--base origin/main` 모드를 사용합니다. freshness/coupling의 변경 목록은 `origin/main...HEAD`의 커밋 차이이므로 최종 커밋 후에도 실행합니다. 미커밋 초안에서의 통과만으로 이 두 검사를 검증했다고 보고하지 않습니다. 상대 링크의 파일 존재 검사는 README와 heading anchor까지 검사하지 않으므로 별도로 확인합니다.
+
+## Envoy Gateway vendor 예외 검사
+
+`make deps`는 1.8.1 원본을 다시 받아 CRD backport를 지울 수 있다. 의존성 갱신 뒤 `python3 scripts/patch_envoy_gateway_crd.py`로 승인된 두 줄 수정만 재적용하고 `--check`로 확인한다. 다른 버전이나 미확인 vendor를 자동 수정하지 않는다. 범위, upstream provenance, checksum, full Git history를 쓰는 테스트 및 제거 조건은 [공유 CRD backport](rules/gateway-api-routing.md#공유-crd의-181-한정-backport)를 따른다.
+
+[Envoy Gateway CI](../.github/workflows/envoy-gateway-lint.yml)는 vendor/script/test/workflow 변경에 실행되며 check, local values를 명시한 Helm lint/render와 전체 렌더 회귀 테스트를 수행한다. 이 gate는 클러스터 admission이나 실제 429 검증을 대신하지 않는다. 테스트 전용 임시 파일은 `TMPDIR` 아래에 두며 render Secret 값은 기록하지 않는다.
 
 ## Normal changes
 
