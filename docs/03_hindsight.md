@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-10-29T17:28:32+09:00
+updated: 2026-10-29T18:03:03+09:00
 type: runbook
 status: current
 ---
@@ -34,7 +34,7 @@ PVC는 Argo prune/delete 방지 선언을 사용하지만 namespace/노드 삭�
 
 ## 접근과 신뢰 경계
 
-The access-hardening changes below are a source candidate, pending live acceptance. The 2026-10-27 results later in this document describe the previous BasicAuth/shared Gateway key deployment, not Google OIDC or per-client keys. Route53, the shared Gateway/listener, workloads, PVCs, model settings, native authentication and Cilium policies are unchanged. No Cloudflare or Tunnel is introduced.
+2026-10-29에 아래 접근 고도화를 배포하고 소유자 UI 로그인, API 인증 조합, WSL CLI의 실제 recall을 검증했습니다. 뒤의 2026-10-27 인수표는 이전 BasicAuth/shared Gateway key 배포의 기록입니다. Route 53, 공유 Gateway/listener, workload, PVC, 모델 설정, native 인증과 Cilium 정책은 변경하지 않았습니다. Cloudflare와 Tunnel은 사용하지 않습니다.
 
 | 경로 | Gateway 인증 | native 인증 |
 |---|---|---|
@@ -43,15 +43,15 @@ The access-hardening changes below are a source candidate, pending live acceptan
 
 UI access key와 API key는 서로 다릅니다. CP는 서버 측에서 API key를 소비합니다. API route의 Gateway 인증은 native 검사를 대체하지 않으며, CP의 browser backend도 native access key로 보호합니다. 키를 가진 사람과 관리자까지 차단하는 절대적인 "나만 접근" 보장이 아닙니다. namespace나 bank 이름은 ACL이 아닙니다.
 
-The UI policy uses Google issuer `https://accounts.google.com`, JWKS `https://www.googleapis.com/oauth2/v3/certs`, and public client ID `47443292322-rlsttvfbbvbp3lg5icerudodded0i7ev.apps.googleusercontent.com` for both OIDC and the JWT audience. An empty, missing or different client ID fails Helm rendering when exposure is enabled. JWT reads only `HindsightGoogleIdToken`; default-deny RBAC permits exactly `email=rlaxowl5460@gmail.com`. Client email/token headers are not authorization inputs. The OIDC ID-token cookie stays encrypted, host-only and SameSite=Lax. Native Authorization is preserved; `forwardIDToken` and `clientIDRef` are not used.
+The UI policy uses Google issuer `https://accounts.google.com`, JWKS `https://www.googleapis.com/oauth2/v3/certs`, and public client ID `47443292322-rlsttvfbbvbp3lg5icerudodded0i7ev.apps.googleusercontent.com` for both OIDC and the JWT audience. An empty, missing or different client ID fails Helm rendering when exposure is enabled. JWT reads only `HindsightGoogleIdToken`; default-deny RBAC permits exactly `email=rlaxowl5460@gmail.com`. Client email/token headers are not authorization inputs. The browser-facing OIDC ID-token cookie is encrypted, host-only and SameSite=Lax. Envoy decrypts token cookies before JWT validation and forwards them toward the trusted CP backend; do not log Cookie headers. API native Authorization is preserved; `forwardIDToken` and `clientIDRef` are not used.
 
 Google must register exactly `https://hindsight.kkamji.net/oauth2/callback`. Callback and `/oauth2/logout` use the same UI catch-all policy, not an unauthenticated bypass route. OAuth callback 302 alone does not prove owner access: a different Google account must receive 403 on the original UI resource. Logout clears the Gateway session, not necessarily the native CP or Google session. Controller discovery and Envoy token/JWKS HTTPS reachability, refresh and expiry require live verification without widening API/CP egress.
 
 The API policy consumes only `X-Hindsight-Client-Key`, sets `sanitize: true` to remove that header, and forwards the authenticated Secret data-key name as `X-Hindsight-Client-ID`, replacing a caller-supplied value. It neither injects nor removes native Authorization. Both credentials are required externally; CP -> API internal calls keep their existing native boundary. Per-client Gateway keys support independent rotation, not native tenant or bank isolation.
 
-Route-local BackendTrafficPolicies cap each request body at `1Mi` (413 when exceeded); larger imports must be split. Buffering increases Envoy memory use and does not support streaming uploads or protocol upgrades. Response streaming is not intentionally buffered, but MCP streaming compatibility remains a live acceptance gate. No connection/listener limit is changed. Rate limiting is NOT enabled: live admission rejects the installed CRD's `requests` schema (`format: int32`, `maximum: 4294967295`) even for small limits. Buffer-only policies pass server dry-run. Repairing this shared CRD is outside the Hindsight-only change; do not claim login brute-force or request-rate protection.
+Route-local BackendTrafficPolicies cap each request body at `1Mi` (413 when exceeded); larger imports must be split. Buffering increases Envoy memory use and does not support streaming uploads or protocol upgrades. Response streaming is not buffered; WSL Claude Code and the Hermes native MCP dispatcher completed live recall after deployment. No connection/listener limit is changed. Rate limiting is NOT enabled: live admission rejects the installed CRD's `requests` schema (`format: int32`, `maximum: 4294967295`) even for small limits. Buffer-only policies pass server dry-run. Repairing this shared CRD is outside the Hindsight-only change; do not claim login brute-force or request-rate protection.
 
-Both HTTPRoutes set `Strict-Transport-Security: max-age=86400`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`. HSTS does not use `includeSubDomains` or `preload`. Verify the headers on both upstream and local authentication/error responses in live acceptance; render evidence alone does not prove response coverage.
+Both HTTPRoutes set `Strict-Transport-Security: max-age=86400`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`. HSTS does not use `includeSubDomains` or `preload`. Live 200 responses carried HSTS, but Envoy-local 302/401 authentication responses did not. This coverage gap remains unresolved; HTTPRoute header modifiers alone do not harden those local responses.
 
 This design is pinned to [Envoy Gateway v1.8.1 filter ordering](https://github.com/envoyproxy/gateway/blob/v1.8.1/internal/xds/translator/httpfilters.go), its [OIDC/JWT/RBAC fixture](https://github.com/envoyproxy/gateway/blob/v1.8.1/internal/xds/translator/testdata/in/xds-ir/securitypolicy-with-oidc-jwt-authz.yaml), and [Envoy v1.38.1 OAuth2 cookie handling](https://github.com/envoyproxy/envoy/blob/v1.38.1/source/extensions/filters/http/oauth2/filter.cc). API/CRD acceptance alone does not prove runtime filter behavior. The boolean `email_verified` claim is not incorrectly treated as a string; Google `sub` is not guessed. Cookie theft and privileged administrators remain trust boundaries. Do not log Cookie, Authorization or client-key values.
 
@@ -65,9 +65,21 @@ This design is pinned to [Envoy Gateway v1.8.1 filter ordering](https://github.c
 - shared `parameter-store`, 해당 Store를 소비할 수 있는 ExternalSecret 작성자, cluster/namespace 관리자와 key 보유자는 신뢰 범위에 남습니다. 새 IAM/Store를 추가하지 않았다는 사실을 독점 접근 증명으로 해석하지 않습니다.
 - 공식 API/AIO와 CP digest의 signature 검증을 마쳤습니다. 현재 Grype 결과는 API/AIO Critical 0, OS High 59(58 wont-fix, 1 not-fixed), CP Critical/High 0입니다. 잔여 High를 제거하거나 완전한 보안으로 주장하지 않습니다. API는 Gateway와 native 인증 및 namespace 한정 Cilium 정책으로 제한합니다. provenance와 취약점 검사는 별개의 gate입니다.
 
+## 2026-10-29 접근 고도화 인수
+
+- Google 개인 계정 로그인 후 기존 CP access key로 `/dashboard` 진입과 합성 bank 목록을 확인했습니다. 다른 Google 계정의 실제 로그인은 시험하지 않았습니다. 배포된 JWT audience와 exact-email default-deny 규칙, 익명/위조 헤더/위조 cookie 거절을 확인했으며, MFA 설정을 새로 강제하거나 검증한 것은 아닙니다.
+- 외부 API는 키 없음, native 키만 있음, Gateway 키만 있음, 각각 잘못된 키의 다섯 조합에서 모두 401을 반환했습니다. 네 클라이언트 키는 올바른 native 키와 함께 각각 200을 반환했습니다.
+- `1Mi` 초과 요청은 413으로 차단됐습니다. HTTP 인증/크기 검사 14개를 통과했습니다. 요청 빈도 제한과 인증 응답 HSTS 누락은 위에 명시한 잔여 항목입니다.
+- 실제 xDS에서 OAuth2 -> JWT -> buffer -> RBAC 순서와 API의 `X-Hindsight-Client-Key` 추출, credential 제거, 검증된 `X-Hindsight-Client-ID` 전달을 확인했습니다. admin config 원문은 저장하거나 출력하지 않았습니다.
+- WSL Claude Code는 등록한 headersHelper를 사용해 실제 `mcp__hindsight__recall`을 한 번 호출했고 합성 문서 `f01`을 조회했습니다. Hermes도 native MCP registry/dispatcher에서 같은 문서를 조회했습니다. Hermes는 `tools.include: [recall]`, `tools.resources: false`, `tools.prompts: false`로 실제 노출 도구가 recall 하나임을 검증했습니다.
+- 실행 중인 Hermes gateway와 기존 TUI는 재시작하지 않았습니다. 새 TUI에서 설정을 읽습니다. 자동 대화 ingestion과 retain hook은 활성화하지 않았습니다. 초기 연결 bank는 `poc_korean_a_20261026_113238`이며 실제 개인 기억의 저장 범위는 별도로 정합니다.
+- Mac용 전용 키와 실행 지침을 로컬에서 준비했습니다. Mac 실기 적용은 하지 않았습니다. 지침은 `/home/kkamji/.local/share/hindsight-k8s-private/MAC-SETUP.md`이고, 비밀값 없는 helper는 같은 디렉터리의 `claude-headers.py`입니다. Mac에는 Google client secret이나 ChatGPT OAuth PVC 내용을 복사하지 않습니다.
+- 임시 SSO 검증 route/policy와 관리용 port-forward는 제거했습니다. 전용 SSM과 새 OAuth client는 운영 자산으로 유지합니다.
+- Kubernetes가 기본 주입하는 `clientSecret.group/kind`, `refreshToken: true`, `remoteJWKS.cacheDuration: 300s`를 소스에 명시합니다. 수정 전후 server-defaulted spec이 동일함을 확인했으며, 인증 동작 변경 없이 Argo SSA drift를 해소하는 변경입니다.
+
 ## Secret과 OAuth 소유권
 
-Candidate edge credentials use a separate SecureString JSON at `auth.edgeSsmKey=/kkamji/automation/hindsight/edge-auth`. `hindsight-google-oidc` maps `client-secret` from `oidc_client_secret`; `hindsight-gateway-client-keys` maps exactly `wsl_claude`, `wsl_hermes`, `mac_claude`, `mac_hermes` to identically named properties. Each client key must be independent and high entropy. The new ExternalSecrets render only with exposure enabled, use the existing `parameter-store`, explicit property mappings, Opaque targets and Orphan/Retain. Provisioning, ESO Ready and Google client-secret validity are pending live gates; no credential value belongs in the chart.
+Edge credentials use a separate SecureString JSON at `auth.edgeSsmKey=/kkamji/automation/hindsight/edge-auth`. `hindsight-google-oidc` maps `client-secret` from `oidc_client_secret`; `hindsight-gateway-client-keys` maps exactly `wsl_claude`, `wsl_hermes`, `mac_claude`, `mac_hermes` to identically named properties. Each client key must be independent and high entropy. The new ExternalSecrets render only with exposure enabled, use the existing `parameter-store`, explicit property mappings, Opaque targets and Orphan/Retain. SSM version 1 metadata, both ESO readers' Ready state, exact target/source equality without value output, and owner Google login were verified. No credential value belongs in the chart.
 
 The original `auth.ssmKey` and all four existing ExternalSecrets stay unchanged for native consumers and rollback. The old Gateway UI/API Secrets are not referenced by the candidate SecurityPolicies. Rollback is a reviewed Git reversal, not an automatic BasicAuth fallback on OIDC failure, and must not reset native keys or the refreshed ChatGPT PVC.
 

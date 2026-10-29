@@ -99,6 +99,8 @@ spec:
     clientID: {{ .Values.exposure.oidc.clientID | quote }}
     clientSecret:
       name: {{ .Values.name }}-google-oidc
+      group: ""
+      kind: Secret
     scopes: [openid, email]
     redirectURL: {{ printf "https://%s/oauth2/callback" .Values.exposure.hostname | quote }}
     logoutPath: /oauth2/logout
@@ -109,6 +111,7 @@ spec:
     forwardAccessToken: false
     passThroughAuthHeader: false
     disableTokenEncryption: false
+    refreshToken: true
   jwt:
     optional: false
     providers:
@@ -117,6 +120,7 @@ spec:
         audiences: [{{ .Values.exposure.oidc.clientID | quote }}]
         remoteJWKS:
           uri: https://www.googleapis.com/oauth2/v3/certs
+          cacheDuration: 300s
         extractFrom:
           cookies: [HindsightGoogleIdToken]
   authorization:
