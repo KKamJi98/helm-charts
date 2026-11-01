@@ -62,7 +62,7 @@ spec:
 {{- if .Values.exposure.enabled }}
 {{- range $entry := list
   (dict "name" (printf "%s-google-oidc" .Values.name) "keys" (dict "client-secret" "oidc_client_secret"))
-  (dict "name" (printf "%s-gateway-client-keys" .Values.name) "keys" (dict "wsl_claude" "wsl_claude" "wsl_hermes" "wsl_hermes" "mac_claude" "mac_claude" "mac_hermes" "mac_hermes"))
+  (dict "name" (printf "%s-gateway-client-keys" .Values.name) "keys" (dict "wsl_claude" "wsl_claude" "wsl_hermes" "wsl_hermes" "mac_claude" "mac_claude" "mac_hermes" "mac_hermes" "wsl_codex" "wsl_codex" "mac_codex" "mac_codex"))
 }}
 ---
 apiVersion: external-secrets.io/v1
