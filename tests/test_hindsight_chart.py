@@ -532,7 +532,14 @@ class ChartTests(unittest.TestCase):
             "hindsight-google-oidc": {"client-secret": "oidc_client_secret"},
             "hindsight-gateway-client-keys": {
                 key: key
-                for key in ("wsl_claude", "wsl_hermes", "mac_claude", "mac_hermes")
+                for key in (
+                    "wsl_claude",
+                    "wsl_hermes",
+                    "mac_claude",
+                    "mac_hermes",
+                    "wsl_codex",
+                    "mac_codex",
+                )
             },
         }
         for name, mapping in expected.items():
