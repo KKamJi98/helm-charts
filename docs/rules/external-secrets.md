@@ -1,6 +1,6 @@
 ---
 title: External Secrets rules
-updated: 2026-10-29T18:03:03+09:00
+updated: 2026-11-01
 type: rule
 status: current
 ---
