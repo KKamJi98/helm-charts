@@ -4,6 +4,8 @@ runtime:
   image: ghcr.io/kkamji98/hindsight-security:1.1.0-20261029@sha256:99f91e62f5e870d91a2e03bb3fce695541dff694dac6dcdb692319f462060074
   model: ""
   reasoningEffort: ""
+  # Retain extraction only; recall/reflect inherit their existing timeout.
+  retainLlmTimeoutSeconds: 600
   nodeSelector:
     kubernetes.io/hostname: k8s-w2
   resources:

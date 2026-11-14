@@ -91,6 +91,11 @@ class ChartTests(unittest.TestCase):
         cls.env = {e["name"]: e.get("value") for e in cls.container["env"]}
         cls.job = next(d for d in cls.docs if d["kind"] == "Job")
 
+    def test_retain_llm_timeout_is_600_without_changing_other_operations(self):
+        self.assertEqual(self.env["HINDSIGHT_API_RETAIN_LLM_TIMEOUT"], "600")
+        for name in ("HINDSIGHT_API_LLM_TIMEOUT", "HINDSIGHT_API_RECALL_LLM_TIMEOUT", "HINDSIGHT_API_REFLECT_LLM_TIMEOUT"):
+            self.assertNotIn(name, self.env)
+
     def test_bootstrap_configmaps_resolve_every_mounted_script_and_manifest(self):
         for owner in (self.api, self.job):
             pod = owner["spec"]["template"]["spec"]
