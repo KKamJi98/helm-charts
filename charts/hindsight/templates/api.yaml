@@ -116,6 +116,8 @@ spec:
               value: {{ required "runtime.model is required" .Values.runtime.model | quote }}
             - name: HINDSIGHT_API_LLM_REASONING_EFFORT
               value: {{ required "runtime.reasoningEffort is required" .Values.runtime.reasoningEffort | quote }}
+            - name: HINDSIGHT_API_RETAIN_LLM_TIMEOUT
+              value: {{ .Values.runtime.retainLlmTimeoutSeconds | quote }}
             - name: HINDSIGHT_API_LLM_CHATGPT_HOME
               value: /auth/chatgpt
             - name: HINDSIGHT_API_LLM_MAX_CONCURRENT

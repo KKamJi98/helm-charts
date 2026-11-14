@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-01
+updated: 2026-11-14
 type: runbook
 status: current
 ---
@@ -164,3 +164,9 @@ python3 docs/_meta/docs_lint.py --root . --base origin/main
 먼저 caller를 멈추고 현재 writer, refresh authority, PVC와 마지막 정상 Git/image/config를 확인합니다. reviewed Git 역변경과 Argo sync로 복구하며 DB schema 호환성과 백업을 먼저 검토합니다. namespace/PVC를 지우거나 refreshed auth를 seed로 덮어쓰지 않습니다. 오래된 WSL OAuth snapshot을 그대로 다시 시작하지 않습니다. 로컬로 되돌려야 한다면 cluster writer 종료 후 현재 auth authority를 승인된 경로로 이전해야 합니다.
 
 ESO 오류는 Store/ExternalSecret 상태와 property 참조부터, 401/403은 Gateway와 native 인증을 나누어, model 오류는 Job/checksum/허용 egress부터 조사합니다. auth init 실패는 seed 부재와 기존 PVC 손상을 구분합니다. 값 조회, IAM 확대, force delete나 무관한 서비스 재시작으로 우회하지 않습니다.
+
+## Retain extraction timeout (2026-11-14)
+
+- `runtime.retainLlmTimeoutSeconds: 600` sets `HINDSIGHT_API_RETAIN_LLM_TIMEOUT` for extraction requests only. Existing model/xhigh, recall/reflect timeouts, HTTP route 600s, authentication and storage are unchanged. Async retain acceptance is not extraction completion.
+- A GitOps rollout restarts the single API/embedded PostgreSQL pod and briefly interrupts service. The worker drains for 30s within the existing 45s pod grace period, then returns unfinished claimed work to pending. Verify operation states after restart; do not blindly replay transcripts or retry completed children.
+- Rollback: revert the timeout change in Git, then verify Argo reconciliation and readiness. Removing the env restores the inherited 120s default. Existing operation IDs and PVCs must be preserved. Longer timeouts can reduce deadline failures but do not prove recovery or fix upstream outages.
