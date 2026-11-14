@@ -42,4 +42,18 @@ class Chart(unittest.TestCase):
   ds=render(['--set','publicRoute.enabled=true','--set','publicRoute.networkValidated=true']);r=named(ds,'HTTPRoute','hindsight-dot')
   self.assertEqual(r['spec']['rules'][0]['backendRefs'][0]['name'],'proxy')
   self.assertEqual(r['spec']['hostnames'],['hindsight-dot.kkamji.net'])
+ def test_bootstrap_diagnostic_containment(self):
+  opts=['--set','bootstrapIdentityDiagnostic=true','--set','owner.sub=bootstrap-unverified-deny-all']
+  ds=render(opts)
+  for name in ['proxy','backend-policy']:
+   env=named(ds,'Deployment',name)['spec']['template']['spec']['containers'][0]['env']
+   self.assertEqual(next(e['value'] for e in env if e['name']=='DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC'),'1')
+  self.assertNotIn('hindsight-dot-native',json.dumps(ds))
+  for bad in [['--set','owner.sub=real-owner'],['--set','syntheticBackend=false','--set','native.approved=true'],['--set','capabilities[1]=hindsight:retain'],['--set','capabilities[0]=hindsight:retain'],['--set','publicRoute.enabled=true']]:
+   self.assertNotEqual(render(opts+bad,ok=False),0)
+ def test_bootstrap_default_disabled(self):
+  ds=render()
+  for name in ['proxy','backend-policy']:
+   env=named(ds,'Deployment',name)['spec']['template']['spec']['containers'][0]['env']
+   self.assertEqual(next(e['value'] for e in env if e['name']=='DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC'),'0')
 if __name__=='__main__':unittest.main()

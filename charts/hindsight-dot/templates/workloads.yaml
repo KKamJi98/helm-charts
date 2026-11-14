@@ -82,6 +82,7 @@
               }
             ],
             "env": [
+              {"name": "DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC", "value": {{ ternary "1" "0" .Values.bootstrapIdentityDiagnostic | quote }}},
               {
                 "name": "DOT_MODE",
                 "value": "proxy"
@@ -301,6 +302,7 @@
               }
             ],
             "env": [
+              {"name": "DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC", "value": {{ ternary "1" "0" .Values.bootstrapIdentityDiagnostic | quote }}},
               {
                 "name": "DOT_MODE",
                 "value": "gateway"

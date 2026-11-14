@@ -69,6 +69,44 @@ class ServiceTests(FlowTests):
   newstore=FernetEncryptionWrapper(PrefixCollectionsWrapper(self.backing,'dot-oauth-e1:'),fernet=Fernet(self.key))
   new=Application(config('proxy'),storage=newstore,read_status=self.state,google_secret='synthetic-secret-only',signing_key='synthetic-signing-key-only',google_http=self.http,outbound_http=self.gateway_http)
   self.assertIsNotNone(await new.provider.load_access_token(tok))
+ async def test_dcr_metadata_and_registration(self):
+  metadata=await self.c.get('/.well-known/oauth-authorization-server')
+  self.assertEqual(metadata.status_code,200,metadata.text)
+  self.assertTrue(metadata.json().get('registration_endpoint','').endswith('/register'))
+  self.assertFalse(metadata.json().get('client_id_metadata_document_supported',False))
+  good=await self.c.post('/register',json={'redirect_uris':['https://client.invalid/callback'],'scope':'openid','grant_types':['authorization_code','refresh_token'],'response_types':['code']})
+  self.assertEqual(good.status_code,201,good.text)
+  bad=await self.c.post('/register',json={'redirect_uris':['https://unapproved.invalid/callback'],'scope':'openid'})
+  self.assertEqual(bad.status_code,400,bad.text)
+ async def test_cimd_disabled_no_remote_discovery(self):
+  self.assertIsNone(self.p._cimd_manager)
+  self.assertIsNone(await self.p.get_client('https://unapproved.invalid/client.json'))
+  self.assertEqual(self.native,[])
+ async def test_bootstrap_logs_verified_identity_but_denies_mcp(self):
+  tok=(await self.exchange()).json()['access_token']
+  cfg=replace(config('proxy',capabilities=('hindsight:recall',)),owner_sub='bootstrap-unverified-deny-all',synthetic_backend=True,native_url='http://synthetic-backend.hindsight-dot.svc.cluster.local:8080',bootstrap_identity_diagnostic=True)
+  bootstrap=Application(cfg,storage=self.store,read_status=self.state,google_secret='synthetic-secret-only',signing_key='synthetic-signing-key-only',google_http=self.http,outbound_http=self.gateway_http)
+  async with bootstrap.raw.router.lifespan_context(bootstrap.raw):
+   async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=bootstrap.app),base_url='https://isolated.invalid') as c:
+    with self.assertLogs('uvicorn.error',level='INFO') as logs:
+     response=await c.post('/mcp',headers={'authorization':'Bearer '+tok,'accept':'application/json, text/event-stream'},json={'jsonrpc':'2.0','id':1,'method':'tools/list'})
+    self.assertEqual(response.status_code,401)
+    text=' '.join(logs.output)
+    self.assertIn('sub=fake-owner email=owner@example.invalid',text)
+    self.assertNotIn(tok,text);self.assertNotIn('synthetic-upstream',text)
+    self.assertNotIn('client_secret',text)
+    with self.assertNoLogs('uvicorn.error',level='INFO'):
+     self.assertIsNone(await bootstrap.provider.load_access_token(tok))
+  self.assertEqual(self.native,[])
+ async def test_bootstrap_does_not_log_other_email(self):
+  tok=(await self.exchange()).json()['access_token']
+  cfg=replace(config('proxy',capabilities=('hindsight:recall',)),owner_sub='bootstrap-unverified-deny-all',synthetic_backend=True,native_url='http://synthetic-backend.hindsight-dot.svc.cluster.local:8080',bootstrap_identity_diagnostic=True)
+  bootstrap=Application(cfg,storage=self.store,read_status=self.state,google_secret='synthetic-secret-only',signing_key='synthetic-signing-key-only',google_http=self.http,outbound_http=self.gateway_http)
+  self.identity['email']='other@example.invalid'
+  with self.assertNoLogs('uvicorn.error',level='INFO'):self.assertIsNone(await bootstrap.provider.load_access_token(tok))
+ async def test_bootstrap_rejects_native_or_real_subject(self):
+  with self.assertRaises(ValueError):replace(config('proxy'),bootstrap_identity_diagnostic=True)
+  with self.assertRaises(ValueError):replace(config('proxy'),owner_sub='bootstrap-unverified-deny-all',bootstrap_identity_diagnostic=True)
  # Base fixture tests only apply to original provider fixture, not replaced service fixture.
  test_pkce_then_exchange_refresh_rotation=None
  test_gate_prevents_refresh_without_upstream_call=None

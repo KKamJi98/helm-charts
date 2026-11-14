@@ -12,4 +12,9 @@
 {{- range .Values.capabilities }}{{ if not (has . (list "hindsight:recall" "hindsight:retain")) }}{{ fail "invalid capability" }}{{ end }}{{ end }}
 {{- if and (not .Values.syntheticBackend) (not .Values.native.approved) }}{{ fail "native approval required" }}{{ end }}
 {{- if and .Values.publicRoute.enabled (not .Values.publicRoute.networkValidated) }}{{ fail "network validation required" }}{{ end }}
+{{- if .Values.bootstrapIdentityDiagnostic }}
+{{- if not .Values.syntheticBackend }}{{ fail "bootstrap diagnostic requires synthetic backend" }}{{ end }}
+{{- if ne .Values.owner.sub "bootstrap-unverified-deny-all" }}{{ fail "bootstrap diagnostic requires deny-all owner sentinel" }}{{ end }}
+{{- if or (ne (len .Values.capabilities) 1) (ne (first .Values.capabilities) "hindsight:recall") }}{{ fail "bootstrap diagnostic requires recall-only capability" }}{{ end }}
+{{- end }}
 {{- end }}

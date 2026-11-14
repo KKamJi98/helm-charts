@@ -1,18 +1,31 @@
 """Synthetic integration only. No listener/native secret or real upstream.
 No semantic approval classifier; bounded summary text is NOT proven approved.
 """
+import logging
+import re
 from fastmcp.server.auth.providers.google import GoogleProvider
 
+BOOTSTRAP_SUBJECT="bootstrap-unverified-deny-all"
+
 class OwnerGoogleProvider(GoogleProvider):
-    def __init__(self, *, owner_sub, owner_email, **kwargs):
+    def __init__(self, *, owner_sub, owner_email, bootstrap_identity_diagnostic=False, **kwargs):
+        if bootstrap_identity_diagnostic and owner_sub!=BOOTSTRAP_SUBJECT:raise ValueError("bootstrap subject must deny all")
+        self.bootstrap_identity_diagnostic=bootstrap_identity_diagnostic
+        self._bootstrap_logged=False
         self.owner_sub,self.owner_email=owner_sub,owner_email
         super().__init__(**kwargs)
     async def load_access_token(self, token):
         verified=await super().load_access_token(token)
         if not verified:return None
         c=verified.claims or {}
-        if verified.subject!=self.owner_sub or c.get('email')!=self.owner_email:return None
-        if c.get('email_verified') not in (True,'true'):return None
+        if c.get('email')!=self.owner_email or c.get('email_verified') not in (True,'true'):return None
+        if self.bootstrap_identity_diagnostic:
+            subject=verified.subject
+            if not self._bootstrap_logged and isinstance(subject,str) and re.fullmatch(r'[A-Za-z0-9_-]{1,128}',subject):
+                logging.getLogger('uvicorn.error').info('Bootstrap verified owner identity: sub=%s email=%s; MCP access denied',subject,self.owner_email)
+                self._bootstrap_logged=True
+            return None
+        if verified.subject!=self.owner_sub:return None
         return verified
 
 class CapabilityVerifier:

@@ -24,7 +24,7 @@ from starlette.responses import JSONResponse
 
 from adapter import safe_text
 from emergency_gate import EmergencyGate, GateStatus
-from owner_bridge import OwnerGoogleProvider, CapabilityVerifier
+from owner_bridge import OwnerGoogleProvider, CapabilityVerifier, BOOTSTRAP_SUBJECT
 from recall_gateway import RecallGateway, PATH as RECALL_PATH
 from retain_gateway import RetainGateway, PATH as RETAIN_PATH
 from retain_candidate import retain_summary
@@ -43,6 +43,7 @@ class Config:
     native_url: str = 'http://hindsight-api.hindsight.svc.cluster.local:8888'
     scanner: str = '/usr/local/bin/gitleaks'
     synthetic_backend: bool = False
+    bootstrap_identity_diagnostic: bool = False
 
     def __post_init__(self):
         if self.mode not in ('proxy','gateway') or type(self.epoch) is not int or self.epoch<1: raise ValueError('mode/epoch')
@@ -54,6 +55,7 @@ class Config:
         for value in (self.gateway_url,self.native_url):
             v=urlsplit(value)
             if v.scheme not in ('http','https') or not v.hostname or v.username or v.query or v.fragment or v.path not in ('','/'):raise ValueError('backend URL')
+        if self.bootstrap_identity_diagnostic and (not self.synthetic_backend or self.owner_sub!=BOOTSTRAP_SUBJECT or self.capabilities!=('hindsight:recall',)):raise ValueError('bootstrap requires synthetic deny-all configuration')
         if self.synthetic_backend and self.native_url!='http://synthetic-backend.hindsight-dot.svc.cluster.local:8080':raise ValueError('synthetic backend must be isolated fixture service')
         if self.scanner!='/usr/local/bin/gitleaks' and not os.path.isabs(self.scanner):raise ValueError('scanner')
 
@@ -87,13 +89,13 @@ class Application:
                  google_http=None, native_headers=None, outbound_http=None):
         self.config=config
         self.http=outbound_http or httpx2.AsyncClient(timeout=httpx2.Timeout(20,connect=5),follow_redirects=False)
-        self.provider=OwnerGoogleProvider(owner_sub=config.owner_sub,owner_email=config.owner_email,
+        self.provider=OwnerGoogleProvider(owner_sub=config.owner_sub,owner_email=config.owner_email,bootstrap_identity_diagnostic=config.bootstrap_identity_diagnostic,
             client_id=config.google_client_id,client_secret=google_secret,base_url=config.public_url,
             required_scopes=['openid','email'],valid_scopes=['openid','email'],
             allowed_client_redirect_uris=list(config.redirects),client_storage=storage,
             jwt_signing_key=signing_key,require_authorization_consent=True,
             cache_ttl_seconds=None,fastmcp_access_token_expiry_seconds=60,
-            fallback_refresh_token_expiry_seconds=86400,enable_cimd=True,http_client=google_http)
+            fallback_refresh_token_expiry_seconds=86400,enable_cimd=False,http_client=google_http)
         self.provider.set_mcp_path('/mcp')
         self.verifier=CapabilityVerifier(self.provider,read_status=read_status,epoch=config.epoch,capabilities=config.capabilities)
         self.read_status=read_status
@@ -194,7 +196,8 @@ def factory():
         capabilities=tuple(json.loads(os.environ.get('DOT_CAPABILITIES','["hindsight:recall"]'))),
         gateway_url=os.environ.get('DOT_GATEWAY_URL','http://backend-policy.hindsight-dot.svc.cluster.local:8001'),
         native_url=os.environ.get('DOT_NATIVE_URL','http://hindsight-api.hindsight.svc.cluster.local:8888'),
-        synthetic_backend=os.environ.get('DOT_STAGING_SYNTHETIC','0')=='1')
+        synthetic_backend=os.environ.get('DOT_STAGING_SYNTHETIC','0')=='1',
+        bootstrap_identity_diagnostic=os.environ.get('DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC','0')=='1')
     # Dedicated ACL users: oauth store key RW; gate key GET-only. Never admin/default user.
     oauth_redis=Redis.from_url(secret('DOT_OAUTH_REDIS_URL'),decode_responses=True,socket_timeout=.3,socket_connect_timeout=.3,retry=Retry(NoBackoff(),0),retry_on_timeout=False)
     gate_redis=Redis.from_url(secret('DOT_GATE_REDIS_URL'),decode_responses=True,socket_timeout=.3,socket_connect_timeout=.3,retry=Retry(NoBackoff(),0),retry_on_timeout=False)

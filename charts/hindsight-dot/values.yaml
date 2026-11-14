@@ -1,6 +1,7 @@
 # Candidate; no Argo Application references this chart.
 enabled: false
 syntheticBackend: true
+bootstrapIdentityDiagnostic: false
 epoch: 1
 capabilities: [hindsight:recall]
 image: {repository: "", digest: "", pullSecrets: []}
