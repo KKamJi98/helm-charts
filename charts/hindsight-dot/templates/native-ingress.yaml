@@ -1,0 +1,13 @@
+{{- if and .Values.enabled (not .Values.syntheticBackend) }}
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata: {name: hindsight-from-dot-gateway, namespace: hindsight}
+spec:
+  endpointSelector:
+    matchLabels: {app.kubernetes.io/component: api, app.kubernetes.io/instance: hindsight, app.kubernetes.io/name: hindsight}
+  ingress:
+    - fromEndpoints:
+        - matchLabels: {app: hindsight-dot, component: gateway, "k8s:io.kubernetes.pod.namespace": hindsight-dot}
+      toPorts:
+        - ports: [{port: "8888", protocol: TCP}]
+{{- end }}

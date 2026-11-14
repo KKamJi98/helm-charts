@@ -1,0 +1,13 @@
+# Version-pinned official vendor images. Resolve immutable image digests in release CI.
+FROM ghcr.io/gitleaks/gitleaks:v8.30.1 AS scanner
+FROM python:3.14.4-slim-bookworm
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 HOME=/tmp
+WORKDIR /app
+COPY requirements.lock.txt ./
+RUN pip install --no-cache-dir --requirement requirements.lock.txt \
+    && groupadd --gid 10001 app && useradd --uid 10001 --gid 10001 --no-create-home app
+COPY --from=scanner /usr/bin/gitleaks /usr/local/bin/gitleaks
+COPY service.py adapter.py owner_bridge.py emergency_gate.py retain_candidate.py recall_gateway.py retain_gateway.py gitleaks.toml ./
+USER 10001:10001
+EXPOSE 8000 8001
+CMD ["uvicorn", "service:factory", "--factory", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]

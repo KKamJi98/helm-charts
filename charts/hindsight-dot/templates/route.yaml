@@ -1,0 +1,12 @@
+{{- if and .Values.enabled .Values.publicRoute.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata: {name: hindsight-dot, namespace: {{ .Release.Namespace }}}
+spec:
+  hostnames: [{{ .Values.publicRoute.hostname | quote }}]
+  parentRefs: [{name: kkamji, namespace: envoy-gateway-system, sectionName: https, group: gateway.networking.k8s.io, kind: Gateway}]
+  rules:
+    - matches: [{path: {type: PathPrefix, value: /}}]
+      backendRefs: [{name: proxy, port: 8000, weight: 1, group: "", kind: Service}]
+      timeouts: {request: 60s, backendRequest: 60s}
+{{- end }}

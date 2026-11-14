@@ -1,0 +1,454 @@
+{{- if .Values.enabled }}
+{
+  "apiVersion": "v1",
+  "kind": "ServiceAccount",
+  "metadata": {
+    "name": "hindsight-dot",
+    "namespace": {{ .Release.Namespace | quote }}
+  },
+  "automountServiceAccountToken": false
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "proxy",
+    "namespace": {{ .Release.Namespace | quote }}
+  },
+  "spec": {
+    "replicas": 1,
+    "strategy": {
+      "type": "Recreate"
+    },
+    "selector": {
+      "matchLabels": {
+        "app": "hindsight-dot",
+        "component": "proxy"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "hindsight-dot",
+          "component": "proxy"
+        }
+      },
+      "spec": {
+        "serviceAccountName": "hindsight-dot",
+        "imagePullSecrets": {{ toJson .Values.image.pullSecrets }},
+        "automountServiceAccountToken": false,
+        "terminationGracePeriodSeconds": 30,
+        "securityContext": {
+          "runAsNonRoot": true,
+          "runAsUser": 10001,
+          "runAsGroup": 10001,
+          "fsGroup": 10001,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "containers": [
+          {
+            "name": "proxy",
+            "image": {{ printf "%s@%s" .Values.image.repository .Values.image.digest | quote }},
+            "command": [
+              "uvicorn"
+            ],
+            "args": [
+              "service:factory",
+              "--factory",
+              "--host",
+              "0.0.0.0",
+              "--port",
+              "8000",
+              "--workers",
+              "1",
+              "--no-access-log"
+            ],
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": true,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            },
+            "ports": [
+              {
+                "name": "http",
+                "containerPort": 8000
+              }
+            ],
+            "env": [
+              {
+                "name": "DOT_MODE",
+                "value": "proxy"
+              },
+              {
+                "name": "DOT_EPOCH",
+                "value": {{ .Values.epoch | quote }}
+              },
+              {
+                "name": "DOT_PUBLIC_URL",
+                "value": {{ printf "https://%s" .Values.publicRoute.hostname | quote }}
+              },
+              {
+                "name": "DOT_OWNER_SUB",
+                "value": {{ .Values.owner.sub | quote }}
+              },
+              {
+                "name": "DOT_OWNER_EMAIL",
+                "value": {{ .Values.owner.email | quote }}
+              },
+              {
+                "name": "DOT_GOOGLE_CLIENT_ID",
+                "value": {{ .Values.googleClientId | quote }}
+              },
+              {
+                "name": "DOT_REDIRECT_URIS",
+                "value": {{ toJson .Values.redirectUris | quote }}
+              },
+              {
+                "name": "DOT_CAPABILITIES",
+                "value": {{ toJson .Values.capabilities | quote }}
+              },
+              {
+                "name": "DOT_GATEWAY_URL",
+                "value": "http://backend-policy.hindsight-dot.svc.cluster.local:8001"
+              },
+              {
+                "name": "DOT_STAGING_SYNTHETIC",
+                "value": {{ ternary "1" "0" .Values.syntheticBackend | quote }}
+              },
+              {
+                "name": "DOT_NATIVE_URL",
+                "value": {{ ternary "http://synthetic-backend.hindsight-dot.svc.cluster.local:8080" "http://hindsight-api.hindsight.svc.cluster.local:8888" .Values.syntheticBackend | quote }}
+              },
+              {
+                "name": "DOT_OAUTH_REDIS_URL_FILE",
+                "value": "/run/dot/oauth_redis_url"
+              },
+              {
+                "name": "DOT_GATE_REDIS_URL_FILE",
+                "value": "/run/dot/gate_redis_url"
+              },
+              {
+                "name": "DOT_STORAGE_KEY_FILE",
+                "value": "/run/dot/storage_key"
+              },
+              {
+                "name": "DOT_SIGNING_KEY_FILE",
+                "value": "/run/dot/signing_key"
+              },
+              {
+                "name": "DOT_GOOGLE_CLIENT_SECRET_FILE",
+                "value": "/run/dot/google_client_secret"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "name": "runtime",
+                "mountPath": "/run/dot",
+                "readOnly": true
+              },
+              {
+                "name": "tmp",
+                "mountPath": "/tmp"
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "100m",
+                "memory": "128Mi"
+              },
+              "limits": {
+                "cpu": "1",
+                "memory": "512Mi"
+              }
+            },
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/health",
+                "port": "http"
+              },
+              "initialDelaySeconds": 15
+            },
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/ready",
+                "port": "http"
+              },
+              "initialDelaySeconds": 5
+            }
+          }
+        ],
+        "volumes": [
+          {
+            "name": "runtime",
+            "secret": {
+              "secretName": "hindsight-dot-runtime",
+              "defaultMode": 288
+            }
+          },
+          {
+            "name": "tmp",
+            "emptyDir": {
+              "medium": "Memory",
+              "sizeLimit": "32Mi"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "proxy",
+    "namespace": {{ .Release.Namespace | quote }}
+  },
+  "spec": {
+    "type": "ClusterIP",
+    "selector": {
+      "app": "hindsight-dot",
+      "component": "proxy"
+    },
+    "ports": [
+      {
+        "name": "http",
+        "port": 8000,
+        "targetPort": "http"
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "backend-policy",
+    "namespace": {{ .Release.Namespace | quote }}
+  },
+  "spec": {
+    "replicas": 1,
+    "strategy": {
+      "type": "Recreate"
+    },
+    "selector": {
+      "matchLabels": {
+        "app": "hindsight-dot",
+        "component": "gateway"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "hindsight-dot",
+          "component": "gateway"
+        }
+      },
+      "spec": {
+        "serviceAccountName": "hindsight-dot",
+        "imagePullSecrets": {{ toJson .Values.image.pullSecrets }},
+        "automountServiceAccountToken": false,
+        "terminationGracePeriodSeconds": 30,
+        "securityContext": {
+          "runAsNonRoot": true,
+          "runAsUser": 10001,
+          "runAsGroup": 10001,
+          "fsGroup": 10001,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "containers": [
+          {
+            "name": "gateway",
+            "image": {{ printf "%s@%s" .Values.image.repository .Values.image.digest | quote }},
+            "command": [
+              "uvicorn"
+            ],
+            "args": [
+              "service:factory",
+              "--factory",
+              "--host",
+              "0.0.0.0",
+              "--port",
+              "8001",
+              "--workers",
+              "1",
+              "--no-access-log"
+            ],
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": true,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            },
+            "ports": [
+              {
+                "name": "http",
+                "containerPort": 8001
+              }
+            ],
+            "env": [
+              {
+                "name": "DOT_MODE",
+                "value": "gateway"
+              },
+              {
+                "name": "DOT_EPOCH",
+                "value": {{ .Values.epoch | quote }}
+              },
+              {
+                "name": "DOT_PUBLIC_URL",
+                "value": {{ printf "https://%s" .Values.publicRoute.hostname | quote }}
+              },
+              {
+                "name": "DOT_OWNER_SUB",
+                "value": {{ .Values.owner.sub | quote }}
+              },
+              {
+                "name": "DOT_OWNER_EMAIL",
+                "value": {{ .Values.owner.email | quote }}
+              },
+              {
+                "name": "DOT_GOOGLE_CLIENT_ID",
+                "value": {{ .Values.googleClientId | quote }}
+              },
+              {
+                "name": "DOT_REDIRECT_URIS",
+                "value": {{ toJson .Values.redirectUris | quote }}
+              },
+              {
+                "name": "DOT_CAPABILITIES",
+                "value": {{ toJson .Values.capabilities | quote }}
+              },
+              {
+                "name": "DOT_GATEWAY_URL",
+                "value": "http://backend-policy.hindsight-dot.svc.cluster.local:8001"
+              },
+              {
+                "name": "DOT_STAGING_SYNTHETIC",
+                "value": {{ ternary "1" "0" .Values.syntheticBackend | quote }}
+              },
+              {
+                "name": "DOT_NATIVE_URL",
+                "value": {{ ternary "http://synthetic-backend.hindsight-dot.svc.cluster.local:8080" "http://hindsight-api.hindsight.svc.cluster.local:8888" .Values.syntheticBackend | quote }}
+              },
+              {
+                "name": "DOT_OAUTH_REDIS_URL_FILE",
+                "value": "/run/dot/oauth_redis_url"
+              },
+              {
+                "name": "DOT_GATE_REDIS_URL_FILE",
+                "value": "/run/dot/gate_redis_url"
+              },
+              {
+                "name": "DOT_STORAGE_KEY_FILE",
+                "value": "/run/dot/storage_key"
+              },
+              {
+                "name": "DOT_SIGNING_KEY_FILE",
+                "value": "/run/dot/signing_key"
+              },
+              {
+                "name": "DOT_GOOGLE_CLIENT_SECRET_FILE",
+                "value": "/run/dot/google_client_secret"
+              },
+              {{ if not .Values.syntheticBackend }}{"name":"DOT_NATIVE_API_KEY_FILE","value":"/run/native/api_key"}{{ else }}{"name":"DOT_SYNTHETIC_NO_NATIVE","value":"1"}{{ end }}
+            ],
+            "volumeMounts": [
+              {
+                "name": "runtime",
+                "mountPath": "/run/dot",
+                "readOnly": true
+              },
+              {
+                "name": "tmp",
+                "mountPath": "/tmp"
+              },
+              {{ if not .Values.syntheticBackend }}{"name":"native","mountPath":"/run/native","readOnly":true}{{ else }}{"name":"tmp","mountPath":"/run/synthetic"}{{ end }}
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "100m",
+                "memory": "128Mi"
+              },
+              "limits": {
+                "cpu": "1",
+                "memory": "512Mi"
+              }
+            },
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/health",
+                "port": "http"
+              },
+              "initialDelaySeconds": 15
+            },
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/ready",
+                "port": "http"
+              },
+              "initialDelaySeconds": 5
+            }
+          }
+        ],
+        "volumes": [
+          {
+            "name": "runtime",
+            "secret": {
+              "secretName": "hindsight-dot-runtime",
+              "defaultMode": 288
+            }
+          },
+          {
+            "name": "tmp",
+            "emptyDir": {
+              "medium": "Memory",
+              "sizeLimit": "32Mi"
+            }
+          },
+          {{ if not .Values.syntheticBackend }}{"name":"native","secret":{"secretName":"hindsight-dot-native","defaultMode":288}}
+{{ else }}{"name":"synthetic-unused","emptyDir":{}}
+{{ end }}
+        ]
+      }
+    }
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "backend-policy",
+    "namespace": {{ .Release.Namespace | quote }}
+  },
+  "spec": {
+    "type": "ClusterIP",
+    "selector": {
+      "app": "hindsight-dot",
+      "component": "gateway"
+    },
+    "ports": [
+      {
+        "name": "http",
+        "port": 8001,
+        "targetPort": "http"
+      }
+    ]
+  }
+}
+{{- end }}
