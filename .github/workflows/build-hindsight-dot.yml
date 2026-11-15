@@ -52,8 +52,16 @@ jobs:
             -e PYTHONPATH=/tests:/app \
             -v "$PWD/images/hindsight-dot/test_service.py:/tests/test_service.py:ro" \
             -v "$PWD/images/hindsight-dot/test_flow_base.py:/tests/test_flow_base.py:ro" \
+            -v "$PWD/images/hindsight-dot/test_rate_limit.py:/tests/test_rate_limit.py:ro" \
             "$IMAGE:${{ github.sha }}" \
-            python -m unittest test_service.ServiceTests test_service.StateTests -q
+            python -m unittest test_service.ServiceTests test_service.StateTests test_rate_limit -q
+      - name: Isolated Redis admission quota integration
+        run: |
+          python -m venv "$RUNNER_TEMP/dcr-live"
+          "$RUNNER_TEMP/dcr-live/bin/pip" install redis==8.1.0
+          docker pull redis@sha256:4eec4565e45aa0b3966554c866bc73211e281b0b3d89fe9a33c982e6faca809d
+          cd images/hindsight-dot
+          DOT_RATE_LIVE=1 "$RUNNER_TEMP/dcr-live/bin/python" -m unittest test_rate_limit_live -q
       - name: Record tested image identity
         id: identity
         run: |

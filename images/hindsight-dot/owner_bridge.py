@@ -11,6 +11,7 @@ BOOTSTRAP_SUBJECT="bootstrap-unverified-deny-all"
 class OwnerGoogleProvider(GoogleProvider):
     def __init__(self, *, owner_sub, owner_email, bootstrap_identity_diagnostic=False, **kwargs):
         if bootstrap_identity_diagnostic and owner_sub!=BOOTSTRAP_SUBJECT:raise ValueError("bootstrap subject must deny all")
+        self._upstream_client_id=kwargs["client_id"]
         self.exact_redirects=frozenset(kwargs.get("allowed_client_redirect_uris") or ())
         if not self.exact_redirects:raise ValueError("exact redirects required")
         self.bootstrap_identity_diagnostic=bootstrap_identity_diagnostic
@@ -49,6 +50,7 @@ class OwnerGoogleProvider(GoogleProvider):
         verified=await super().load_access_token(token)
         if not verified:return None
         c=verified.claims or {}
+        if c.get('sub')!=verified.subject or c.get('aud')!=self._upstream_client_id:return None
         if c.get('email')!=self.owner_email or c.get('email_verified') not in (True,'true'):return None
         if self.bootstrap_identity_diagnostic:
             subject=verified.subject

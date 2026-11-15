@@ -3,7 +3,9 @@
 {{- $repo := required "image repository required" .Values.image.repository }}
 {{- if not (regexMatch "^sha256:[0-9a-f]{64}$" .Values.image.digest) }}{{ fail "image digest required" }}{{ end }}
 {{- if not (regexMatch "^sha256:[0-9a-f]{64}$" .Values.redis.digest) }}{{ fail "redis digest required" }}{{ end }}
-{{- $sub := required "owner sub required" .Values.owner.sub }}
+{{- if not .Values.owner.fromSecret }}{{- $sub := required "owner sub required" .Values.owner.sub }}{{- end }}
+{{- if and .Values.owner.fromSecret .Values.bootstrapIdentityDiagnostic }}{{ fail "secret owner cannot use bootstrap diagnostic" }}{{ end }}
+{{- if and .Values.owner.fromSecret (not .Values.externalSecrets.enabled) }}{{ fail "secret owner requires external secrets" }}{{ end }}
 {{- $client := required "google client required" .Values.googleClientId }}
 {{- if empty .Values.redirectUris }}{{ fail "exact redirects required" }}{{ end }}
 {{- range .Values.redirectUris }}{{ if or (not (hasPrefix "https://" .)) (contains "*" .) (contains "[" .) (contains "]" .) (contains "#" .) }}{{ fail "exact HTTPS redirects required" }}{{ end }}{{ end }}

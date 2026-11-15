@@ -78,6 +78,45 @@ class ServiceTests(FlowTests):
   self.assertEqual(good.status_code,201,good.text)
   bad=await self.c.post('/register',json={'redirect_uris':['https://unapproved.invalid/callback'],'scope':'openid'})
   self.assertEqual(bad.status_code,400,bad.text)
+ async def test_bound_owner_requires_limiter(self):
+  with self.assertRaises(ValueError):
+   Application(replace(config('proxy'),owner_bound=True),storage=self.store,read_status=self.state,google_secret='fake',signing_key='fake')
+ async def test_rate_limit_before_callback_and_payload(self):
+  from unittest.mock import AsyncMock
+  from rate_limit import RegistrationLimited,RegistrationUnavailable
+  limiter=AsyncMock()
+  self.proxy.registration_limiter=limiter
+  limiter.acquire.side_effect=RegistrationLimited(retry_after=60)
+  response=await self.c.post('/register',content=b'invalid-json')
+  self.assertEqual(response.status_code,429);self.assertEqual(response.headers['retry-after'],'60')
+  limiter.acquire.side_effect=RegistrationUnavailable()
+  response=await self.c.post('/register',json={'redirect_uris':['https://bad.invalid']})
+  self.assertEqual(response.status_code,503)
+  self.assertEqual(limiter.acquire.await_count,2)
+ async def test_registration_body_bounds_and_redirect_quota(self):
+  import asyncio
+  from unittest.mock import AsyncMock
+  self.proxy.registration_limiter=AsyncMock()
+  response=await self.c.post('/register',content=b'x'*16385)
+  self.assertEqual(response.status_code,413)
+  for delayed in [False,True]:
+   events=[]
+   async def receive():
+    if delayed:await asyncio.sleep(3)
+    return {'type':'http.disconnect'}
+   async def send(event):events.append(event)
+   await self.proxy.app({'type':'http','path':'/register','method':'POST','headers':[]},receive,send)
+   self.assertEqual(events[0]['status'],413)
+  before=self.proxy.registration_limiter.acquire.await_count
+  response=await self.c.post('/register/',json={'redirect_uris':['https://client.invalid/callback'],'scope':'openid'},follow_redirects=True)
+  self.assertEqual(response.status_code,201)
+  self.assertEqual(self.proxy.registration_limiter.acquire.await_count,before+1)
+
+ async def test_wrong_google_audience_denied(self):
+  tok=(await self.exchange()).json()['access_token'];self.identity['aud']='different-client'
+  r=await self.call(tok,'recall_memory',{'query':'fictional memory query'})
+  self.assertEqual(r.status_code,401);self.assertEqual(self.native,[])
+
  async def test_issuer_metadata_stable_callback(self):
   stable='https://chatgpt.com/connector_platform_oauth_redirect'
   app=Application(replace(config('proxy'),redirects=(stable,)),storage=self.store,read_status=self.state,google_secret='synthetic-only',signing_key='synthetic-only-key',google_http=self.http,outbound_http=self.gateway_http)

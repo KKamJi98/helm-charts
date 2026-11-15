@@ -22,6 +22,7 @@ from redis.backoff import NoBackoff
 from redis.retry import Retry
 from starlette.responses import JSONResponse
 
+from rate_limit import RedisDCRLimiter, RegistrationLimited as DCRLimitExceeded, RegistrationUnavailable as DCRLimiterUnavailable
 from adapter import safe_text
 from emergency_gate import EmergencyGate, GateStatus
 from owner_bridge import OwnerGoogleProvider, CapabilityVerifier, BOOTSTRAP_SUBJECT
@@ -44,6 +45,7 @@ class Config:
     scanner: str = '/usr/local/bin/gitleaks'
     synthetic_backend: bool = False
     bootstrap_identity_diagnostic: bool = False
+    owner_bound: bool = False
 
     def __post_init__(self):
         if self.mode not in ('proxy','gateway') or type(self.epoch) is not int or self.epoch<1: raise ValueError('mode/epoch')
@@ -86,8 +88,10 @@ async def json_request(client, url, headers, body, max_bytes=65536):
 
 class Application:
     def __init__(self, config, *, storage, read_status, google_secret, signing_key,
-                 google_http=None, native_headers=None, outbound_http=None):
+                 google_http=None, native_headers=None, outbound_http=None, registration_limiter=None):
         self.config=config
+        if config.owner_bound and registration_limiter is None:raise ValueError("bound owner requires registration quota")
+        self.registration_limiter=registration_limiter
         self.http=outbound_http or httpx2.AsyncClient(timeout=httpx2.Timeout(20,connect=5),follow_redirects=False)
         self.provider=OwnerGoogleProvider(owner_sub=config.owner_sub,owner_email=config.owner_email,bootstrap_identity_diagnostic=config.bootstrap_identity_diagnostic,
             client_id=config.google_client_id,client_secret=google_secret,base_url=config.public_url,
@@ -129,9 +133,33 @@ class Application:
             self.recall=RecallGateway(self.verifier,recall)
             self.retain=RetainGateway(self.verifier,retain,scanner=config.scanner)
             self.raw=self._gateway
-        self.gated=EmergencyGate(self.raw,read_status,config.epoch)
+        self.gated=EmergencyGate(self._limited,read_status,config.epoch)
         self.storage=storage
         self.app=self._entry
+
+    async def _limited(self,scope,receive,send):
+        if scope['type']=='http' and scope['path']=='/register' and scope['method']=='POST' and self.registration_limiter is not None:
+            try:await self.registration_limiter.acquire()
+            except DCRLimitExceeded as error:
+                headers={'Cache-Control':'no-store'}
+                if error.retry_after is not None:headers['Retry-After']=str(error.retry_after)
+                return await JSONResponse({'error':'registration_quota_exceeded'},429,headers=headers)(scope,receive,send)
+            except DCRLimiterUnavailable:
+                return await JSONResponse({'error':'registration_unavailable'},503,headers={'Cache-Control':'no-store'})(scope,receive,send)
+            async def bounded_body():
+                body=bytearray()
+                while True:
+                    event=await receive()
+                    if event['type']!='http.request':raise ValueError('request interrupted')
+                    body.extend(event.get('body',b''))
+                    if len(body)>16384:raise ValueError('body limit')
+                    if not event.get('more_body',False):return bytes(body)
+            try:body=await asyncio.wait_for(bounded_body(),2)
+            except (ValueError,asyncio.TimeoutError):
+                return await JSONResponse({'error':'registration_payload_refused'},413)(scope,receive,send)
+            async def replay():return {'type':'http.request','body':body,'more_body':False}
+            return await self.raw(scope,replay,send)
+        return await self.raw(scope,receive,send)
 
     async def _entry(self,scope,receive,send):
         if scope['type']=='http' and scope['method']=='GET' and scope['path'] in ('/health','/ready'):
@@ -197,7 +225,7 @@ def factory():
         gateway_url=os.environ.get('DOT_GATEWAY_URL','http://backend-policy.hindsight-dot.svc.cluster.local:8001'),
         native_url=os.environ.get('DOT_NATIVE_URL','http://hindsight-api.hindsight.svc.cluster.local:8888'),
         synthetic_backend=os.environ.get('DOT_STAGING_SYNTHETIC','0')=='1',
-        bootstrap_identity_diagnostic=os.environ.get('DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC','0')=='1')
+        bootstrap_identity_diagnostic=os.environ.get('DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC','0')=='1',owner_bound=os.environ.get('DOT_OWNER_BOUND','0')=='1')
     # Dedicated ACL users: oauth store key RW; gate key GET-only. Never admin/default user.
     oauth_redis=Redis.from_url(secret('DOT_OAUTH_REDIS_URL'),decode_responses=True,socket_timeout=.3,socket_connect_timeout=.3,retry=Retry(NoBackoff(),0),retry_on_timeout=False)
     gate_redis=Redis.from_url(secret('DOT_GATE_REDIS_URL'),decode_responses=True,socket_timeout=.3,socket_connect_timeout=.3,retry=Retry(NoBackoff(),0),retry_on_timeout=False)
@@ -206,6 +234,10 @@ def factory():
     if config.mode=='gateway' and not config.synthetic_backend:
         headers={'Authorization':'Bearer '+secret('DOT_NATIVE_API_KEY')}
         if 'DOT_NATIVE_GATEWAY_KEY_FILE' in os.environ:headers['X-Hindsight-Client-Key']=secret('DOT_NATIVE_GATEWAY_KEY')
-    instance=Application(config,storage=store,read_status=RedisStatus(gate_redis),
+    limiter=None
+    if config.owner_bound:
+        rate_redis=Redis.from_url(secret('DOT_RATE_REDIS_URL'),decode_responses=True,socket_timeout=.3,socket_connect_timeout=.3,retry=Retry(NoBackoff(),0),retry_on_timeout=False)
+        limiter=RedisDCRLimiter(rate_redis,config.epoch)
+    instance=Application(config,registration_limiter=limiter,storage=store,read_status=RedisStatus(gate_redis),
         google_secret=secret('DOT_GOOGLE_CLIENT_SECRET'),signing_key=secret('DOT_SIGNING_KEY'),native_headers=headers)
     return instance.app

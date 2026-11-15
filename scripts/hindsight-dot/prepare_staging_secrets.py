@@ -10,6 +10,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import secrets
 import stat
@@ -53,7 +54,17 @@ def write_new_json(directory,name,value):
     with os.fdopen(fd,'w') as f:
         json.dump(value,f,ensure_ascii=True,indent=2);f.write('\n');f.flush();os.fsync(f.fileno())
 
-def prepare(google_path,output_dir,epoch):
+def prepare(google_path,output_dir,epoch,owner_path=None):
+    owner=None
+    if owner_path is not None:
+        owner_path=Path(owner_path);reject_symlink_components(owner_path)
+        fd=os.open(owner_path,os.O_RDONLY|os.O_NOFOLLOW)
+        with os.fdopen(fd,'rb') as f:
+            st=os.fstat(f.fileno())
+            if not stat.S_ISREG(st.st_mode) or st.st_uid!=os.getuid() or stat.S_IMODE(st.st_mode)&0o077 or st.st_size>2048:raise BundleError('Owner file permissions')
+            owner=json.load(f)
+        if not isinstance(owner,dict) or owner.get('email')!='rlaxowl5460@gmail.com' or owner.get('tools_denied') is not True or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}',str(owner.get('sub',''))):raise BundleError('Verified owner required')
+
     if type(epoch) is not int or not 1<=epoch<=1000000:raise BundleError('Invalid epoch')
     google_path=Path(google_path);output_dir=Path(output_dir)
     reject_symlink_components(output_dir)
@@ -63,7 +74,7 @@ def prepare(google_path,output_dir,epoch):
         raise BundleError('Output parent must exist, owned by you, mode0700')
     # Read/validate before creating any output; no partial bundle on invalid input.
     cid,google_secret=read_google(google_path)
-    password={role:secrets.token_urlsafe(48) for role in ('oauth','gate','operator')}
+    password={role:secrets.token_urlsafe(48) for role in (('oauth','gate','operator','rate') if owner else ('oauth','gate','operator'))}
     hashed={role:hashlib.sha256(value.encode()).hexdigest() for role,value in password.items()}
     acl='\n'.join([
         'user default off',
@@ -79,6 +90,10 @@ def prepare(google_path,output_dir,epoch):
         'signing_key':secrets.token_urlsafe(64),
         'google_client_secret':google_secret,'redis_acl':acl,
     }
+    if owner:
+        runtime['owner_sub']=owner['sub']
+        runtime['rate_redis_url']=url('rate')
+        runtime['redis_acl']=acl.replace(f'%RW~dot-control:state',f'%RW~dot-control:state %RW~dot-dcr-e{epoch}:state')+f'user rate on #{hashed["rate"]} ~dot-dcr-e{epoch}:state +get +set +time +ttl +ping +client|setinfo\n'
     # Operator plaintext never enters runtime JSON/SSM or service pod mounts.
     operator={
         'redis_url':url('operator'),'state_key':'dot-control:state',
@@ -108,9 +123,10 @@ def main(argv=None):
     parser.add_argument('--google-client',type=Path,default=GOOGLE_DEFAULT)
     parser.add_argument('--output-dir',type=Path,required=True)
     parser.add_argument('--epoch',type=int,required=True)
+    parser.add_argument('--verified-owner',type=Path)
     args=parser.parse_args(argv)
     os.umask(0o077)
-    try:prepare(args.google_client,args.output_dir,args.epoch)
+    try:prepare(args.google_client,args.output_dir,args.epoch,args.verified_owner)
     except Exception:
         print('Secret bundle not completed. Check private input permissions, project/callback and unused output directory. No AWS writes were attempted.',file=sys.stderr)
         return 1
