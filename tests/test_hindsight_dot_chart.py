@@ -73,7 +73,7 @@ class Chart(unittest.TestCase):
    self.assertEqual(env['DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC'],'1')
    self.assertEqual(env['DOT_OWNER_SUB'],'bootstrap-unverified-deny-all')
    self.assertEqual(json.loads(env['DOT_CAPABILITIES']),['hindsight:recall'])
-   self.assertEqual(json.loads(env['DOT_REDIRECT_URIS']),['https://chatgpt.com/connector/oauth/msuk3CV7PsAT'])
+   self.assertEqual(json.loads(env['DOT_REDIRECT_URIS']),['https://chatgpt.com/connector_platform_oauth_redirect'])
  def test_bootstrap_default_disabled(self):
   ds=render()
   for name in ['proxy','backend-policy']:

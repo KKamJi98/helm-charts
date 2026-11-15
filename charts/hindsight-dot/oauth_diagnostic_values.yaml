@@ -5,7 +5,7 @@ syntheticBackend: true
 owner:
   sub: bootstrap-unverified-deny-all
 capabilities: [hindsight:recall]
-redirectUris: [https://chatgpt.com/connector/oauth/msuk3CV7PsAT]
+redirectUris: [https://chatgpt.com/connector_platform_oauth_redirect]
 publicRoute:
   enabled: true
   hostname: hindsight-dot.kkamji.net
