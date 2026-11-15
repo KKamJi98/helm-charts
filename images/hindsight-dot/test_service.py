@@ -78,6 +78,37 @@ class ServiceTests(FlowTests):
   self.assertEqual(good.status_code,201,good.text)
   bad=await self.c.post('/register',json={'redirect_uris':['https://unapproved.invalid/callback'],'scope':'openid'})
   self.assertEqual(bad.status_code,400,bad.text)
+ async def test_dcr_public_client_scope_and_redacted_diagnostics(self):
+  payload={'redirect_uris':['https://client.invalid/callback'],'scope':'openid https://www.googleapis.com/auth/userinfo.email','grant_types':['authorization_code','refresh_token'],'response_types':['code'],'token_endpoint_auth_method':'none','client_name':'PRIVATE-MARKER'}
+  with self.assertLogs('uvicorn.error',level='INFO') as logs:
+   good=await self.c.post('/register',json=payload)
+   payload['redirect_uris']=['https://unapproved.invalid/callback?secret=PRIVATE-MARKER']
+   bad=await self.c.post('/register',json=payload)
+  self.assertEqual(good.status_code,201,good.text)
+  self.assertEqual(good.json()['token_endpoint_auth_method'],'none')
+  self.assertEqual(bad.status_code,400,bad.text)
+  self.assertEqual(bad.json()['error'],'invalid_redirect_uri')
+  output=' '.join(logs.output)
+  self.assertIn('DCR outcome=accepted',output)
+  self.assertIn('DCR outcome=redirect_denied',output)
+  self.assertNotIn('PRIVATE-MARKER',output)
+  self.assertNotIn('https://',output)
+ async def test_dcr_storage_error_diagnostics_redacted(self):
+  from unittest.mock import AsyncMock,patch
+  client=await self.proxy.provider.get_client('test-client')
+  with patch('owner_bridge.GoogleProvider.register_client',new=AsyncMock(side_effect=RuntimeError('PRIVATE-ERROR'))):
+   with self.assertLogs('uvicorn.error',level='INFO') as logs:
+    with self.assertRaises(RuntimeError):
+     await self.proxy.provider.register_client(client)
+  self.assertIn('storage_or_provider_error',' '.join(logs.output))
+  self.assertNotIn('PRIVATE-ERROR',' '.join(logs.output))
+ async def test_dcr_diagnostics_bounded(self):
+  self.proxy.provider._registration_events=0
+  with self.assertLogs('uvicorn.error',level='INFO') as logs:
+   for _ in range(20):
+    self.proxy.provider._registration_event('redirect_denied')
+  self.assertEqual(len(logs.output),16)
+
  async def test_redirect_variants_rejected(self):
   from types import SimpleNamespace
   from mcp.server.auth.provider import AuthorizeError

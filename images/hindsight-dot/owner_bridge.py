@@ -15,15 +15,27 @@ class OwnerGoogleProvider(GoogleProvider):
         if not self.exact_redirects:raise ValueError("exact redirects required")
         self.bootstrap_identity_diagnostic=bootstrap_identity_diagnostic
         self._bootstrap_logged=False
+        self._registration_events=0
         self.owner_sub,self.owner_email=owner_sub,owner_email
         super().__init__(**kwargs)
+    def _registration_event(self, outcome):
+        # Bounded, fixed vocabulary only. Never log client metadata, URIs,
+        # exception text, authorization headers, codes or credentials.
+        if self._registration_events < 16:
+            logging.getLogger('uvicorn.error').info('DCR outcome=%s',outcome)
+            self._registration_events += 1
+
     async def register_client(self, client_info):
-        # FastMCP patterns permit query variants and glob characters. Never rely
-        # on those patterns for this deployment's exact callback boundary.
         redirects=client_info.redirect_uris
         if not redirects or any(str(uri) not in self.exact_redirects for uri in redirects):
+            self._registration_event('redirect_denied')
             raise RegistrationError("invalid_redirect_uri", "Exact registered callback required")
-        await super().register_client(client_info)
+        try:
+            await super().register_client(client_info)
+        except Exception:
+            self._registration_event('storage_or_provider_error')
+            raise
+        self._registration_event('accepted')
 
     async def authorize(self, client, params):
         redirect=str(params.redirect_uri)
