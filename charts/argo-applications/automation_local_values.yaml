@@ -178,3 +178,18 @@ applications:
       helm:
         valueFiles:
         - kkamji_local_values.yaml
+
+  hindsight-dot-staging:
+    enabled: true
+    name: hindsight-dot-staging
+    project: automation
+    destination:
+      namespace: hindsight-dot
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/hindsight-dot
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+          - staging_local_values.yaml

@@ -7,7 +7,7 @@ status: current
 
 # Hindsight dot connection candidate
 
-This is a disabled GitOps candidate, not an installed service or verified personal dot connection. No Argo Application references `charts/hindsight-dot`. This work does not create Google credentials, change existing Hindsight routes, or read/copy the native key.
+This branch prepares private synthetic GitOps staging, not an installed service or verified personal dot connection. The proposed `hindsight-dot-staging` Application enables only synthetic staging after the branch is merged; default chart values remain disabled. This work does not create Google credentials, change existing Hindsight routes, or read/copy the native key.
 
 ## Topology
 
@@ -75,3 +75,9 @@ These are prepared procedures, not executed cluster evidence. They add no chart 
 The operator path changes only the dedicated Redis control key. Security rollback uses `security-stop --epoch CURRENT`, atomically committing disabled plus CURRENT+1. Existing processes fail closed on epoch mismatch. Provision the new exact-epoch OAuth ACL and matching dedicated credentials first; do not widen to a cross-epoch wildcard. Preserve the incremented control state, do not initialize or restore it. Update BOTH proxy and gateway GitOps epoch and credential references to the new values, reconcile Redis ACL and both Deployments, verify OAuth storage access and old-session rejection, then verify the deployed configuration before `enable --epoch NEW --verified-configs-epoch NEW`. The latter flag is an explicit operator attestation, not an automated cluster verification. Old OAuth collections must not be restored or reused; verify old access/refresh rejection after reopen. New owner authorization may be required. Never decrease epoch to recover sessions. `maintenance-pause` preserves the epoch and therefore intentionally permits old sessions when resumed: it is not token revocation. Neither operation undoes an already-dispatched native retain. Keep PVC/Secrets for authorized recovery, without restoring a prior control epoch.
 
 [Redis SET documentation](https://redis.io/docs/latest/commands/set/) specifies IFEQ since 8.4.0; the pinned Redis image meets that requirement. CAS needs only the existing GET/SET key ACL, not Lua, WATCH, MULTI, or additional command permissions. On unsupported syntax, competing update or ambiguous transport failure, stop and inspect state manually; never fall back to plain SET. A compromised operator credential still has raw SET authority and can violate monotonicity outside this tool, so it remains privileged and local-only.
+
+## Approved synthetic staging preparation (2026-11-15)
+
+The owner approved a dedicated personal-cluster namespace, Redis 1Gi PVC, proxy/gateway/synthetic backend, narrow Cilium rules, image publishing and dedicated runtime SSM/Secrets. Public routes, existing native keys, real memories and company resources remain excluded. `staging_local_values.yaml` pins the tested published digest from workflow run 43711932181. Anonymous manifest retrieval succeeded. Owner identity is the deny-all placeholder and the callback is synthetic only; neither enables real login or memory access.
+
+The proposed Application targets main. Branch publication is not a merge or deployment. AWS personal session renewal and runtime parameter provisioning are pending; do not merge or claim live acceptance until these and explicit merge authorization are complete. Initialize the Redis gate disabled after deployment, then enable only for approved synthetic checks using the separate local operator credential. No production native mode is enabled by this change.

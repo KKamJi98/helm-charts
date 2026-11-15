@@ -51,6 +51,17 @@ class Chart(unittest.TestCase):
   self.assertNotIn('hindsight-dot-native',json.dumps(ds))
   for bad in [['--set','owner.sub=real-owner'],['--set','syntheticBackend=false','--set','native.approved=true'],['--set','capabilities[1]=hindsight:retain'],['--set','capabilities[0]=hindsight:retain'],['--set','publicRoute.enabled=true']]:
    self.assertNotEqual(render(opts+bad,ok=False),0)
+ def test_staging_values_no_public_or_native(self):
+  r=subprocess.run(BASE+['-f','charts/hindsight-dot/staging_local_values.yaml'],cwd=ROOT,text=True,capture_output=True,check=True)
+  ds=[d for d in yaml.safe_load_all(r.stdout) if d]
+  self.assertTrue(ds)
+  self.assertFalse(any(d['kind']=='HTTPRoute' for d in ds))
+  self.assertNotIn('hindsight-dot-native',json.dumps(ds))
+  self.assertTrue(all(d['metadata']['namespace']=='hindsight-dot' for d in ds))
+  cfg=yaml.safe_load((ROOT/'charts/hindsight-dot/staging_local_values.yaml').read_text())
+  self.assertFalse(cfg['bootstrapIdentityDiagnostic'])
+  self.assertEqual(cfg['owner']['sub'],'bootstrap-unverified-deny-all')
+  self.assertEqual(cfg['capabilities'],['hindsight:recall'])
  def test_bootstrap_default_disabled(self):
   ds=render()
   for name in ['proxy','backend-policy']:
