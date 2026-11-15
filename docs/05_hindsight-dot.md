@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-15T15:30:29Z
+updated: 2026-11-15T15:38:07Z
 type: runbook
 status: current
 ---
@@ -108,3 +108,8 @@ The generic ChatGPT rejection is not a proven redirect mismatch. Official OpenAI
 Before any restart: preserve control disabled/epoch2 and the existing PVC. Prepare an epoch2 bundle in a fresh private directory, use new signing/storage keys and epoch2-only OAuth ACL namespace, and keep operator material out of SSM/runtime. Do not initialize or decrease the existing control epoch. ESO refresh alone does not prove Redis ACL reload: coordinate a GitOps rollout of Redis and both app Deployments, verify applied ACL and epoch2 storage access privately, and prove epoch1 grants fail. Failed rotation stays closed; do not restore epoch1 control state. The Google credential does not need unrelated rotation. Secret writes, rollout, image publication and public route activation are separate from this source-only change.
 
 Reference: https://developers.openai.com/plugins/build/auth
+
+
+## Epoch2 private rollout candidate
+
+The approved epoch2 runtime bundle has been stored as SSM version2; no native credential is included. Before merging this rollout, confirm both ESO target Secrets match that bundle without printing values. ESO remains on its existing one-hour refresh interval. No force-refresh or public-route activation is bundled. Redis Pod template now tracks the non-secret credential epoch so a GitOps epoch bump reloads its ACL file by restart. The existing PVC and disabled epoch2 control state must survive; do not initialize or revert the state. Proxy/gateway epoch changes trigger their existing Recreate rollout. A rollout failure stays closed and is repaired forward, not by enabling epoch1.
