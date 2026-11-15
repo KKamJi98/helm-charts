@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-15T15:09:19Z
+updated: 2026-11-15T16:11:54Z
 type: runbook
 status: current
 ---
@@ -180,3 +180,6 @@ The candidate now uses DCR-only OAuth, explicit synthetic-only identity bootstra
 The isolated dot staging ASGI startup correction and its remaining live gates are recorded in [the dot runbook](05_hindsight-dot.md#initial-live-staging-finding). Existing native Hindsight is unchanged.
 
 Public synthetic dot OAuth preparation is isolated in the optional diagnostic values overlay; see the dot runbook. It does not enable the native API key or real memory use.
+
+
+The isolated dot synthetic diagnostic now tests the exact stable ChatGPT OAuth callback selected after issuer-aware metadata discovery. Native Hindsight is unchanged; see [dot connection runbook](05_hindsight-dot.md).
