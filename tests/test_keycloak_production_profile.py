@@ -101,6 +101,12 @@ class KeycloakProductionProfileTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return documents(result.stdout)
 
+    def test_database_tolerations_are_omitted_for_podspec_snapshot_stability(self):
+        for phase in ("database", "application"):
+            with self.subTest(phase=phase):
+                cluster = next(obj for obj in self.render(phase) if obj["kind"] == "Cluster")
+                self.assertNotIn("tolerations", cluster["spec"]["affinity"])
+
     def test_production_database_phase_declares_backup_before_app(self):
         result = preparation.KeycloakPreparationTests.command(preparation.APP, override=PRODUCTION)
         self.assertEqual(result.returncode, 0, result.stderr)
