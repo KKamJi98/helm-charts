@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-15T16:11:26Z
+updated: 2026-11-15T16:16:15Z
 type: runbook
 status: current
 ---
@@ -120,3 +120,8 @@ The approved epoch2 runtime bundle has been stored as SSM version2; no native cr
 After metadata discovery, the same ChatGPT custom MCP draft now displays `https://chatgpt.com/connector_platform_oauth_redirect` in its user-defined client view. Local provider metadata independently advertises `authorization_response_iss_parameter_supported=true`. This matches the OpenAI documented stable-redirect rule. The earlier callback-ID allowlist was observed before discovery; mismatch is a strong hypothesis, not a proven historical request payload.
 
 This attempt replaces, rather than broadens, the exact allowlist. Tests accept the stable URL and reject the previous callback-ID URL and query variants. The same dedicated synthetic public overlay is activated only for an attended diagnostic. Gate remains disabled2 until rollout and TLS checks. No native secrets, memories or writes; bootstrap still denies all tool access. There is no DCR rate limiter: the operator must keep the open window short and close on unexpected load, UI rejection or completion. On failure remove the overlay, security-stop to epoch3, and verify actual route prune. No automatic restart or epoch downgrade.
+
+
+## Epoch2 supervised result and close
+
+Stable exact callback resolved the app-creation blocker: DCR accepted, ChatGPT synthetic plugin was created, Google personal email authorization completed, and the server verified the owner identity. Bootstrap intentionally denied MCP access (401); no native key or real memory was used. The verified subject is stored only in the local private evidence, not this repository. Following the attended diagnostic, security-stop advanced control to disabled epoch3 and this change removes the public overlay. Verify actual HTTPRoute prune. Installed synthetic plugin presence is not a usable memory connection. Further production access needs a separately reviewed owner/epoch3 configuration and applicable authorization.
