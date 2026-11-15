@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-15T16:16:15Z
+updated: 2026-11-15T16:27:16Z
 type: runbook
 status: current
 ---
@@ -125,3 +125,10 @@ This attempt replaces, rather than broadens, the exact allowlist. Tests accept t
 ## Epoch2 supervised result and close
 
 Stable exact callback resolved the app-creation blocker: DCR accepted, ChatGPT synthetic plugin was created, Google personal email authorization completed, and the server verified the owner identity. Bootstrap intentionally denied MCP access (401); no native key or real memory was used. The verified subject is stored only in the local private evidence, not this repository. Following the attended diagnostic, security-stop advanced control to disabled epoch3 and this change removes the public overlay. Verify actual HTTPRoute prune. Installed synthetic plugin presence is not a usable memory connection. Further production access needs a separately reviewed owner/epoch3 configuration and applicable authorization.
+
+
+## Owner-positive synthetic candidate
+
+Optional owner.fromSecret injects verified owner subject from the dedicated runtime Secret, never public values. Bound-owner mode requires a separate rate credential. Source preparation does not enable it, rotate credentials, update image digests or reopen routes. Google tokeninfo validates audience and supplies subject; the bridge additionally matches claims.sub to verified subject and claims.aud to the dedicated Google client. It never trusts a decoded unverified JWT. Native mode remains excluded from this phase.
+
+DCR uses separate atomic Redis keys dot-dcr-eN:total/window, fixed-window5/600seconds and hard32 attempts per epoch. Existing registered clients are not expired by the quota; new attempts fail closed on quota exhaustion or corrupt/missing counter state. A dedicated rate user can eval/get/incr/expire/ttl only within its prefix; the control operator gains only the exact total key for one-time SET0 NX bootstrap. No reset after ambiguous timeout. This is an admission quota, not protection against all volumetric traffic; authenticated recall and token traffic have no new rate budget in this candidate. Registration bodies are capped16KiB with a2-second read timeout. Long-lived exposure is not approved or claimed. Epoch3 secrets and actual Lua/ACL tests must precede a brief supervised synthetic test.

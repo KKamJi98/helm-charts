@@ -74,6 +74,17 @@ class Chart(unittest.TestCase):
    self.assertEqual(env['DOT_OWNER_SUB'],'bootstrap-unverified-deny-all')
    self.assertEqual(json.loads(env['DOT_CAPABILITIES']),['hindsight:recall'])
    self.assertEqual(json.loads(env['DOT_REDIRECT_URIS']),['https://chatgpt.com/connector_platform_oauth_redirect'])
+ def test_private_owner_binding_uses_secret(self):
+  r=subprocess.run(BASE+['-f','charts/hindsight-dot/staging_local_values.yaml','--set','owner.fromSecret=true'],cwd=ROOT,text=True,capture_output=True,check=True)
+  ds=[d for d in yaml.safe_load_all(r.stdout) if d]
+  for name in ['proxy','backend-policy']:
+   env={e['name']:e for e in named(ds,'Deployment',name)['spec']['template']['spec']['containers'][0]['env']}
+   self.assertEqual(env['DOT_OWNER_SUB']['valueFrom']['secretKeyRef']['key'],'owner_sub')
+   self.assertEqual(env['DOT_OWNER_BOUND']['value'],'1')
+   self.assertIn('DOT_RATE_REDIS_URL_FILE',env)
+  runtime=named(ds,'ExternalSecret','hindsight-dot-runtime')
+  self.assertIn('owner_sub',[x['secretKey'] for x in runtime['spec']['data']])
+  self.assertNotIn('HTTPRoute',[x['kind'] for x in ds])
  def test_bootstrap_default_disabled(self):
   ds=render()
   for name in ['proxy','backend-policy']:

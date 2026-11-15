@@ -84,6 +84,10 @@
               }
             ],
             "env": [
+              {{- if .Values.owner.fromSecret }}
+              {"name":"DOT_OWNER_BOUND","value":"1"},
+              {"name":"DOT_RATE_REDIS_URL_FILE","value":"/run/dot/rate_redis_url"},
+              {{- end }}
               {"name": "DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC", "value": {{ ternary "1" "0" .Values.bootstrapIdentityDiagnostic | quote }}},
               {
                 "name": "DOT_MODE",
@@ -99,7 +103,11 @@
               },
               {
                 "name": "DOT_OWNER_SUB",
+                {{- if .Values.owner.fromSecret }}
+                "valueFrom": {"secretKeyRef": {"name": "hindsight-dot-runtime", "key": "owner_sub"}}
+                {{- else }}
                 "value": {{ .Values.owner.sub | quote }}
+                {{- end }}
               },
               {
                 "name": "DOT_OWNER_EMAIL",
@@ -306,6 +314,10 @@
               }
             ],
             "env": [
+              {{- if .Values.owner.fromSecret }}
+              {"name":"DOT_OWNER_BOUND","value":"1"},
+              {"name":"DOT_RATE_REDIS_URL_FILE","value":"/run/dot/rate_redis_url"},
+              {{- end }}
               {"name": "DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC", "value": {{ ternary "1" "0" .Values.bootstrapIdentityDiagnostic | quote }}},
               {
                 "name": "DOT_MODE",
@@ -321,7 +333,11 @@
               },
               {
                 "name": "DOT_OWNER_SUB",
+                {{- if .Values.owner.fromSecret }}
+                "valueFrom": {"secretKeyRef": {"name": "hindsight-dot-runtime", "key": "owner_sub"}}
+                {{- else }}
                 "value": {{ .Values.owner.sub | quote }}
+                {{- end }}
               },
               {
                 "name": "DOT_OWNER_EMAIL",

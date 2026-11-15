@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-15T16:11:54Z
+updated: 2026-11-15T16:27:16Z
 type: runbook
 status: current
 ---
@@ -183,3 +183,8 @@ Public synthetic dot OAuth preparation is isolated in the optional diagnostic va
 
 
 The isolated dot synthetic diagnostic now tests the exact stable ChatGPT OAuth callback selected after issuer-aware metadata discovery. Native Hindsight is unchanged; see [dot connection runbook](05_hindsight-dot.md).
+
+
+## Owner-positive synthetic candidate
+
+Optional owner.fromSecret injects verified owner subject from the dedicated runtime Secret, never public values. Bound-owner mode requires a separate rate credential. Source preparation does not enable it, rotate credentials, update image digests or reopen routes. Google tokeninfo validates audience and supplies subject; the bridge additionally matches claims.sub to verified subject and claims.aud to the dedicated Google client. It never trusts a decoded unverified JWT. Native mode remains excluded from this phase.

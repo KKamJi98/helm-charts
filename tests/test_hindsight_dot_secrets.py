@@ -39,3 +39,12 @@ class BundleTests(unittest.TestCase):
  def test_insecure_parent_denied(self):
   self.root.chmod(0o755)
   with self.assertRaises(BundleError):prepare(self.google,self.root/'new',1)
+
+ def test_bound_owner_epoch3_counter_acl(self):
+  owner=self.root/'owner.json';owner.write_text(json.dumps({'sub':'fixture-owner','email':'rlaxowl5460@gmail.com','tools_denied':True}));owner.chmod(0o600)
+  out=self.root/'e3';prepare(self.google,out,3,owner)
+  runtime=json.loads((out/'ssm-runtime.json').read_text())
+  self.assertEqual(runtime['owner_sub'],'fixture-owner')
+  rate=next(x for x in runtime['redis_acl'].splitlines() if x.startswith('user rate '))
+  self.assertIn('~dot-dcr-e3:*',rate);self.assertIn('+eval',rate);self.assertNotIn('+set',rate);self.assertNotIn('dot-control',rate)
+  self.assertIn('%RW~dot-dcr-e3:total',runtime['redis_acl'])
