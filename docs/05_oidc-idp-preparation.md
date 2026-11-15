@@ -1,6 +1,6 @@
 ---
 title: Keycloak OIDC IdP preparation
-updated: 2026-11-16T04:36:04+09:00
+updated: 2026-11-16T06:16:10+09:00
 type: runbook
 status: current
 ---
@@ -190,7 +190,17 @@ Realm JSON export만으로 세션/모든 상태를 포함한 DB backup을 대체
 schema migration 후 컨테이너만 낮추지 않습니다. DB backup과 맞는 버전으로 별도 복구합니다.
 비밀번호 endpoint의 재활성화는 별도 운영 판단이며 자동 fallback을 만들지 않습니다.
 
-## 오프라인 검증 범위
+## CNPG PodSpec snapshot 경계
+
+CNPG 1.30.0은 Pod 생성 시 저장한 `cnpg.io/podSpec` JSON과 새로 만든 PodSpec을 비교합니다. 명시적 빈 `tolerations: []`는 JSON snapshot에서 생략되어 nil로 복원되지만 원래 빈 배열과 `reflect.DeepEqual` 결과가 다릅니다. 운영에서 이 차이로 세 번째 DB Pod의 반복 재생성을 확인했습니다.
+
+차트는 입력 profile과 guard를 유지하고, 깊은 복사본을 렌더하는 시점에 CNPG database affinity의 빈 tolerations만 생략합니다. 다른 값과 worker/anti-affinity/리소스/TLS/backup 경계는 바꾸지 않습니다. Kubernetes가 제공하는 기본 NoExecute toleration을 제거하거나 새 권한을 주는 변경도 아닙니다.
+
+임시 `cnpg.io/reconcilePodSpec=disabled`는 Git 소스에 넣지 않습니다. 이미 적용한 임시 중지는 수정 revision 반영 후 제거하고, 정상 조정 상태에서 Pod UID 안정성, 3/3 Ready와 실제 TLS/backup/restore를 별도로 확인해야 합니다.
+
+고정 소스: [PodSpec 비교](https://github.com/cloudnative-pg/cloudnative-pg/blob/4b5e244a7d031f67e025c83c1555e7726ecbbfa1/pkg/specs/podspec_diff.go), [snapshot 복원 경로](https://github.com/cloudnative-pg/cloudnative-pg/blob/4b5e244a7d031f67e025c83c1555e7726ecbbfa1/internal/controller/cluster_upgrade.go).
+
+## 오프라인 검증의 경계
 
 Helm4.2.1 strict lint/template, immutable 원본/overlay/schema, credential refs, namespace/RBAC/노출, 자원/job와 inactive 예제를 검사합니다.
 기본 준비, 공개 CA와 production 단계의 회귀 suite에 GitOps 연결 검사를 추가했습니다. Operator18, 기본 IdP8, CA15, production DB16/application17 객체 계약을 검증합니다. 기본 준비 렌더에 노출/RealmImport/source Secret은 없습니다.

@@ -417,7 +417,7 @@ class KeycloakPreparationTests(unittest.TestCase):
         self.assertEqual(db_affinity["podAntiAffinityType"], "preferred")
         self.assertIs(db_affinity["enablePodAntiAffinity"], True)
         self.assertEqual(db_affinity["nodeAffinity"], spec["scheduling"]["affinity"]["nodeAffinity"])
-        self.assertEqual(db_affinity["tolerations"], [])
+        self.assertNotIn("tolerations", db_affinity)
 
     def test_render_derived_steady_import_operator_surge_and_update_model(self):
         op = resource_vector(self.op_by[("Deployment", "keycloak-operator")]["spec"]["template"]["spec"]["containers"][0]["resources"])

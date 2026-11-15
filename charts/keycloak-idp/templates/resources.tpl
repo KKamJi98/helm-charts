@@ -1,4 +1,8 @@
 {{- include "keycloak.guard" . }}
+{{- $database := deepCopy .Values.database }}
+{{- if empty $database.affinity.tolerations }}
+{{- $_ := unset $database.affinity "tolerations" }}
+{{- end }}
 {{- $production := eq .Values.preparationProfile "keycloak-26.8.2-production" }}
 {{- if or (not $production) (eq .Values.productionPhase "application") }}
 apiVersion: k8s.keycloak.org/v2beta1
@@ -22,4 +26,4 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: Prune=false,Delete=false
 spec:
-{{ toYaml .Values.database | indent 2 }}
+{{ toYaml $database | indent 2 }}
