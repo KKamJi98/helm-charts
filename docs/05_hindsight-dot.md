@@ -1,13 +1,13 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-15T15:24:23Z
+updated: 2026-11-15T15:30:29Z
 type: runbook
 status: current
 ---
 
 # Hindsight dot connection candidate
 
-This branch prepares private synthetic GitOps staging, not an installed service or verified personal dot connection. The proposed `hindsight-dot-staging` Application enables only synthetic staging after the branch is merged; default chart values remain disabled. This work does not create Google credentials, change existing Hindsight routes, or read/copy the native key.
+Private synthetic staging is deployed after PR68/69. The PR70 public diagnostic window failed at ChatGPT app creation after OAuth discovery, before Google exchange. PR71 removed the dedicated public route and control state is disabled at epoch2. This is not a verified dot connection. No native key or real memory was used. The inactive diagnostic overlay is a candidate, not the currently applied configuration.
 
 ## Topology
 
@@ -97,3 +97,14 @@ This overlay enables identity diagnostic only, with deny-all owner, synthetic ba
 ## OAuth window stopped
 
 The 2026-11-15 supervised public diagnostic reached valid HTTPS/OAuth metadata discovery and ChatGPT detected DCR. Creating the custom plugin returned a generic rejected-settings error before Google authorization; root cause is not established. No real memory or native key was used. The operator security-stopped the gate at epoch 2, invalidating epoch 1 sessions; do not decrement it. This rollback removes only the public diagnostic overlay from the Argo values list. Preserve retained Secrets/PVC. Any next attempt needs reviewed epoch-2 ACL/storage credentials and both deployment epochs before re-enabling. The overlay file remains an inactive candidate, not a live configuration.
+
+
+## Next diagnostic candidate and epoch2 restart plan
+
+Source-only DCR diagnostics emit a maximum of 16 fixed-vocabulary events per provider process: accepted, redirect_denied, storage_or_provider_error. These new events do not record metadata, callback strings, exceptions, tokens or credentials. Provider/storage exceptions are converted to a fixed RegistrationError without a chained traceback; a synthetic ASGI registration test checks captured application logs and response for leakage. This is not a blanket claim that all Uvicorn/framework logs are redacted. This bounds log volume, not request rate; it is NOT a DCR abuse-control feature. Validation rejected before the provider callback is not covered. Public retry must remain short and attended.
+
+The generic ChatGPT rejection is not a proven redirect mismatch. Official OpenAI authentication guidance supports exact callback-ID redirects; retain the exact observed callback and do not widen the allowlist without evidence. Local tests cover public-client none authentication, advertised Google scopes, exact callback rejection and redacted bounded logs. These cannot reproduce ChatGPT's unknown original registration payload.
+
+Before any restart: preserve control disabled/epoch2 and the existing PVC. Prepare an epoch2 bundle in a fresh private directory, use new signing/storage keys and epoch2-only OAuth ACL namespace, and keep operator material out of SSM/runtime. Do not initialize or decrease the existing control epoch. ESO refresh alone does not prove Redis ACL reload: coordinate a GitOps rollout of Redis and both app Deployments, verify applied ACL and epoch2 storage access privately, and prove epoch1 grants fail. Failed rotation stays closed; do not restore epoch1 control state. The Google credential does not need unrelated rotation. Secret writes, rollout, image publication and public route activation are separate from this source-only change.
+
+Reference: https://developers.openai.com/plugins/build/auth
