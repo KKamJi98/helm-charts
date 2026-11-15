@@ -1,160 +1,107 @@
-"""Offline contract tests. FakeRedis models reservations, not Lua execution.
-A real Redis/ACL integration test is required before deployment.
-"""
+"""Offline CAS contract tests; real Redis restart suite is separate."""
 import asyncio
+import json
 import unittest
-
 from rate_limit import (RedisDCRLimiter, RegistrationLimited, RegistrationUnavailable,
-                        LUA_RESERVE)
+                        INITIAL_STATE, MAX_CONFLICT_RETRIES)
 
 
 class FakeRedis:
     def __init__(self):
-        self.values = {'dot-dcr-e3:total': 0}
-        self.expires = {}
-        self.now = 0
+        self.values = {'dot-dcr-e3:state': INITIAL_STATE}
+        self.now = 1000
         self.lock = asyncio.Lock()
         self.calls = []
-
-    async def eval(self, script, numkeys, total, window, window_limit,
-                   epoch_limit, window_seconds):
+    async def get(self, key):
+        value = self.values.get(key)
+        await asyncio.sleep(0)
+        return value
+    async def time(self): return (self.now, 0)
+    async def ttl(self, key): return -1
+    async def execute_command(self, command, key, value, condition, old):
         async with self.lock:
-            self.calls.append((script, numkeys, total, window))
-            assert script == LUA_RESERVE and numkeys == 2
-            if window in self.expires and self.expires[window] <= self.now:
-                del self.values[window]
-                del self.expires[window]
-            if total in self.expires:
-                return [-1, 0]
-            t = self.values.get(total)
-            w = self.values.get(window, 0)
-            if type(t) is not int or not 0 <= t <= epoch_limit:
-                return [-1, 0]
-            if type(w) is not int or not 0 <= w <= window_limit:
-                return [-1, 0]
-            retry = window_seconds
-            if window in self.values:
-                retry = self.expires.get(window, self.now - 1) - self.now
-                if not 1 <= retry <= window_seconds:
-                    return [-1, 0]
-            if t >= epoch_limit:
-                return [2, 0]
-            if w >= window_limit:
-                return [0, retry]
-            self.values[total] = t + 1
-            self.values[window] = w + 1
-            if w == 0:
-                self.expires[window] = self.now + window_seconds
-            return [1, 0]
+            self.calls.append((command, key, condition))
+            assert command == 'SET' and condition == 'IFEQ'
+            if self.values.get(key) != old: return None
+            self.values[key] = value
+            return True
 
 
 class LimiterTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.redis = FakeRedis()
         self.limit = RedisDCRLimiter(self.redis, 3)
-
     async def test_five_then_429_and_window_expiry(self):
-        for _ in range(5):
-            await self.limit.acquire()
-        self.redis.now = 60
-        with self.assertRaises(RegistrationLimited) as e:
-            await self.limit.acquire()
-        self.assertEqual(e.exception.retry_after, 540)
-        self.redis.now = 600
+        for _ in range(5): await self.limit.acquire()
+        self.redis.now += 60
+        with self.assertRaises(RegistrationLimited) as caught: await self.limit.acquire()
+        self.assertEqual(caught.exception.retry_after, 540)
+        self.redis.now += 540
         await self.limit.acquire()
-        self.assertEqual(self.redis.values[self.limit.total_key], 6)
-
-    async def test_epoch_cap_survives_windows_and_process_restart(self):
+        self.assertEqual(json.loads(self.redis.values[self.limit.state_key])['total'], 6)
+    async def test_epoch_cap_survives_objects(self):
         for index in range(32):
-            self.redis.now = (index // 5) * 600
+            self.redis.now = 1000 + (index // 5) * 600
             await RedisDCRLimiter(self.redis, 3).acquire()
         self.redis.now += 600
-        with self.assertRaises(RegistrationLimited) as e:
-            await RedisDCRLimiter(self.redis, 3).acquire()
-        self.assertIsNone(e.exception.retry_after)
-        self.assertEqual(self.redis.values[self.limit.total_key], 32)
-
-    async def test_concurrent_instances_share_one_cap(self):
-        results = await asyncio.gather(
-            *(RedisDCRLimiter(self.redis, 3).acquire() for _ in range(25)),
-            return_exceptions=True,
-        )
-        self.assertEqual(sum(r is None for r in results), 5)
-        self.assertEqual(sum(isinstance(r, RegistrationLimited) for r in results), 20)
-
-    async def test_failed_callback_still_consumes_reserved_attempt(self):
-        for _ in range(5):
-            await self.limit.acquire()
-            # Provider rejects callback after reservation; no refund API exists.
-        with self.assertRaises(RegistrationLimited):
-            await self.limit.acquire()
-
-    async def test_missing_total_and_wrong_epoch_fail_closed(self):
+        with self.assertRaises(RegistrationLimited) as caught: await self.limit.acquire()
+        self.assertIsNone(caught.exception.retry_after)
+    async def test_concurrent_instances_share_cap(self):
+        outcomes = await asyncio.gather(*(RedisDCRLimiter(self.redis, 3).acquire()
+                                        for _ in range(25)), return_exceptions=True)
+        self.assertEqual(sum(x is None for x in outcomes), 5)
+        self.assertEqual(sum(isinstance(x, RegistrationLimited) for x in outcomes), 20)
+    async def test_rejected_provider_request_consumes_quota(self):
+        for _ in range(5): await self.limit.acquire()  # Provider rejects after this.
+        with self.assertRaises(RegistrationLimited): await self.limit.acquire()
+    async def test_missing_and_corrupt_fail_closed(self):
+        for value in (None, 'bad', '{}', '{"total":true,"window_count":0,"window_until":0}',
+                      '{"total":0,"window_count":1,"window_until":0}',
+                      '{"total":33,"window_count":0,"window_until":0}'):
+            self.redis.values[self.limit.state_key] = value
+            with self.assertRaises(RegistrationUnavailable): await self.limit.acquire()
+            self.assertEqual(self.redis.values[self.limit.state_key], value)
+    async def test_other_epoch_missing_fails_closed(self):
         with self.assertRaises(RegistrationUnavailable):
             await RedisDCRLimiter(self.redis, 4).acquire()
-        self.redis.values.clear()
-        with self.assertRaises(RegistrationUnavailable):
-            await self.limit.acquire()
-        self.assertEqual(self.redis.values, {})
-
-    async def test_corrupt_state_or_missing_window_ttl_fail_closed(self):
-        for value in ('secret-invalid', -1, 33, True):
-            self.redis.values[self.limit.total_key] = value
-            with self.assertRaises(RegistrationUnavailable):
-                await self.limit.acquire()
-        self.redis.values[self.limit.total_key] = 0
-        self.redis.values[self.limit.window_key] = 1
-        with self.assertRaises(RegistrationUnavailable):
-            await self.limit.acquire()
-        self.assertEqual(self.redis.values[self.limit.total_key], 0)
-
-    async def test_expiring_total_fails_closed(self):
-        self.redis.expires[self.limit.total_key] = 600
-        with self.assertRaises(RegistrationUnavailable):
-            await self.limit.acquire()
-
-    async def test_errors_are_fixed_and_never_retried(self):
-        class Broken:
-            calls = 0
-            async def eval(self, *args):
-                self.calls += 1
+    async def test_future_window_or_bad_clock_fails_closed(self):
+        self.redis.values[self.limit.state_key] = '{"total":1,"window_count":1,"window_until":9999}'
+        with self.assertRaises(RegistrationUnavailable): await self.limit.acquire()
+        self.redis.values[self.limit.state_key] = INITIAL_STATE
+        self.redis.now = -1
+        with self.assertRaises(RegistrationUnavailable): await self.limit.acquire()
+    async def test_ambiguous_write_never_retried(self):
+        class Ambiguous(FakeRedis):
+            async def execute_command(self, *args):
+                await super().execute_command(*args)
                 raise RuntimeError('PRIVATE-CREDENTIAL')
-        broken = Broken()
-        with self.assertRaises(RegistrationUnavailable) as e:
-            await RedisDCRLimiter(broken, 3).acquire()
-        self.assertNotIn('PRIVATE-CREDENTIAL', str(e.exception))
-        self.assertIsNone(e.exception.__cause__)
-        self.assertTrue(e.exception.__suppress_context__)
-        self.assertEqual(broken.calls, 1)
-
+        client = Ambiguous()
+        with self.assertRaises(RegistrationUnavailable) as caught:
+            await RedisDCRLimiter(client, 3).acquire()
+        self.assertEqual(len(client.calls), 1)
+        self.assertEqual(json.loads(client.values[self.limit.state_key])['total'], 1)
+        self.assertNotIn('PRIVATE-CREDENTIAL', str(caught.exception))
+        self.assertTrue(caught.exception.__suppress_context__)
+    async def test_contention_is_bounded(self):
+        class Contended(FakeRedis):
+            async def execute_command(self, *args):
+                self.calls.append(args)
+                return None
+        client = Contended()
+        with self.assertRaises(RegistrationUnavailable): await RedisDCRLimiter(client, 3).acquire()
+        self.assertEqual(len(client.calls), MAX_CONFLICT_RETRIES)
     async def test_timeout_fail_closed(self):
-        class Slow:
-            async def eval(self, *args):
-                await asyncio.sleep(1)
+        class Slow(FakeRedis):
+            async def get(self, key): await asyncio.sleep(1)
         with self.assertRaises(RegistrationUnavailable):
             await RedisDCRLimiter(Slow(), 3, timeout_seconds=.01).acquire()
-
-    async def test_unexpected_response_fails_closed(self):
-        class Reply:
-            def __init__(self, value): self.value = value
-            async def eval(self, *args): return self.value
-        for value in (None, [True, 0], [1], [0, 0], [0, 601], [2, 1], [-1, 0]):
-            with self.assertRaises(RegistrationUnavailable):
-                await RedisDCRLimiter(Reply(value), 3).acquire()
-
-    async def test_only_exact_epoch_keys_are_passed(self):
+    async def test_exact_key_only(self):
         await self.limit.acquire()
-        _, count, total, window = self.redis.calls[0]
-        self.assertEqual((count, total, window),
-                         (2, 'dot-dcr-e3:total', 'dot-dcr-e3:window'))
-
+        self.assertEqual(self.redis.calls, [('SET', 'dot-dcr-e3:state', 'IFEQ')])
     def test_invalid_configuration(self):
-        for epoch in (True, 0, -1, 1_000_001, '3'):
+        for epoch in (True, 0, -1, 1000001, '3'):
             with self.assertRaises(ValueError): RedisDCRLimiter(self.redis, epoch)
         for timeout in (True, 0, -1, 3, float('nan')):
-            with self.assertRaises(ValueError):
-                RedisDCRLimiter(self.redis, 3, timeout_seconds=timeout)
+            with self.assertRaises(ValueError): RedisDCRLimiter(self.redis, 3, timeout_seconds=timeout)
 
-
-if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__': unittest.main()

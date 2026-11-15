@@ -46,5 +46,5 @@ class BundleTests(unittest.TestCase):
   runtime=json.loads((out/'ssm-runtime.json').read_text())
   self.assertEqual(runtime['owner_sub'],'fixture-owner')
   rate=next(x for x in runtime['redis_acl'].splitlines() if x.startswith('user rate '))
-  self.assertIn('~dot-dcr-e3:*',rate);self.assertIn('+eval',rate);self.assertNotIn('+set',rate);self.assertNotIn('dot-control',rate)
-  self.assertIn('%RW~dot-dcr-e3:total',runtime['redis_acl'])
+  self.assertIn('~dot-dcr-e3:state',rate);self.assertIn('+set',rate);self.assertNotIn('+eval',rate);self.assertNotIn('dot-control',rate)
+  self.assertIn('%RW~dot-dcr-e3:state',runtime['redis_acl'])

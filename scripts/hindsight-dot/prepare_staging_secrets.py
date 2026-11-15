@@ -93,7 +93,7 @@ def prepare(google_path,output_dir,epoch,owner_path=None):
     if owner:
         runtime['owner_sub']=owner['sub']
         runtime['rate_redis_url']=url('rate')
-        runtime['redis_acl']=acl.replace(f'%RW~dot-control:state',f'%RW~dot-control:state %RW~dot-dcr-e{epoch}:total')+f'user rate on #{hashed["rate"]} ~dot-dcr-e{epoch}:* +eval +get +incr +expire +ttl +ping +client|setinfo\n'
+        runtime['redis_acl']=acl.replace(f'%RW~dot-control:state',f'%RW~dot-control:state %RW~dot-dcr-e{epoch}:state')+f'user rate on #{hashed["rate"]} ~dot-dcr-e{epoch}:state +get +set +time +ttl +ping +client|setinfo\n'
     # Operator plaintext never enters runtime JSON/SSM or service pod mounts.
     operator={
         'redis_url':url('operator'),'state_key':'dot-control:state',
