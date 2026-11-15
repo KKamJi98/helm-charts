@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-15T17:19:55.078475+00:00
+updated: 2026-11-15T17:22:33.192309+00:00
 type: runbook
 status: current
 ---
@@ -147,3 +147,7 @@ The isolated AOF test runs as the invoking non-root UID/GID so Linux-host bind-m
 ### Epoch3 private owner synthetic rollout
 
 PR76 source-only commit 579dee5 passed candidate and explicit publish run 43739331618. The private staging values now pin its tested digest and epoch3, enable verified owner from the dedicated ESO Secret, and retain synthetic-only/native-disabled/public-route-disabled. Both existing ESO Secret fields matched SSM version3 before preparing this change. New owner/rate fields must be checked after ESO reconciliation before any gate enable. Gate stays disabled3; readiness503 is expected. Rate state bootstrap is trusted exact-key SET NX, not an ACL-enforced option. A compromised rate credential can reset only its quota state. Rollback stops the gate with a forward epoch and leaves the route absent; never restore prior ACL/epoch. No actual memory or native credentials.
+
+### Supervised owner-bound synthetic window
+
+The dedicated owner_synthetic_window_values overlay retains verified owner binding, admission quota, synthetic-only recall and no native key. It is distinct from the inactive deny-all diagnostic overlay. Private epoch3 checks passed and gate was restored disabled3 before publication. The short supervised OAuth test must end with forward security-stop epoch4 and removal of the overlay/actual route. Quota is 5 attempts/600 seconds, 32 total per epoch (2 used by private acceptance checks); do not reset counters. This is not permanent public availability or real memory consent.

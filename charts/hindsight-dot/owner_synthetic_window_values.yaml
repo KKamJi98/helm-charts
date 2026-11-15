@@ -1,0 +1,13 @@
+# Supervised owner-bound synthetic OAuth window only.
+bootstrapIdentityDiagnostic: false
+syntheticBackend: true
+owner:
+  fromSecret: true
+capabilities: [hindsight:recall]
+redirectUris: [https://chatgpt.com/connector_platform_oauth_redirect]
+publicRoute:
+  enabled: true
+  hostname: hindsight-dot.kkamji.net
+  networkValidated: true
+native:
+  approved: false
