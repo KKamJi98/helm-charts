@@ -1,6 +1,6 @@
 ---
 title: External Secrets rules
-updated: 2026-11-01
+updated: 2026-11-16T04:36:04+09:00
 type: rule
 status: current
 ---
@@ -55,3 +55,14 @@ Google OIDC/per-client edge 설정은 2026-10-29에 배포했습니다. 신규 S
 - Legacy rollback UI uses a high-entropy password and Envoy `{SHA}` htpasswd. API key도 고엔트로피 전용 값이며 다른 서비스 인증을 재사용하지 않습니다. shared Store 권한, ExternalSecret 작성자, 관리자와 key 보유자는 신뢰 범위에 남습니다.
 - The legacy rollback Gateway API key target stores raw `api_key` without a Bearer prefix. Envoy가 헤더에서 접두사를 분리하고 원본 key를 비교합니다. `sanitize: false`로 전달한 단일 Bearer 헤더는 Hindsight native 검사에도 필요합니다.
 - ChatGPT OAuth `credentials.json`/`host_id`는 이 SSM JSON에 넣지 않습니다. 전용 세션의 일회성 seed에서 writable PVC로 옮기고, 현재 refresh authority를 stale Secret으로 덮어쓰지 않습니다. 로컬 writer 종료, 재시작 지속성 확인과 seed 삭제 순서는 runbook을 따릅니다.
+
+## Keycloak preparation
+
+- [Keycloak OIDC 단계별 배포](../05_oidc-idp-preparation.md)는 DB 단계와 서버/로그인 전환을 분리합니다. 차트의 Secret 참조는 원본 존재나 실제 로그인 성공의 증거가 아닙니다.
+- 원본 제안은 `/kkamji/keycloak/database`의 username/password, `/kkamji/keycloak/bootstrap`의 username/password, `/kkamji/keycloak/clients/kkamji-platform`의 client_secret입니다. 전부 SecureString JSON이며 값은 소스에 넣지 않습니다.
+- consumer별 explicit property와 Orphan/Retain을 사용합니다. 기존 parameter-store의 새 경로/KMS 권한과 CNPG owner 일치는 활성화 전에 확인합니다.
+- bootstrap 입력은 초기 master realm용입니다. 기존 realm에서 ESO 갱신을 관리자 password 회전이라고 보지 않습니다.
+- RealmImport는 create-only입니다. ESO client Secret 갱신이나 RealmImport 재적용은 기존 client의 활성화/회전이 아닙니다. 지원 Admin API/console 동작과 이전 credential 거부를 별도 검증합니다.
+- 별도 keycloak-db-client-trust에는 공개 ca.crt/chain만 허용합니다. CNPG의 ca.key가 들어 있는 Secret 전체를 앱 truststore에 전달하지 않습니다. 공개 사본은 기존 ESO Kubernetes provider로 공급합니다. 실효 reader/TokenRequest 권한과 target keyset, 회전 uptake/TLS 거부는 운영에서 검증합니다.
+- production 백업은 `/kkamji/keycloak/backup-s3`의 `access_key_id`와 `secret_access_key`만 explicit property로 읽고 target의 공개 `AWS_REGION`을 merge합니다. Orphan/Retain과 region merge는 credential 회전이나 복원 성공을 증명하지 않습니다.
+- Operator/ESO/namespace 관리자는 관련 Secret의 신뢰 범위에 남습니다. 앱 volume의 공개 CA 제한을 controller RBAC 격리라고 표현하지 않습니다.

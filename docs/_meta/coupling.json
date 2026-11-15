@@ -42,5 +42,16 @@
     "images/hindsight-security/**",
     "tests/test_hindsight*.py",
     ".github/workflows/hindsight*.yml"
+  ],
+  "docs/05_oidc-idp-preparation.md": [
+    "charts/keycloak-operator/**",
+    "charts/keycloak-idp/**",
+    "examples/keycloak-preparation/**",
+    "tests/test_keycloak_preparation.py",
+    "tests/test_keycloak_ca_projection.py",
+    "tests/test_keycloak_production_profile.py",
+    "tests/test_keycloak_gitops_activation.py",
+    "tests/fixtures/keycloak-idp/**",
+    ".github/workflows/keycloak-lint.yml"
   ]
 }

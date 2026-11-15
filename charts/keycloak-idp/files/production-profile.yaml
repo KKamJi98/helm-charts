@@ -1,0 +1,28 @@
+# Narrow production overlay. Start with database phase, not the app.
+# Apply after kkamji_local_values.yaml; values are references/public metadata only.
+preparationProfile: keycloak-26.8.2-production
+productionPhase: database
+publicCaProjection:
+  enabled: true
+database:
+  backup:
+    retentionPolicy: 30d
+    barmanObjectStore:
+      destinationPath: s3://kkamji-keycloak-pg-backup/keycloak
+      # Omit serverName: the pinned CNPG default is the Cluster name, keycloak-db.
+      s3Credentials:
+        accessKeyId:
+          name: keycloak-backup-s3
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: keycloak-backup-s3
+          key: ACCESS_SECRET_KEY
+        region:
+          name: keycloak-backup-s3
+          key: AWS_REGION
+      data:
+        compression: gzip
+        encryption: AES256
+      wal:
+        compression: gzip
+        encryption: AES256

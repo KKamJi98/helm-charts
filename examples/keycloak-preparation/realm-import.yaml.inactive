@@ -1,0 +1,62 @@
+# CREATE-ONLY. Not continuous reconciliation, activation or client-secret rotation.
+# MFA browser flow intentionally omitted: manual built-in duplicate/export/validation gate.
+apiVersion: k8s.keycloak.org/v2beta1
+kind: KeycloakRealmImport
+metadata:
+  name: kkamji-disabled-seed
+  namespace: keycloak
+  annotations:
+    argocd.argoproj.io/skip-reconcile: 'true'
+    preparation.kkamji.net/reviewed-commit: UNRESOLVED_REVIEWED_COMMIT
+spec:
+  keycloakCRName: keycloak
+  resources:
+    requests:
+      cpu: '1'
+      memory: 2Gi
+    limits:
+      cpu: '2'
+      memory: 2Gi
+  placeholders:
+    OIDC_CLIENT_SECRET:
+      secret:
+        name: keycloak-oidc-client
+        key: client-secret
+  realm:
+    realm: kkamji
+    enabled: false
+    registrationAllowed: false
+    resetPasswordAllowed: false
+    rememberMe: false
+    sslRequired: external
+    identityProviders: []
+    webAuthnPolicyUserVerificationRequirement: required
+    webAuthnPolicyRpId: sso.kkamji.net
+    webAuthnPolicyRpEntityName: KKamJi
+    webAuthnPolicyPasswordlessPasskeysEnabled: false
+    clients:
+    - clientId: kkamji-platform
+      name: KKamJi Platform
+      enabled: false
+      protocol: openid-connect
+      clientAuthenticatorType: client-secret
+      publicClient: false
+      bearerOnly: false
+      standardFlowEnabled: true
+      directAccessGrantsEnabled: false
+      implicitFlowEnabled: false
+      serviceAccountsEnabled: false
+      fullScopeAllowed: false
+      redirectUris:
+      - https://platform.kkamji.net/api/auth/oidc/callback
+      webOrigins:
+      - https://platform.kkamji.net
+      authenticationFlowBindingOverrides: {}
+      attributes:
+        pkce.code.challenge.method: S256
+        oauth2.device.authorization.grant.enabled: 'false'
+        oidc.ciba.grant.enabled: 'false'
+        standard.token.exchange.enabled: 'false'
+        oauth2.jwt.authorization.grant.enabled: 'false'
+        external.token.enabled: 'false'
+      secret: ${OIDC_CLIENT_SECRET}

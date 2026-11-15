@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "preparationProfile",
+    "images"
+  ],
+  "properties": {
+    "preparationProfile": {
+      "const": "keycloak-26.8.2-local-only"
+    },
+    "images": {
+      "const": {
+        "operator": "quay.io/keycloak/keycloak-operator@sha256:df890db951b595fe46f3f985301a38b76fcfcc264f06201c54dfaf28adeba19e",
+        "keycloak": "quay.io/keycloak/keycloak@sha256:c68e286cacd87b942ac1939a0a1481461109d6acd3a57dc496969a319a76bbf0"
+      }
+    }
+  }
+}

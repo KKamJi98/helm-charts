@@ -1,6 +1,6 @@
 ---
 title: Docs index
-updated: 2026-10-27T09:44:13+09:00
+updated: 2026-11-16T04:36:04+09:00
 type: architecture
 status: current
 ---
@@ -19,6 +19,10 @@ status: current
 - [Memory API adoption status](02_memory-api-status.md) - Mem0 운영 보류 근거와 공식 경로 재개 조건.
 - [Hindsight dot candidate](05_hindsight-dot.md) - Disabled dedicated OAuth/MCP staging, secret trust boundary, Cilium acceptance and rollback.
 - [Private Hindsight](03_hindsight.md) - 개인 UI/API/MCP 설계, 전용 인증과 단일 writer, 배포 후 인수 및 복구 절차.
+
+- [Keycloak OIDC preparation and phased deployment](05_oidc-idp-preparation.md) - 전용 DB 단계, 별도 앱 활성화, MFA/복구와 기존 인증 보존.
+- [Platform OIDC client contract](oidc/01_platform-client-contract.md) - 고정 issuer/owner, PKCE/state/nonce와 세션 폐기.
+- [Keycloak DB public CA and backup](oidc/03_db-public-ca-supply.md) - 공개 CA 공급/회전, production 단계와 외부 백업/복원 gate.
 
 ## Rules
 

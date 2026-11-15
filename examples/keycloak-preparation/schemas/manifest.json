@@ -1,0 +1,27 @@
+{
+  "schemas": [
+    {
+      "path": "schemas/cnpg-1.30-cluster.schema.json",
+      "sha256": "44ee1d0632632a5f3351de37114e35db92fc2b4ff07572546085dd578f6466cb",
+      "source": {
+        "url": "https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/ec38e6ef0cb37186ac5c4922fd8da1a768e5c9bf/config/crd/bases/postgresql.cnpg.io_clusters.yaml",
+        "sha256": "3a96b6aacc23ef070e9eaca232f79ba12856d0229dea932794d1894cca354bf1",
+        "bytes": 474000
+      }
+    },
+    {
+      "path": "schemas/eso-2.4.1-externalsecret.schema.json",
+      "sha256": "85cf677155c82d85032611d4d622b1e6efd09cbdd6731d8f1c65daad7ee161ff",
+      "source": {
+        "url": "https://github.com/external-secrets/external-secrets/releases/tag/v2.4.1",
+        "archive": "charts/external-secrets/charts/external-secrets-2.4.1.tgz",
+        "archiveSha256": "d432db5dd4935cc8032f6fbc1c3f33b4baaa08db2be76de41e6cf3ea651fe574",
+        "derivation": "Helm 4.2.1 template existing pinned chart, select CRD externalsecrets.external-secrets.io then v1 openAPIV3Schema"
+      }
+    }
+  ],
+  "limitations": [
+    "JSON schema structure/types only; stricter offline unknown-field checks are local tests, not admission.",
+    "Kubernetes CEL, defaulting, admission/webhooks, API authorization, scheduling and runtime are not executed."
+  ]
+}
