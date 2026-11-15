@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-15T14:09:00Z
+updated: 2026-11-15T15:09:19Z
 type: runbook
 status: current
 ---
@@ -85,3 +85,11 @@ The proposed Application targets main. Branch publication is not a merge or depl
 ## Initial live staging finding
 
 PR 68 deployed private synthetic staging on 2026-11-15. ESO synchronized and the 1Gi PVC bound, but Uvicorn 0.54 auto-detected the factory-returned bound async method as ASGI2, causing health HTTP 500 and restart loops. Explicit `--interface asgi3` in both Helm commands fixes invocation selection; the image default command is aligned for future builds. Regression coverage exercises the loaded Uvicorn app, not only direct ASGITransport. Existing digest can be reused with the Helm argument fix. This correction still requires separate merge approval. Public route and native mode remain off; gate remains disabled at epoch 1. Live network acceptance remains pending.
+
+## Proposed public synthetic identity diagnostic
+
+The owner approved the trusted-node boundary and a dedicated HTTPS OAuth test, excluding native keys, real memories and retain. Local node TCP checks reached same-node proxy/gateway/Redis; this is an explicit administrator trust boundary, not host isolation. Cross-node timeouts were not independently attributed. Bounded Pod tests and Hubble showed intended native/public drops; a readiness-gated proxy recheck passed all five TCP expectations.
+
+The proposed third values file `oauth_diagnostic_values.yaml` exposes only hindsight-dot.kkamji.net via the existing HTTPS Gateway. `networkValidated` records scoped acceptance with the above limits, not universal isolation. The exact ChatGPT callback was read from the authenticated custom MCP advanced OAuth UI on 2026-11-15. It is not a credential. Discovery is currently unavailable before route deployment. Recheck callback before registration; never widen its allowlist to a wildcard. Use DCR after metadata discovery succeeds; do not copy the Google client secret into ChatGPT.
+
+This overlay enables identity diagnostic only, with deny-all owner, synthetic backend and recall-only capability. Diagnostic logs only a verified matching owner's subject/email and denies MCP access. The operator gate remains disabled until deployment inspection; enable briefly for the approved OAuth test. Recording the real owner subject or allowing tool access is a separate reviewed change. If testing fails, remove the overlay through GitOps and security-stop the dedicated gate to invalidate sessions; preserve PVC and existing Hindsight. Merge is a separate approval gate.

@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-15T14:09:00Z
+updated: 2026-11-15T15:09:19Z
 type: runbook
 status: current
 ---
@@ -178,3 +178,5 @@ The isolated [dot gateway candidate](05_hindsight-dot.md) is disabled and has no
 The candidate now uses DCR-only OAuth, explicit synthetic-only identity bootstrap with denied memory access, and an operator security-stop that advances the session epoch atomically. Local test coverage includes secret-file handling and staging fixtures. These do not replace actual Cilium, Google or dot acceptance; the feature remains disabled until those gates complete.
 
 The isolated dot staging ASGI startup correction and its remaining live gates are recorded in [the dot runbook](05_hindsight-dot.md#initial-live-staging-finding). Existing native Hindsight is unchanged.
+
+Public synthetic dot OAuth preparation is isolated in the optional diagnostic values overlay; see the dot runbook. It does not enable the native API key or real memory use.
