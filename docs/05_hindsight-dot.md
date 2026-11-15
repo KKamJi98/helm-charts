@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-15
+updated: 2026-11-15T14:09:00Z
 type: runbook
 status: current
 ---
@@ -81,3 +81,7 @@ The operator path changes only the dedicated Redis control key. Security rollbac
 The owner approved a dedicated personal-cluster namespace, Redis 1Gi PVC, proxy/gateway/synthetic backend, narrow Cilium rules, image publishing and dedicated runtime SSM/Secrets. Public routes, existing native keys, real memories and company resources remain excluded. `staging_local_values.yaml` pins the tested published digest from workflow run 43711932181. Anonymous manifest retrieval succeeded. Owner identity is the deny-all placeholder and the callback is synthetic only; neither enables real login or memory access.
 
 The proposed Application targets main. Branch publication is not a merge or deployment. AWS personal session renewal and runtime parameter provisioning are pending; do not merge or claim live acceptance until these and explicit merge authorization are complete. Initialize the Redis gate disabled after deployment, then enable only for approved synthetic checks using the separate local operator credential. No production native mode is enabled by this change.
+
+## Initial live staging finding
+
+PR 68 deployed private synthetic staging on 2026-11-15. ESO synchronized and the 1Gi PVC bound, but Uvicorn 0.54 auto-detected the factory-returned bound async method as ASGI2, causing health HTTP 500 and restart loops. Explicit `--interface asgi3` in both Helm commands fixes invocation selection; the image default command is aligned for future builds. Regression coverage exercises the loaded Uvicorn app, not only direct ASGITransport. Existing digest can be reused with the Helm argument fix. This correction still requires separate merge approval. Public route and native mode remain off; gate remains disabled at epoch 1. Live network acceptance remains pending.
