@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-15T17:22:33.192309+00:00
+updated: 2026-11-15T17:28:08.359341+00:00
 type: runbook
 status: current
 ---
@@ -151,3 +151,7 @@ PR76 source-only commit 579dee5 passed candidate and explicit publish run 437393
 ### Supervised owner-bound synthetic window
 
 The dedicated owner_synthetic_window_values overlay retains verified owner binding, admission quota, synthetic-only recall and no native key. It is distinct from the inactive deny-all diagnostic overlay. Private epoch3 checks passed and gate was restored disabled3 before publication. The short supervised OAuth test must end with forward security-stop epoch4 and removal of the overlay/actual route. Quota is 5 attempts/600 seconds, 32 total per epoch (2 used by private acceptance checks); do not reset counters. This is not permanent public availability or real memory consent.
+
+### Owner synthetic window closed
+
+ChatGPT reported Primary connection complete for a new epoch3 synthetic plugin after verified Google owner OAuth. Old epoch2 client was correctly rejected as unregistered. No real/native memory was accessed. Tool invocation was not demonstrated in this worker session, so OAuth success is not recall completion. Security-stop advanced the control gate to disabled4, invalidating epoch3 access. This change removes the transient public overlay; verify actual HTTPRoute prune and external refusal after sync. Keep credentials/PVC/native intact and never lower epoch.
