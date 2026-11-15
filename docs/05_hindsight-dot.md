@@ -101,7 +101,7 @@ The 2026-11-15 supervised public diagnostic reached valid HTTPS/OAuth metadata d
 
 ## Next diagnostic candidate and epoch2 restart plan
 
-Source-only DCR diagnostics emit a maximum of 16 fixed-vocabulary events per provider process: accepted, redirect_denied, storage_or_provider_error. They do not record metadata, callback strings, exceptions, tokens or credentials. This bounds log volume, not request rate; it is NOT a DCR abuse-control feature. Validation rejected before the provider callback is not covered. Public retry must remain short and attended.
+Source-only DCR diagnostics emit a maximum of 16 fixed-vocabulary events per provider process: accepted, redirect_denied, storage_or_provider_error. These new events do not record metadata, callback strings, exceptions, tokens or credentials. Provider/storage exceptions are converted to a fixed RegistrationError without a chained traceback; a synthetic ASGI registration test checks captured application logs and response for leakage. This is not a blanket claim that all Uvicorn/framework logs are redacted. This bounds log volume, not request rate; it is NOT a DCR abuse-control feature. Validation rejected before the provider callback is not covered. Public retry must remain short and attended.
 
 The generic ChatGPT rejection is not a proven redirect mismatch. Official OpenAI authentication guidance supports exact callback-ID redirects; retain the exact observed callback and do not widen the allowlist without evidence. Local tests cover public-client none authentication, advertised Google scopes, exact callback rejection and redacted bounded logs. These cannot reproduce ChatGPT's unknown original registration payload.
 

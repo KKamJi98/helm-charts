@@ -98,10 +98,20 @@ class ServiceTests(FlowTests):
   client=await self.proxy.provider.get_client('test-client')
   with patch('owner_bridge.GoogleProvider.register_client',new=AsyncMock(side_effect=RuntimeError('PRIVATE-ERROR'))):
    with self.assertLogs('uvicorn.error',level='INFO') as logs:
-    with self.assertRaises(RuntimeError):
+    from mcp.server.auth.provider import RegistrationError
+    with self.assertRaises(RegistrationError):
      await self.proxy.provider.register_client(client)
   self.assertIn('storage_or_provider_error',' '.join(logs.output))
   self.assertNotIn('PRIVATE-ERROR',' '.join(logs.output))
+ async def test_dcr_storage_failure_through_asgi_is_sanitized(self):
+  from unittest.mock import AsyncMock,patch
+  with patch('owner_bridge.GoogleProvider.register_client',new=AsyncMock(side_effect=RuntimeError('PRIVATE-ASGI-SECRET'))):
+   with self.assertLogs(level='INFO') as logs:
+    response=await self.c.post('/register',json={'redirect_uris':['https://client.invalid/callback'],'scope':'openid'})
+  self.assertEqual(response.status_code,400,response.text)
+  self.assertEqual(response.json()['error'],'invalid_client_metadata')
+  self.assertNotIn('PRIVATE-ASGI-SECRET',response.text+' '.join(logs.output))
+  self.assertIn('Registration unavailable',response.text)
  async def test_dcr_diagnostics_bounded(self):
   self.proxy.provider._registration_events=0
   with self.assertLogs('uvicorn.error',level='INFO') as logs:

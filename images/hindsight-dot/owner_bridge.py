@@ -34,7 +34,8 @@ class OwnerGoogleProvider(GoogleProvider):
             await super().register_client(client_info)
         except Exception:
             self._registration_event('storage_or_provider_error')
-            raise
+            # Do not hand raw provider/storage exceptions to ASGI loggers.
+            raise RegistrationError("invalid_client_metadata", "Registration unavailable") from None
         self._registration_event('accepted')
 
     async def authorize(self, client, params):
