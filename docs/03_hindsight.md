@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-15
+updated: 2026-11-15T14:09:00Z
 type: runbook
 status: current
 ---
@@ -176,3 +176,5 @@ ESO 오류는 Store/ExternalSecret 상태와 property 참조부터, 401/403은 G
 The isolated [dot gateway candidate](05_hindsight-dot.md) is disabled and has no Argo Application. Its chart contract tests do not establish live network enforcement. It adds no native route, credential, or memory change by default. The separate proxy/gateway design keeps the existing schema-wide native credential out of the proxy; gateway code and network controls constrain use, not the credential's intrinsic authority. Native mode, OAuth owner login, real dot tool availability and network acceptance remain release gates. Existing clients and the 600-second extraction configuration remain unchanged.
 
 The candidate now uses DCR-only OAuth, explicit synthetic-only identity bootstrap with denied memory access, and an operator security-stop that advances the session epoch atomically. Local test coverage includes secret-file handling and staging fixtures. These do not replace actual Cilium, Google or dot acceptance; the feature remains disabled until those gates complete.
+
+The isolated dot staging ASGI startup correction and its remaining live gates are recorded in [the dot runbook](05_hindsight-dot.md#initial-live-staging-finding). Existing native Hindsight is unchanged.

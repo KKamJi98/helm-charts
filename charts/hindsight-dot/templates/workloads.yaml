@@ -58,6 +58,8 @@
             "args": [
               "service:factory",
               "--factory",
+              "--interface",
+              "asgi3",
               "--host",
               "0.0.0.0",
               "--port",
@@ -278,6 +280,8 @@
             "args": [
               "service:factory",
               "--factory",
+              "--interface",
+              "asgi3",
               "--host",
               "0.0.0.0",
               "--port",

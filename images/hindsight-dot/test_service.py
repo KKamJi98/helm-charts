@@ -129,6 +129,15 @@ class ServiceTests(FlowTests):
  test_gate_prevents_refresh_without_upstream_call=None
  test_fresh_store_restart_denies_old_access_refresh=None
 
+ async def test_uvicorn_asgi3_factory_health(self):
+  import uvicorn
+  for app in (self.proxy,self.gateway):
+   cfg=uvicorn.Config(lambda:app.app,factory=True,interface='asgi3',log_config=None)
+   cfg.load()
+   async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=cfg.loaded_app),base_url='http://synthetic.invalid') as client:
+    response=await client.get('/health')
+    self.assertEqual(response.status_code,200,response.text)
+
 class StateTests(unittest.IsolatedAsyncioTestCase):
  async def test_state_shapes(self):
   class Fake:

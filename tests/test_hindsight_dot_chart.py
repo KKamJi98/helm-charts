@@ -26,6 +26,7 @@ class Chart(unittest.TestCase):
    d=named(ds,'Deployment',name);pod=d['spec']['template']['spec'];self.assertEqual(d['spec']['replicas'],1)
    self.assertFalse(pod['automountServiceAccountToken']);self.assertTrue(pod['containers'][0]['securityContext']['readOnlyRootFilesystem'])
    self.assertNotIn('hostNetwork',pod)
+   args=pod['containers'][0]['args'];self.assertEqual(args[args.index('--interface')+1],'asgi3')
   state=named(ds,'StatefulSet','state');self.assertEqual(state['spec']['replicas'],1);self.assertEqual(state['spec']['template']['spec']['securityContext']['runAsGroup'],1000)
  def test_production_native_gateway_only(self):
   ds=render(['--set','syntheticBackend=false','--set','native.approved=true','--set','externalSecrets.enabled=true'])
