@@ -193,4 +193,3 @@ applications:
         valueFiles:
           - kkamji_local_values.yaml
           - staging_local_values.yaml
-          - oauth_diagnostic_values.yaml

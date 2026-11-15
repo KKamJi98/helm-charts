@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-15T15:09:19Z
+updated: 2026-11-15T15:24:23Z
 type: runbook
 status: current
 ---
@@ -93,3 +93,7 @@ The owner approved the trusted-node boundary and a dedicated HTTPS OAuth test, e
 The proposed third values file `oauth_diagnostic_values.yaml` exposes only hindsight-dot.kkamji.net via the existing HTTPS Gateway. `networkValidated` records scoped acceptance with the above limits, not universal isolation. The exact ChatGPT callback was read from the authenticated custom MCP advanced OAuth UI on 2026-11-15. It is not a credential. Discovery is currently unavailable before route deployment. Recheck callback before registration; never widen its allowlist to a wildcard. Use DCR after metadata discovery succeeds; do not copy the Google client secret into ChatGPT.
 
 This overlay enables identity diagnostic only, with deny-all owner, synthetic backend and recall-only capability. Diagnostic logs only a verified matching owner's subject/email and denies MCP access. The operator gate remains disabled until deployment inspection; enable briefly for the approved OAuth test. Recording the real owner subject or allowing tool access is a separate reviewed change. If testing fails, remove the overlay through GitOps and security-stop the dedicated gate to invalidate sessions; preserve PVC and existing Hindsight. Merge is a separate approval gate.
+
+## OAuth window stopped
+
+The 2026-11-15 supervised public diagnostic reached valid HTTPS/OAuth metadata discovery and ChatGPT detected DCR. Creating the custom plugin returned a generic rejected-settings error before Google authorization; root cause is not established. No real memory or native key was used. The operator security-stopped the gate at epoch 2, invalidating epoch 1 sessions; do not decrement it. This rollback removes only the public diagnostic overlay from the Argo values list. Preserve retained Secrets/PVC. Any next attempt needs reviewed epoch-2 ACL/storage credentials and both deployment epochs before re-enabling. The overlay file remains an inactive candidate, not a live configuration.
