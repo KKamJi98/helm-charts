@@ -4,16 +4,34 @@ No semantic approval classifier; bounded summary text is NOT proven approved.
 import logging
 import re
 from fastmcp.server.auth.providers.google import GoogleProvider
+from mcp.server.auth.provider import RegistrationError, AuthorizeError
 
 BOOTSTRAP_SUBJECT="bootstrap-unverified-deny-all"
 
 class OwnerGoogleProvider(GoogleProvider):
     def __init__(self, *, owner_sub, owner_email, bootstrap_identity_diagnostic=False, **kwargs):
         if bootstrap_identity_diagnostic and owner_sub!=BOOTSTRAP_SUBJECT:raise ValueError("bootstrap subject must deny all")
+        self.exact_redirects=frozenset(kwargs.get("allowed_client_redirect_uris") or ())
+        if not self.exact_redirects:raise ValueError("exact redirects required")
         self.bootstrap_identity_diagnostic=bootstrap_identity_diagnostic
         self._bootstrap_logged=False
         self.owner_sub,self.owner_email=owner_sub,owner_email
         super().__init__(**kwargs)
+    async def register_client(self, client_info):
+        # FastMCP patterns permit query variants and glob characters. Never rely
+        # on those patterns for this deployment's exact callback boundary.
+        redirects=client_info.redirect_uris
+        if not redirects or any(str(uri) not in self.exact_redirects for uri in redirects):
+            raise RegistrationError("invalid_redirect_uri", "Exact registered callback required")
+        await super().register_client(client_info)
+
+    async def authorize(self, client, params):
+        redirect=str(params.redirect_uri)
+        registered={str(uri) for uri in (client.redirect_uris or ())}
+        if redirect not in self.exact_redirects or redirect not in registered:
+            raise AuthorizeError("invalid_request", "Exact registered callback required")
+        return await super().authorize(client, params)
+
     async def load_access_token(self, token):
         verified=await super().load_access_token(token)
         if not verified:return None

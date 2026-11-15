@@ -6,7 +6,7 @@
 {{- $sub := required "owner sub required" .Values.owner.sub }}
 {{- $client := required "google client required" .Values.googleClientId }}
 {{- if empty .Values.redirectUris }}{{ fail "exact redirects required" }}{{ end }}
-{{- range .Values.redirectUris }}{{ if or (not (hasPrefix "https://" .)) (contains "*" .) }}{{ fail "exact HTTPS redirects required" }}{{ end }}{{ end }}
+{{- range .Values.redirectUris }}{{ if or (not (hasPrefix "https://" .)) (contains "*" .) (contains "[" .) (contains "]" .) (contains "#" .) }}{{ fail "exact HTTPS redirects required" }}{{ end }}{{ end }}
 {{- if lt (int .Values.epoch) 1 }}{{ fail "positive epoch required" }}{{ end }}
 {{- if empty .Values.capabilities }}{{ fail "capabilities required" }}{{ end }}
 {{- range .Values.capabilities }}{{ if not (has . (list "hindsight:recall" "hindsight:retain")) }}{{ fail "invalid capability" }}{{ end }}{{ end }}

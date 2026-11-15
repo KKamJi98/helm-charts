@@ -13,7 +13,7 @@ def named(docs,kind,name):return next(d for d in docs if d['kind']==kind and d['
 class Chart(unittest.TestCase):
  def test_default_off(self):self.assertEqual(render(enabled=False),[])
  def test_inputs_failclosed(self):
-  for args in [('--set','owner.sub='),('--set','image.digest=latest'),('--set','publicRoute.enabled=true'),('--set','syntheticBackend=false'),('--set','capabilities[0]=admin')]:
+  for args in [('--set','owner.sub='),('--set','image.digest=latest'),('--set','publicRoute.enabled=true'),('--set','syntheticBackend=false'),('--set','capabilities[0]=admin'),('--set','redirectUris[0]=https://client.invalid/callback[AB]')]:
    self.assertNotEqual(render(args,ok=False),0)
  def test_synthetic_no_native_no_public(self):
   ds=render(['--set','externalSecrets.enabled=true']);raw=json.dumps(ds)

@@ -78,6 +78,23 @@ class ServiceTests(FlowTests):
   self.assertEqual(good.status_code,201,good.text)
   bad=await self.c.post('/register',json={'redirect_uris':['https://unapproved.invalid/callback'],'scope':'openid'})
   self.assertEqual(bad.status_code,400,bad.text)
+ async def test_redirect_variants_rejected(self):
+  from types import SimpleNamespace
+  from mcp.server.auth.provider import AuthorizeError
+  client=await self.p.get_client('test-client')
+  for uri in ['https://client.invalid/callback?redirect=https://attacker.invalid',
+              'https://client.invalid/callback#fragment',
+              'https://client.invalid/callbackA',
+              'https://unapproved.invalid/callback']:
+   bad=await self.c.post('/register',json={'redirect_uris':[uri],'scope':'openid'})
+   self.assertEqual(bad.status_code,400,bad.text)
+   with self.assertRaises(AuthorizeError):
+    await self.p.authorize(client,SimpleNamespace(redirect_uri=uri))
+  missing=await self.c.post('/register',json={'scope':'openid'})
+  self.assertEqual(missing.status_code,400,missing.text)
+  for uri in ['https://client.invalid/callback[AB]','https:///missing-host',
+              'https://user@client.invalid/callback','https://client.invalid/callback#fragment']:
+   with self.assertRaises(ValueError):replace(config('proxy'),redirects=(uri,))
  async def test_cimd_disabled_no_remote_discovery(self):
   self.assertIsNone(self.p._cimd_manager)
   self.assertIsNone(await self.p.get_client('https://unapproved.invalid/client.json'))

@@ -50,7 +50,7 @@ class Config:
         u=urlsplit(self.public_url)
         if u.scheme!='https' or not u.hostname or u.path not in ('','/') or u.query or u.fragment or u.username: raise ValueError('public URL')
         if not self.owner_sub or not self.owner_email or not self.google_client_id: raise ValueError('owner/client required')
-        if not self.redirects or any('*' in x or urlsplit(x).scheme!='https' for x in self.redirects): raise ValueError('exact HTTPS callbacks required')
+        if not self.redirects or any(any(c in x for c in '*[]') or urlsplit(x).scheme!='https' or not urlsplit(x).hostname or urlsplit(x).username or urlsplit(x).fragment for x in self.redirects): raise ValueError('exact HTTPS callbacks required')
         if not set(self.capabilities) <= {'hindsight:recall','hindsight:retain'} or 'hindsight:recall' not in self.capabilities: raise ValueError('capabilities')
         for value in (self.gateway_url,self.native_url):
             v=urlsplit(value)

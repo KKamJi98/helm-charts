@@ -50,6 +50,8 @@ These manifests are offline contract tests, not evidence of live Cilium enforcem
 
 Stop only the new route/proxy/gateway for rollback; stopping workers terminates streams but cannot undo committed retains. Gate checks alone cannot cancel already-dispatched native work. Invalidate dedicated sessions/refresh references and increment epoch before reopening. Preserve existing Hindsight data, clients, routes and 600-second extraction timeout. Preserve PVC/retained Secrets until explicit data-removal authorization. The chart does not automate destructive rollback.
 
+Callback registration and authorization both enforce exact URI membership, including query strings. FastMCP pattern matching alone is not trusted; callback glob brackets and fragments are rejected.
+
 ## Offline checks
 
 ```
