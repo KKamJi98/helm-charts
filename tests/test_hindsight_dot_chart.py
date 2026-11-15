@@ -90,4 +90,19 @@ class Chart(unittest.TestCase):
   for name in ['proxy','backend-policy']:
    env=named(ds,'Deployment',name)['spec']['template']['spec']['containers'][0]['env']
    self.assertEqual(next(e['value'] for e in env if e['name']=='DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC'),'0')
+
+ def test_owner_synthetic_window_preserves_bound_limiter(self):
+  r=subprocess.run(BASE+['-f','charts/hindsight-dot/staging_local_values.yaml','-f','charts/hindsight-dot/owner_synthetic_window_values.yaml'],cwd=ROOT,text=True,capture_output=True,check=True)
+  ds=[d for d in yaml.safe_load_all(r.stdout) if d]
+  self.assertNotIn('hindsight-dot-native',json.dumps(ds))
+  self.assertEqual(named(ds,'HTTPRoute','hindsight-dot')['spec']['hostnames'],['hindsight-dot.kkamji.net'])
+  for name in ['proxy','backend-policy']:
+   env={e['name']:e for e in named(ds,'Deployment',name)['spec']['template']['spec']['containers'][0]['env']}
+   self.assertEqual(env['DOT_OWNER_BOUND']['value'],'1')
+   self.assertEqual(env['DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC']['value'],'0')
+   self.assertEqual(env['DOT_OWNER_SUB']['valueFrom']['secretKeyRef']['key'],'owner_sub')
+   self.assertIn('DOT_RATE_REDIS_URL_FILE',env)
+   self.assertEqual(json.loads(env['DOT_CAPABILITIES']['value']),['hindsight:recall'])
+   self.assertEqual(json.loads(env['DOT_REDIRECT_URIS']['value']),['https://chatgpt.com/connector_platform_oauth_redirect'])
+
 if __name__=='__main__':unittest.main()

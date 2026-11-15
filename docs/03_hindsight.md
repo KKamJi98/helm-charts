@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-15T16:27:16Z
+updated: 2026-11-15T17:22:33.192999+00:00
 type: runbook
 status: current
 ---
@@ -188,3 +188,7 @@ The isolated dot synthetic diagnostic now tests the exact stable ChatGPT OAuth c
 ## Owner-positive synthetic candidate
 
 Optional owner.fromSecret injects verified owner subject from the dedicated runtime Secret, never public values. Bound-owner mode requires a separate rate credential. Source preparation does not enable it, rotate credentials, update image digests or reopen routes. Google tokeninfo validates audience and supplies subject; the bridge additionally matches claims.sub to verified subject and claims.aud to the dedicated Google client. It never trusts a decoded unverified JWT. Native mode remains excluded from this phase.
+
+### Supervised owner-bound synthetic window
+
+The dedicated owner_synthetic_window_values overlay retains verified owner binding, admission quota, synthetic-only recall and no native key. It is distinct from the inactive deny-all diagnostic overlay. Private epoch3 checks passed and gate was restored disabled3 before publication. The short supervised OAuth test must end with forward security-stop epoch4 and removal of the overlay/actual route. Quota is 5 attempts/600 seconds, 32 total per epoch (2 used by private acceptance checks); do not reset counters. This is not permanent public availability or real memory consent.
