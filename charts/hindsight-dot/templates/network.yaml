@@ -1,0 +1,328 @@
+{{- if .Values.enabled }}
+{
+  "apiVersion": "cilium.io/v2",
+  "kind": "CiliumNetworkPolicy",
+  "metadata": {
+    "name": "dot-proxy",
+    "namespace": {{ .Release.Namespace | quote }}
+  },
+  "spec": {
+    "endpointSelector": {
+      "matchLabels": {
+        "app": "hindsight-dot",
+        "component": "proxy"
+      }
+    },
+    "ingress": [
+      {
+        "fromEndpoints": [
+          {
+            "matchLabels": {
+              "gateway.envoyproxy.io/owning-gateway-name": "kkamji",
+              "k8s:io.kubernetes.pod.namespace": "envoy-gateway-system"
+            }
+          }
+        ],
+        "toPorts": [
+          {
+            "ports": [
+              {
+                "port": "8000",
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "egress": [
+      {
+        "toEndpoints": [
+          {
+            "matchLabels": {
+              "k8s:k8s-app": "kube-dns",
+              "k8s:io.kubernetes.pod.namespace": "kube-system"
+            }
+          }
+        ],
+        "toPorts": [
+          {
+            "ports": [
+              {
+                "port": "53",
+                "protocol": "UDP"
+              },
+              {
+                "port": "53",
+                "protocol": "TCP"
+              }
+            ],
+            "rules": {
+              "dns": [
+                {
+                  "matchPattern": "*.hindsight-dot.svc.cluster.local"
+                },
+                {
+                  "matchName": "hindsight-api.hindsight.svc.cluster.local"
+                },
+                {
+                  "matchName": "oauth2.googleapis.com"
+                },
+                {
+                  "matchName": "www.googleapis.com"
+                },
+                {
+                  "matchName": "accounts.google.com"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "toFQDNs": [
+          {
+            "matchName": "oauth2.googleapis.com"
+          },
+          {
+            "matchName": "www.googleapis.com"
+          },
+          {
+            "matchName": "accounts.google.com"
+          }
+        ],
+        "toPorts": [
+          {
+            "ports": [
+              {
+                "port": "443",
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "toEndpoints": [
+          {
+            "matchLabels": {
+              "app": "hindsight-dot",
+              "component": "state",
+              "k8s:io.kubernetes.pod.namespace": "hindsight-dot"
+            }
+          }
+        ],
+        "toPorts": [
+          {
+            "ports": [
+              {
+                "port": "6379",
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "toEndpoints": [
+          {
+            "matchLabels": {
+              "app": "hindsight-dot",
+              "component": "gateway",
+              "k8s:io.kubernetes.pod.namespace": "hindsight-dot"
+            }
+          }
+        ],
+        "toPorts": [
+          {
+            "ports": [
+              {
+                "port": "8001",
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "cilium.io/v2",
+  "kind": "CiliumNetworkPolicy",
+  "metadata": {
+    "name": "dot-gateway",
+    "namespace": {{ .Release.Namespace | quote }}
+  },
+  "spec": {
+    "endpointSelector": {
+      "matchLabels": {
+        "app": "hindsight-dot",
+        "component": "gateway"
+      }
+    },
+    "ingress": [
+      {
+        "fromEndpoints": [
+          {
+            "matchLabels": {
+              "app": "hindsight-dot",
+              "component": "proxy",
+              "k8s:io.kubernetes.pod.namespace": "hindsight-dot"
+            }
+          }
+        ],
+        "toPorts": [
+          {
+            "ports": [
+              {
+                "port": "8001",
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "egress": [
+      {
+        "toEndpoints": [
+          {
+            "matchLabels": {
+              "k8s:k8s-app": "kube-dns",
+              "k8s:io.kubernetes.pod.namespace": "kube-system"
+            }
+          }
+        ],
+        "toPorts": [
+          {
+            "ports": [
+              {
+                "port": "53",
+                "protocol": "UDP"
+              },
+              {
+                "port": "53",
+                "protocol": "TCP"
+              }
+            ],
+            "rules": {
+              "dns": [
+                {
+                  "matchPattern": "*.hindsight-dot.svc.cluster.local"
+                },
+                {
+                  "matchName": "hindsight-api.hindsight.svc.cluster.local"
+                },
+                {
+                  "matchName": "oauth2.googleapis.com"
+                },
+                {
+                  "matchName": "www.googleapis.com"
+                },
+                {
+                  "matchName": "accounts.google.com"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "toFQDNs": [
+          {
+            "matchName": "oauth2.googleapis.com"
+          },
+          {
+            "matchName": "www.googleapis.com"
+          },
+          {
+            "matchName": "accounts.google.com"
+          }
+        ],
+        "toPorts": [
+          {
+            "ports": [
+              {
+                "port": "443",
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "toEndpoints": [
+          {
+            "matchLabels": {
+              "app": "hindsight-dot",
+              "component": "state",
+              "k8s:io.kubernetes.pod.namespace": "hindsight-dot"
+            }
+          }
+        ],
+        "toPorts": [
+          {
+            "ports": [
+              {
+                "port": "6379",
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ]
+      },
+      {{ if .Values.syntheticBackend }}{"toEndpoints":[{"matchLabels":{"app":"hindsight-dot","component":"synthetic","k8s:io.kubernetes.pod.namespace":"hindsight-dot"}}],"toPorts":[{"ports":[{"port":"8080","protocol":"TCP"}]}]}{{ else }}{"toEndpoints":[{"matchLabels":{"app.kubernetes.io/component":"api","app.kubernetes.io/instance":"hindsight","app.kubernetes.io/name":"hindsight","k8s:io.kubernetes.pod.namespace":"hindsight"}}],"toPorts":[{"ports":[{"port":"8888","protocol":"TCP"}]}]}{{ end }}
+    ]
+  }
+}
+---
+{
+  "apiVersion": "cilium.io/v2",
+  "kind": "CiliumNetworkPolicy",
+  "metadata": {
+    "name": "dot-state",
+    "namespace": {{ .Release.Namespace | quote }}
+  },
+  "spec": {
+    "endpointSelector": {
+      "matchLabels": {
+        "app": "hindsight-dot",
+        "component": "state"
+      }
+    },
+    "ingress": [
+      {
+        "fromEndpoints": [
+          {
+            "matchLabels": {
+              "app": "hindsight-dot",
+              "component": "proxy",
+              "k8s:io.kubernetes.pod.namespace": "hindsight-dot"
+            }
+          },
+          {
+            "matchLabels": {
+              "app": "hindsight-dot",
+              "component": "gateway",
+              "k8s:io.kubernetes.pod.namespace": "hindsight-dot"
+            }
+          }
+        ],
+        "toPorts": [
+          {
+            "ports": [
+              {
+                "port": "6379",
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "egress": []
+  }
+}
+{{- end }}

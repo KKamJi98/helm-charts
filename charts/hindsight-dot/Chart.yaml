@@ -1,0 +1,5 @@
+apiVersion: v2
+name: hindsight-dot
+version: 0.1.0
+appVersion: "4.2.0"
+description: Disabled-by-default isolated Hindsight dot staging candidate

@@ -1,0 +1,166 @@
+{{- if and .Values.enabled .Values.syntheticBackend }}
+{
+  "apiVersion": "v1",
+  "kind": "ConfigMap",
+  "metadata": {
+    "name": "synthetic-backend",
+    "namespace": {{ .Release.Namespace | quote }}
+  },
+  "data": {
+    "server.py": "from http.server import BaseHTTPRequestHandler,HTTPServer\nimport json\nclass Handler(BaseHTTPRequestHandler):\n def log_message(self,*args):pass\n def do_POST(self):\n  size=int(self.headers.get('Content-Length','0'))\n  if size>20000:self.send_error(413);return\n  body=json.loads(self.rfile.read(size))\n  if self.path=='/v1/default/banks/personal_shared/memories/recall':result={'results':[]}\n  elif self.path=='/v1/default/banks/personal_shared/memories':result={'success':True,'operation_id':body['operation_id']}\n  else:self.send_error(404);return\n  out=json.dumps(result).encode();self.send_response(200);self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(out)\nHTTPServer(('0.0.0.0',8080),Handler).serve_forever()\n"
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "synthetic-backend",
+    "namespace": {{ .Release.Namespace | quote }}
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app": "hindsight-dot",
+        "component": "synthetic"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "hindsight-dot",
+          "component": "synthetic"
+        }
+      },
+      "spec": {
+        "serviceAccountName": "hindsight-dot",
+        "imagePullSecrets": {{ toJson .Values.image.pullSecrets }},
+        "automountServiceAccountToken": false,
+        "securityContext": {
+          "runAsNonRoot": true,
+          "runAsUser": 10001,
+          "runAsGroup": 10001,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "containers": [
+          {
+            "name": "synthetic",
+            "image": {{ printf "%s@%s" .Values.image.repository .Values.image.digest | quote }},
+            "command": [
+              "python",
+              "/fixture/server.py"
+            ],
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": true,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            },
+            "ports": [
+              {
+                "name": "http",
+                "containerPort": 8080
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "10m",
+                "memory": "32Mi"
+              },
+              "limits": {
+                "cpu": "100m",
+                "memory": "64Mi"
+              }
+            },
+            "volumeMounts": [
+              {
+                "name": "fixture",
+                "mountPath": "/fixture",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "volumes": [
+          {
+            "name": "fixture",
+            "configMap": {
+              "name": "synthetic-backend"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "synthetic-backend",
+    "namespace": {{ .Release.Namespace | quote }}
+  },
+  "spec": {
+    "type": "ClusterIP",
+    "selector": {
+      "app": "hindsight-dot",
+      "component": "synthetic"
+    },
+    "ports": [
+      {
+        "name": "http",
+        "port": 8080,
+        "targetPort": "http"
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "cilium.io/v2",
+  "kind": "CiliumNetworkPolicy",
+  "metadata": {
+    "name": "dot-synthetic",
+    "namespace": {{ .Release.Namespace | quote }}
+  },
+  "spec": {
+    "endpointSelector": {
+      "matchLabels": {
+        "app": "hindsight-dot",
+        "component": "synthetic"
+      }
+    },
+    "ingress": [
+      {
+        "fromEndpoints": [
+          {
+            "matchLabels": {
+              "app": "hindsight-dot",
+              "component": "gateway",
+              "k8s:io.kubernetes.pod.namespace": "hindsight-dot"
+            }
+          }
+        ],
+        "toPorts": [
+          {
+            "ports": [
+              {
+                "port": "8080",
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "egress": []
+  }
+}
+{{- end }}

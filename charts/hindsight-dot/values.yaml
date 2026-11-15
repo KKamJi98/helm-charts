@@ -1,0 +1,22 @@
+# Candidate; no Argo Application references this chart.
+enabled: false
+syntheticBackend: true
+bootstrapIdentityDiagnostic: false
+epoch: 1
+capabilities: [hindsight:recall]
+image: {repository: "", digest: "", pullSecrets: []}
+redis:
+  repository: docker.io/library/redis
+  digest: sha256:4eec4565e45aa0b3966554c866bc73211e281b0b3d89fe9a33c982e6faca809d
+  storageClass: local-path
+  storage: 1Gi
+owner: {sub: "", email: rlaxowl5460@gmail.com}
+googleClientId: ""
+redirectUris: []
+publicRoute: {enabled: false, hostname: hindsight-dot.kkamji.net, networkValidated: false}
+native: {approved: false}
+externalSecrets:
+  enabled: false
+  store: parameter-store
+  runtimeSource: /kkamji/automation/hindsight/dot
+  nativeSource: /kkamji/automation/hindsight/access

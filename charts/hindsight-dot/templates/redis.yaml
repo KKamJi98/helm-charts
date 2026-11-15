@@ -1,0 +1,157 @@
+{{- if .Values.enabled }}
+{
+  "apiVersion": "apps/v1",
+  "kind": "StatefulSet",
+  "metadata": {
+    "name": "state",
+    "namespace": {{ .Release.Namespace | quote }}
+  },
+  "spec": {
+    "serviceName": "state",
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app": "hindsight-dot",
+        "component": "state"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "hindsight-dot",
+          "component": "state"
+        }
+      },
+      "spec": {
+        "serviceAccountName": "hindsight-dot",
+        "automountServiceAccountToken": false,
+        "securityContext": {
+          "runAsNonRoot": true,
+          "runAsUser": 999,
+          "runAsGroup": 1000,
+          "fsGroup": 1000,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "containers": [
+          {
+            "name": "redis",
+            "image": {{ printf "%s@%s" .Values.redis.repository .Values.redis.digest | quote }},
+            "command": [
+              "redis-server"
+            ],
+            "args": [
+              "--bind",
+              "0.0.0.0",
+              "--protected-mode",
+              "yes",
+              "--port",
+              "6379",
+              "--dir",
+              "/data",
+              "--appendonly",
+              "yes",
+              "--appendfsync",
+              "always",
+              "--aclfile",
+              "/run/redis/users.acl"
+            ],
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": true,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            },
+            "ports": [
+              {
+                "name": "redis",
+                "containerPort": 6379
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "50m",
+                "memory": "64Mi"
+              },
+              "limits": {
+                "cpu": "500m",
+                "memory": "256Mi"
+              }
+            },
+            "readinessProbe": {
+              "tcpSocket": {
+                "port": "redis"
+              }
+            },
+            "volumeMounts": [
+              {
+                "name": "data",
+                "mountPath": "/data"
+              },
+              {
+                "name": "acl",
+                "mountPath": "/run/redis",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "volumes": [
+          {
+            "name": "acl",
+            "secret": {
+              "secretName": "hindsight-dot-redis-acl",
+              "defaultMode": 288
+            }
+          }
+        ]
+      }
+    },
+    "volumeClaimTemplates": [
+      {
+        "metadata": {
+          "name": "data"
+        },
+        "spec": {
+          "accessModes": [
+            "ReadWriteOnce"
+          ],
+          "storageClassName": {{ .Values.redis.storageClass | quote }},
+          "resources": {
+            "requests": {
+              "storage": {{ .Values.redis.storage | quote }}
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "state",
+    "namespace": {{ .Release.Namespace | quote }}
+  },
+  "spec": {
+    "type": "ClusterIP",
+    "selector": {
+      "app": "hindsight-dot",
+      "component": "state"
+    },
+    "ports": [
+      {
+        "name": "redis",
+        "port": 6379,
+        "targetPort": "redis"
+      }
+    ]
+  }
+}
+{{- end }}

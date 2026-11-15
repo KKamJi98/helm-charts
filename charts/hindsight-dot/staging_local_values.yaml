@@ -1,0 +1,21 @@
+# Private synthetic staging only. No public route or native credential.
+enabled: true
+syntheticBackend: true
+bootstrapIdentityDiagnostic: false
+epoch: 1
+capabilities: [hindsight:recall]
+image:
+  repository: ghcr.io/kkamji98/hindsight-dot
+  digest: sha256:c32cc2f3e0cc635d692a7ef27b9cc39516684d453f22290f414d7b855a339157
+owner:
+  sub: bootstrap-unverified-deny-all
+  email: rlaxowl5460@gmail.com
+googleClientId: 283256146968-bu8r1b1s29jjche7l8hu8vucknaj7pnv.apps.googleusercontent.com
+# Network testing placeholder only; replace with verified client callback later.
+redirectUris: [https://synthetic-client.invalid/callback]
+publicRoute: {enabled: false, hostname: hindsight-dot.kkamji.net, networkValidated: false}
+native: {approved: false}
+externalSecrets:
+  enabled: true
+  store: parameter-store
+  runtimeSource: /kkamji/automation/hindsight/dot
