@@ -33,6 +33,7 @@ IMAGE = 'redis@sha256:4eec4565e45aa0b3966554c866bc73211e281b0b3d89fe9a33c982e6fa
 class LiveLimiterTests(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
+        if os.getuid()==0:raise RuntimeError('run isolated tests as non-root')
         cls.temp = tempfile.TemporaryDirectory(prefix='dot-dcr-live-')
         cls.addClassCleanup(cls.temp.cleanup)
         cls.name = 'dot-dcr-test-' + uuid.uuid4().hex[:12]
@@ -54,7 +55,7 @@ class LiveLimiterTests(unittest.IsolatedAsyncioTestCase):
             stderr=subprocess.DEVNULL, check=False, timeout=15))
         subprocess.run([
             'docker', 'run', '--detach', '--name', cls.name, '--pull=never',
-            '--user', '999:1000', '--read-only', '--cap-drop', 'ALL',
+            '--user', f'{os.getuid()}:{os.getgid()}', '--read-only', '--cap-drop', 'ALL',
             '--security-opt', 'no-new-privileges', '--memory', '128m',
             '--cpus', '0.5', '--pids-limit', '64',
             '--mount', f'type=bind,src={cls.data_dir},dst=/data',
