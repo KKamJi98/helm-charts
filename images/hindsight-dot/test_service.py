@@ -78,6 +78,16 @@ class ServiceTests(FlowTests):
   self.assertEqual(good.status_code,201,good.text)
   bad=await self.c.post('/register',json={'redirect_uris':['https://unapproved.invalid/callback'],'scope':'openid'})
   self.assertEqual(bad.status_code,400,bad.text)
+ async def test_issuer_metadata_stable_callback(self):
+  stable='https://chatgpt.com/connector_platform_oauth_redirect'
+  app=Application(replace(config('proxy'),redirects=(stable,)),storage=self.store,read_status=self.state,google_secret='synthetic-only',signing_key='synthetic-only-key',google_http=self.http,outbound_http=self.gateway_http)
+  async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app.app),base_url='https://isolated.invalid') as c:
+   meta=(await c.get('/.well-known/oauth-authorization-server')).json()
+   self.assertIs(meta['authorization_response_iss_parameter_supported'],True)
+   for uri,expected in [(stable,201),('https://chatgpt.com/connector/oauth/msuk3CV7PsAT',400),(stable+'?next=invalid',400)]:
+    response=await c.post('/register',json={'redirect_uris':[uri],'scope':'openid','token_endpoint_auth_method':'none'})
+    self.assertEqual(response.status_code,expected,response.text)
+
  async def test_dcr_public_client_scope_and_redacted_diagnostics(self):
   payload={'redirect_uris':['https://client.invalid/callback'],'scope':'openid https://www.googleapis.com/auth/userinfo.email','grant_types':['authorization_code','refresh_token'],'response_types':['code'],'token_endpoint_auth_method':'none','client_name':'PRIVATE-MARKER'}
   with self.assertLogs('uvicorn.error',level='INFO') as logs:

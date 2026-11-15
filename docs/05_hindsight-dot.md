@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-15T15:38:07Z
+updated: 2026-11-15T16:11:26Z
 type: runbook
 status: current
 ---
@@ -113,3 +113,10 @@ Reference: https://developers.openai.com/plugins/build/auth
 ## Epoch2 private rollout candidate
 
 The approved epoch2 runtime bundle has been stored as SSM version2; no native credential is included. Before merging this rollout, confirm both ESO target Secrets match that bundle without printing values. ESO remains on its existing one-hour refresh interval. No force-refresh or public-route activation is bundled. Redis Pod template now tracks the non-secret credential epoch so a GitOps epoch bump reloads its ACL file by restart. The existing PVC and disabled epoch2 control state must survive; do not initialize or revert the state. Proxy/gateway epoch changes trigger their existing Recreate rollout. A rollout failure stays closed and is repaired forward, not by enabling epoch1.
+
+
+## Supervised epoch2 stable-callback diagnostic
+
+After metadata discovery, the same ChatGPT custom MCP draft now displays `https://chatgpt.com/connector_platform_oauth_redirect` in its user-defined client view. Local provider metadata independently advertises `authorization_response_iss_parameter_supported=true`. This matches the OpenAI documented stable-redirect rule. The earlier callback-ID allowlist was observed before discovery; mismatch is a strong hypothesis, not a proven historical request payload.
+
+This attempt replaces, rather than broadens, the exact allowlist. Tests accept the stable URL and reject the previous callback-ID URL and query variants. The same dedicated synthetic public overlay is activated only for an attended diagnostic. Gate remains disabled2 until rollout and TLS checks. No native secrets, memories or writes; bootstrap still denies all tool access. There is no DCR rate limiter: the operator must keep the open window short and close on unexpected load, UI rejection or completion. On failure remove the overlay, security-stop to epoch3, and verify actual route prune. No automatic restart or epoch downgrade.
