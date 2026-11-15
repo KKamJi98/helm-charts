@@ -3,6 +3,7 @@
 bootstrapIdentityDiagnostic: true
 syntheticBackend: true
 owner:
+  fromSecret: false
   sub: bootstrap-unverified-deny-all
 capabilities: [hindsight:recall]
 redirectUris: [https://chatgpt.com/connector_platform_oauth_redirect]
