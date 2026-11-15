@@ -63,6 +63,17 @@ class Chart(unittest.TestCase):
   self.assertFalse(cfg['bootstrapIdentityDiagnostic'])
   self.assertEqual(cfg['owner']['sub'],'bootstrap-unverified-deny-all')
   self.assertEqual(cfg['capabilities'],['hindsight:recall'])
+ def test_public_synthetic_diagnostic(self):
+  r=subprocess.run(BASE+['-f','charts/hindsight-dot/staging_local_values.yaml','-f','charts/hindsight-dot/oauth_diagnostic_values.yaml'],cwd=ROOT,text=True,capture_output=True,check=True)
+  ds=[d for d in yaml.safe_load_all(r.stdout) if d]
+  route=named(ds,'HTTPRoute','hindsight-dot');self.assertEqual(route['spec']['hostnames'],['hindsight-dot.kkamji.net'])
+  self.assertNotIn('hindsight-dot-native',json.dumps(ds))
+  for name in ['proxy','backend-policy']:
+   env={e['name']:e.get('value') for e in named(ds,'Deployment',name)['spec']['template']['spec']['containers'][0]['env']}
+   self.assertEqual(env['DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC'],'1')
+   self.assertEqual(env['DOT_OWNER_SUB'],'bootstrap-unverified-deny-all')
+   self.assertEqual(json.loads(env['DOT_CAPABILITIES']),['hindsight:recall'])
+   self.assertEqual(json.loads(env['DOT_REDIRECT_URIS']),['https://chatgpt.com/connector/oauth/msuk3CV7PsAT'])
  def test_bootstrap_default_disabled(self):
   ds=render()
   for name in ['proxy','backend-policy']:
