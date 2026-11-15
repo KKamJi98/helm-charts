@@ -71,6 +71,21 @@ applications:
       chart: cloudnative-pg
       targetRevision: 0.29.0
 
+  keycloak-operator:
+    enabled: true
+    name: keycloak-operator
+    project: management
+    destination:
+      namespace: keycloak
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/keycloak-operator
+      helm:
+        releaseName: keycloak-operator
+        valueFiles:
+          - kkamji_local_values.yaml
+
   keycloak-idp:
     enabled: true
     name: keycloak-idp
