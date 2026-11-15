@@ -104,3 +104,5 @@ class Chart(unittest.TestCase):
    self.assertIn('DOT_RATE_REDIS_URL_FILE',env)
    self.assertEqual(json.loads(env['DOT_CAPABILITIES']['value']),['hindsight:recall'])
    self.assertEqual(json.loads(env['DOT_REDIRECT_URIS']['value']),['https://chatgpt.com/connector_platform_oauth_redirect'])
+
+if __name__=='__main__':unittest.main()
