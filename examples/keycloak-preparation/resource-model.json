@@ -1,0 +1,116 @@
+{
+  "basis": "Rendered explicit resources plus pinned upstream controller source models; NOT live Pod/scheduler/performance proof.",
+  "columns": [
+    "requestedCPU_m",
+    "requestedMemoryMi",
+    "limitedCPU_m",
+    "limitedMemoryMi"
+  ],
+  "perPod": {
+    "operator": {
+      "requestedCPU_m": 300,
+      "requestedMemoryMi": 450,
+      "limitedCPU_m": 700,
+      "limitedMemoryMi": 450
+    },
+    "server": {
+      "requestedCPU_m": 1000,
+      "requestedMemoryMi": 2048,
+      "limitedCPU_m": 2000,
+      "limitedMemoryMi": 2048
+    },
+    "database": {
+      "requestedCPU_m": 250,
+      "requestedMemoryMi": 1024,
+      "limitedCPU_m": 1000,
+      "limitedMemoryMi": 1024
+    },
+    "import": {
+      "requestedCPU_m": 1000,
+      "requestedMemoryMi": 2048,
+      "limitedCPU_m": 2000,
+      "limitedMemoryMi": 2048
+    }
+  },
+  "logicalStorageGi": 30,
+  "scenarios": {
+    "steady": {
+      "pods": 6,
+      "requestedCPU_m": 3050,
+      "requestedMemoryMi": 7618,
+      "limitedCPU_m": 7700,
+      "limitedMemoryMi": 7618,
+      "status": "selected model"
+    },
+    "oneInactiveImport": {
+      "pods": 7,
+      "requestedCPU_m": 4050,
+      "requestedMemoryMi": 9666,
+      "limitedCPU_m": 9700,
+      "limitedMemoryMi": 9666,
+      "status": "inactive future import model"
+    },
+    "operatorDefaultSurge": {
+      "pods": 7,
+      "requestedCPU_m": 3350,
+      "requestedMemoryMi": 8068,
+      "limitedCPU_m": 8400,
+      "limitedMemoryMi": 8068,
+      "status": "one extra Operator Pod: default maxSurge 25%, ceil(1*25%)=1"
+    },
+    "importAndOperatorSurge": {
+      "pods": 8,
+      "requestedCPU_m": 4350,
+      "requestedMemoryMi": 10116,
+      "limitedCPU_m": 10400,
+      "limitedMemoryMi": 10116,
+      "status": "concurrent modeled overlap"
+    },
+    "oneExtraCnpgPodReserve": {
+      "pods": 7,
+      "requestedCPU_m": 3300,
+      "requestedMemoryMi": 8642,
+      "limitedCPU_m": 8700,
+      "limitedMemoryMi": 8642,
+      "status": "conservative one EXTRA bootstrap/job/replacement reserve, not an observed/enforced surge"
+    },
+    "importOperatorSurgeAndOneCnpgReserve": {
+      "pods": 9,
+      "requestedCPU_m": 4600,
+      "requestedMemoryMi": 11140,
+      "limitedCPU_m": 11400,
+      "limitedMemoryMi": 11140,
+      "status": "conservative single-DB reserve, not enforced concurrency"
+    },
+    "futureAutoCheckNotSelected": {
+      "pods": 7,
+      "requestedCPU_m": 4050,
+      "requestedMemoryMi": 9666,
+      "limitedCPU_m": 9700,
+      "limitedMemoryMi": 9666,
+      "status": "Auto rejected; sequential regular init/main effective max(old,new)"
+    },
+    "futureAutoAndImportNotSelected": {
+      "pods": 8,
+      "requestedCPU_m": 5050,
+      "requestedMemoryMi": 11714,
+      "limitedCPU_m": 11700,
+      "limitedMemoryMi": 11714,
+      "status": "NOT SELECTED; new approval and concurrency budget required"
+    }
+  },
+  "initAndSidecars": {
+    "operator": "One container, no init/sidecar in preserved published bundle.",
+    "server": "Pinned stock supported spec, no unsupported podTemplate, no extra init/sidecar; mutating admission excluded.",
+    "import": "Copies stock StatefulSet; explicit RealmImport resources; no generated sidecars in candidate model.",
+    "cnpg": "One Postgres main + one regular bootstrap-controller init; each Cluster spec.resources, per-resource max not sum. No plugins configured.",
+    "cnpgBootstrapJobs": "Same vector and regular init; concurrency/maintenance/scheduler not executed.",
+    "futureAuto": "One regular init actual, one main desired, sequential. Not selected."
+  },
+  "inheritedImageRisk": "CNPG bootstrap-controller init inherits existing Operator image ghcr.io/cloudnative-pg/cloudnative-pg:1.30.0, not owned or digest-pinned by this candidate.",
+  "limitations": [
+    "No physical-failure HA: one Windows Hyper-V host.",
+    "w2 existing memory limits 110%; request headroom is not real spare RAM.",
+    "Disk capacity, off-host backups/restore, runtime scheduling, admission mutation and maintenance concurrency remain gates."
+  ]
+}

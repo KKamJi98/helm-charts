@@ -1,0 +1,26 @@
+# No automated sync, finalizers or active root wiring.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keycloak-operator
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/skip-reconcile: 'true'
+    preparation.kkamji.net/reviewed-commit: UNRESOLVED_REVIEWED_COMMIT
+spec:
+  project: management
+  source:
+    repoURL: https://github.com/KKamJi98/helm-charts.git
+    targetRevision: UNRESOLVED_REVIEWED_COMMIT
+    path: charts/keycloak-operator
+    helm:
+      releaseName: keycloak-operator
+      valueFiles:
+      - kkamji_local_values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keycloak
+  syncPolicy:
+    syncOptions:
+    - ServerSideApply=true
+    - FailOnSharedResource=true

@@ -1,0 +1,7 @@
+apiVersion: v2
+name: keycloak
+version: 0.1.0
+appVersion: 26.8.2
+description: Locally owned preparation-only wrapper; not an official Keycloak Helm
+  chart.
+type: application

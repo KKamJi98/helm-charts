@@ -1,0 +1,383 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "preparationProfile",
+    "publicCaProjection",
+    "keycloak",
+    "database"
+  ],
+  "properties": {
+    "publicCaProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "preparationProfile": {
+      "enum": [
+        "keycloak-26.8.2-local-only",
+        "keycloak-26.8.2-production"
+      ]
+    },
+    "keycloak": {
+      "const": {
+        "instances": 2,
+        "image": "quay.io/keycloak/keycloak@sha256:c68e286cacd87b942ac1939a0a1481461109d6acd3a57dc496969a319a76bbf0",
+        "startOptimized": false,
+        "automountServiceAccountToken": false,
+        "resources": {
+          "requests": {
+            "cpu": "1",
+            "memory": "2Gi"
+          },
+          "limits": {
+            "cpu": "2",
+            "memory": "2Gi"
+          }
+        },
+        "db": {
+          "vendor": "postgres",
+          "host": "keycloak-db-rw.keycloak.svc.cluster.local",
+          "port": 5432,
+          "database": "keycloak",
+          "usernameSecret": {
+            "name": "keycloak-db-app",
+            "key": "username"
+          },
+          "passwordSecret": {
+            "name": "keycloak-db-app",
+            "key": "password"
+          }
+        },
+        "truststores": {
+          "database": {
+            "secret": {
+              "name": "keycloak-db-client-trust",
+              "optional": false
+            }
+          }
+        },
+        "additionalOptions": [
+          {
+            "name": "db-tls-mode",
+            "value": "verify-server"
+          }
+        ],
+        "hostname": {
+          "hostname": "https://sso.kkamji.net",
+          "strict": true
+        },
+        "http": {
+          "httpEnabled": true,
+          "httpPort": 8080
+        },
+        "httpManagement": {
+          "port": 9000
+        },
+        "proxy": {
+          "headers": "xforwarded"
+        },
+        "ingress": {
+          "enabled": false
+        },
+        "networkPolicy": {
+          "enabled": false
+        },
+        "bootstrapAdmin": {
+          "user": {
+            "secret": "keycloak-bootstrap-admin"
+          }
+        },
+        "update": {
+          "strategy": "RecreateOnImageChange",
+          "scheduling": {
+            "affinity": {
+              "nodeAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": {
+                  "nodeSelectorTerms": [
+                    {
+                      "matchExpressions": [
+                        {
+                          "key": "kubernetes.io/hostname",
+                          "operator": "In",
+                          "values": [
+                            "k8s-w1",
+                            "k8s-w2"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "tolerations": []
+          }
+        },
+        "scheduling": {
+          "affinity": {
+            "nodeAffinity": {
+              "requiredDuringSchedulingIgnoredDuringExecution": {
+                "nodeSelectorTerms": [
+                  {
+                    "matchExpressions": [
+                      {
+                        "key": "kubernetes.io/hostname",
+                        "operator": "In",
+                        "values": [
+                          "k8s-w1",
+                          "k8s-w2"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "podAntiAffinity": {
+              "requiredDuringSchedulingIgnoredDuringExecution": [
+                {
+                  "labelSelector": {
+                    "matchLabels": {
+                      "app": "keycloak",
+                      "app.kubernetes.io/instance": "keycloak",
+                      "app.kubernetes.io/managed-by": "keycloak-operator",
+                      "app.kubernetes.io/component": "server"
+                    }
+                  },
+                  "topologyKey": "kubernetes.io/hostname"
+                }
+              ]
+            }
+          },
+          "tolerations": []
+        },
+        "import": {
+          "scheduling": {
+            "affinity": {
+              "nodeAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": {
+                  "nodeSelectorTerms": [
+                    {
+                      "matchExpressions": [
+                        {
+                          "key": "kubernetes.io/hostname",
+                          "operator": "In",
+                          "values": [
+                            "k8s-w1",
+                            "k8s-w2"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "tolerations": []
+          }
+        }
+      }
+    },
+    "database": {
+      "type": "object"
+    },
+    "productionPhase": {
+      "enum": [
+        "database",
+        "application"
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "preparationProfile": {
+          "const": "keycloak-26.8.2-local-only"
+        },
+        "database": {
+          "$ref": "#/definitions/preparationDatabase"
+        }
+      },
+      "not": {
+        "required": [
+          "productionPhase"
+        ]
+      }
+    },
+    {
+      "required": [
+        "productionPhase"
+      ],
+      "properties": {
+        "preparationProfile": {
+          "const": "keycloak-26.8.2-production"
+        },
+        "publicCaProjection": {
+          "const": {
+            "enabled": true
+          }
+        },
+        "database": {
+          "$ref": "#/definitions/productionDatabase"
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "preparationDatabase": {
+      "const": {
+        "instances": 3,
+        "imageName": "ghcr.io/cloudnative-pg/postgresql:18.4-system-trixie@sha256:42708a75345b7a48fdd9257b071830783a97fd228529196b6313187a7198e185",
+        "enableSuperuserAccess": false,
+        "certificates": {
+          "serverAltDNSNames": [
+            "keycloak-db-rw.keycloak.svc.cluster.local"
+          ]
+        },
+        "bootstrap": {
+          "initdb": {
+            "database": "keycloak",
+            "owner": "keycloak",
+            "secret": {
+              "name": "keycloak-db-app"
+            }
+          }
+        },
+        "storage": {
+          "size": "10Gi",
+          "storageClass": "local-path"
+        },
+        "resources": {
+          "requests": {
+            "cpu": "250m",
+            "memory": "1Gi"
+          },
+          "limits": {
+            "cpu": "1",
+            "memory": "1Gi"
+          }
+        },
+        "affinity": {
+          "enablePodAntiAffinity": true,
+          "podAntiAffinityType": "preferred",
+          "topologyKey": "kubernetes.io/hostname",
+          "nodeAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+              "nodeSelectorTerms": [
+                {
+                  "matchExpressions": [
+                    {
+                      "key": "kubernetes.io/hostname",
+                      "operator": "In",
+                      "values": [
+                        "k8s-w1",
+                        "k8s-w2"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "tolerations": []
+        }
+      }
+    },
+    "productionDatabase": {
+      "const": {
+        "instances": 3,
+        "imageName": "ghcr.io/cloudnative-pg/postgresql:18.4-system-trixie@sha256:42708a75345b7a48fdd9257b071830783a97fd228529196b6313187a7198e185",
+        "enableSuperuserAccess": false,
+        "certificates": {
+          "serverAltDNSNames": [
+            "keycloak-db-rw.keycloak.svc.cluster.local"
+          ]
+        },
+        "bootstrap": {
+          "initdb": {
+            "database": "keycloak",
+            "owner": "keycloak",
+            "secret": {
+              "name": "keycloak-db-app"
+            }
+          }
+        },
+        "storage": {
+          "size": "10Gi",
+          "storageClass": "local-path"
+        },
+        "resources": {
+          "requests": {
+            "cpu": "250m",
+            "memory": "1Gi"
+          },
+          "limits": {
+            "cpu": "1",
+            "memory": "1Gi"
+          }
+        },
+        "affinity": {
+          "enablePodAntiAffinity": true,
+          "podAntiAffinityType": "preferred",
+          "topologyKey": "kubernetes.io/hostname",
+          "nodeAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+              "nodeSelectorTerms": [
+                {
+                  "matchExpressions": [
+                    {
+                      "key": "kubernetes.io/hostname",
+                      "operator": "In",
+                      "values": [
+                        "k8s-w1",
+                        "k8s-w2"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "tolerations": []
+        },
+        "backup": {
+          "retentionPolicy": "30d",
+          "barmanObjectStore": {
+            "destinationPath": "s3://kkamji-keycloak-pg-backup/keycloak",
+            "s3Credentials": {
+              "accessKeyId": {
+                "name": "keycloak-backup-s3",
+                "key": "ACCESS_KEY_ID"
+              },
+              "secretAccessKey": {
+                "name": "keycloak-backup-s3",
+                "key": "ACCESS_SECRET_KEY"
+              },
+              "region": {
+                "name": "keycloak-backup-s3",
+                "key": "AWS_REGION"
+              }
+            },
+            "data": {
+              "compression": "gzip",
+              "encryption": "AES256"
+            },
+            "wal": {
+              "compression": "gzip",
+              "encryption": "AES256"
+            }
+          }
+        }
+      }
+    }
+  }
+}

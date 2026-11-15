@@ -1,0 +1,266 @@
+{
+  "keycloakSourceCommit": "e514445f9dcdabc5bdcf67cab56c1e49655de067",
+  "resourcesCommit": "79ba77fd65bb05a8300cd1396d6be9806a0f290f",
+  "cnpgSchemaCommit": "ec38e6ef0cb37186ac5c4922fd8da1a768e5c9bf",
+  "sources": {
+    "release": {
+      "url": "https://api.github.com/repos/keycloak/keycloak/releases/tags/26.8.2",
+      "sha256": "5e05a0ad84f5bd19338fc6824f6bea6b495889a10a9e7039f70b3d37038c8495"
+    },
+    "operator_installation": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/operator/installation.adoc",
+      "sha256": "a70cb6258498bfc30ea5a478dc48b4b5125768643b50578ca4a05bccb4110a47"
+    },
+    "operator_manifest": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/79ba77fd65bb05a8300cd1396d6be9806a0f290f/kubernetes/kubernetes.yml",
+      "sha256": "e1da7dd96a3f4bcea806ad67f13b695fc813d5f37257266bc037dcb21321e6e5"
+    },
+    "official_install_bundle": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/79ba77fd65bb05a8300cd1396d6be9806a0f290f/kubernetes/kustomization.yml",
+      "sha256": "fd702341f6442d432190e6c83b82c2f105f8ba91b635a99bc300af29343265ac"
+    },
+    "keycloak_crd": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/79ba77fd65bb05a8300cd1396d6be9806a0f290f/kubernetes/keycloaks.k8s.keycloak.org-v1.yml",
+      "sha256": "20c51247cb6cbc6158098caabeaf6b429dc8c016e35829f5ddd9c468b7582667"
+    },
+    "realmimport_crd": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/79ba77fd65bb05a8300cd1396d6be9806a0f290f/kubernetes/keycloakrealmimports.k8s.keycloak.org-v1.yml",
+      "sha256": "8d552e1864d78117a07e535479ddb36e16a42b2695726c875f44828e1323edd4"
+    },
+    "operator_basic": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/operator/basic-deployment.adoc",
+      "sha256": "5a18289c338e7f68d470f7b93ce78ab09468b9b80cb7f9834de49a50eaa04693"
+    },
+    "operator_advanced": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/operator/advanced-configuration.adoc",
+      "sha256": "df5006c4765fd24cd719db16e677d1d1f2584b39cee2f2bfdedca149dc18c276"
+    },
+    "operator_custom_image": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/operator/customizing-keycloak.adoc",
+      "sha256": "c1bb717b4d0f1aec97d28b2c67303072afc5a234193de69053990689a7b6bbe4"
+    },
+    "operator_updates": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/operator/rolling-updates.adoc",
+      "sha256": "27aeb98005c93476ee0d738806cc64fd0b8378532d05016c2a7f8488a101540a"
+    },
+    "operator_preview_client": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/operator/managing-clients.adoc",
+      "sha256": "ff0c93cdc5a68d9c0fbe4145f91c294cf266f829a1fcd44329267eba91ebfc4d"
+    },
+    "realm_import": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/operator/realm-import.adoc",
+      "sha256": "20d4610269d6ff2fb5bdb32044b150555035295f6e0d1a99df44a27a79bf8bce"
+    },
+    "db_tls_doc": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/server/db.adoc",
+      "sha256": "9af7171a1c156af05c2ac35b52eb8a041c0520a030dac7b30db7d14ac24f3f35"
+    },
+    "db_tls_options": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/quarkus/config-api/src/main/java/org/keycloak/config/DatabaseOptions.java",
+      "sha256": "d0c7ce7b9b0215233475eb8e0f14be4c36f5c23a70a956ff8a29918009fe931a"
+    },
+    "db_tls_mapper": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/quarkus/runtime/src/main/java/org/keycloak/quarkus/runtime/configuration/mappers/DatabasePropertyMappers.java",
+      "sha256": "ef556de002d06d4cf62e3158d1273a382a0756f5eb75259c95ba10a33ab3fde1"
+    },
+    "pgjdbc_ssl": {
+      "url": "https://jdbc.postgresql.org/documentation/ssl/",
+      "sha256": "b48cb974d617a8bedae4c34c7e01fc7cea835abb01c91c4adbd023cdf5aceb69"
+    },
+    "system_truststore": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/server/keycloak-truststore.adoc",
+      "sha256": "52064ca3fa0f63cec3a717cafaef1804f813b8f5056c2cf7906ae42e406ebde8"
+    },
+    "cnpg_certificates": {
+      "url": "https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/ec38e6ef0cb37186ac5c4922fd8da1a768e5c9bf/docs/src/certificates.md",
+      "sha256": "96a34951b7ad951f12a7bca3290f01c4b4ebefa94b845eb654bf8adc17ef709f"
+    },
+    "deployment_controller": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/operator/src/main/java/org/keycloak/operator/controllers/KeycloakDeploymentDependentResource.java",
+      "sha256": "11e2b40be2781c6635d39d237f0f19c510a8e93236ae20ef95c772d90883f30d"
+    },
+    "service_controller": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/operator/src/main/java/org/keycloak/operator/controllers/KeycloakServiceDependentResource.java",
+      "sha256": "8318b16649945cf00bbe92ea8354ec6f6bf3ff5f6f554ece53b3a5e7c1bf34cf"
+    },
+    "operator_constants": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/operator/src/main/java/org/keycloak/operator/Constants.java",
+      "sha256": "2b04f1b84f8c4c29a744cfa53c304c866e6dc54f6bdf823b6e366b745b849eb7"
+    },
+    "operator_defaults": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/operator/src/main/resources/application.properties",
+      "sha256": "d7b24d3d636bf737e3b454b2ab4a668017e295a6641cb0f4e8a7ca1e0e2c11fc"
+    },
+    "operator_labels": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/operator/src/main/java/org/keycloak/operator/Utils.java",
+      "sha256": "87463be321fa0476f90d0ade27b3191f9dc38fbb2686d8aad9918fde3d1d0986"
+    },
+    "reverse_proxy": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/server/reverseproxy.adoc",
+      "sha256": "b2b9cbcbfb9a531aa9017cfa07f7476d92e4bc65b0f6a22da453001e0956ce5e"
+    },
+    "webauthn_doc": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/documentation/server_admin/topics/authentication/webauthn.adoc",
+      "sha256": "1edc01db2b2cc93d23429b3649721dce5632fbbf4cb07fdfe821c013a6381d2c"
+    },
+    "flows_doc": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/documentation/server_admin/topics/authentication/flows.adoc",
+      "sha256": "b562d8d875b3cdc0d02038cdff106018f7c5137227fbcfaf72efbb46c91fadb7"
+    },
+    "passkeys_doc": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/documentation/server_admin/topics/authentication/passkeys.adoc",
+      "sha256": "1b487d656e5597b909bb1ac5ecf6c7fd303d4537d56aebe13c22a40ece23bbfd"
+    },
+    "recovery_doc": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/documentation/server_admin/topics/authentication/recovery-codes.adoc",
+      "sha256": "8940a126e89d720ff1fe1a2fe3a798247f05eff21f0ebfca2daab0a3d48ed7fe"
+    },
+    "webauthn_authenticator": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/services/src/main/java/org/keycloak/authentication/authenticators/browser/WebAuthnAuthenticator.java",
+      "sha256": "a702153c467c39f2ff05f812b825ff9c64460d03f69ced7cfeeafdc52f267699"
+    },
+    "webauthn_registration": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/services/src/main/java/org/keycloak/authentication/requiredactions/WebAuthnRegister.java",
+      "sha256": "3d695c8e4fa60bb28da9f79aeaeb97f4a0b9795dbf5f2e77fbc257909970814e"
+    },
+    "webauthn_registration_factory": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/services/src/main/java/org/keycloak/authentication/requiredactions/WebAuthnRegisterFactory.java",
+      "sha256": "144007bec8549f4d59f80733b7346355c1a1fb23cd64111e93c3495c4e6b4d4d"
+    },
+    "default_flows_source": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/server-spi-private/src/main/java/org/keycloak/models/utils/DefaultAuthenticationFlows.java",
+      "sha256": "ae10747d9c6380c48291560efdd6973829263644304f5729c50b20f44f555b3d"
+    },
+    "realm_import_placeholders": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/server/importExport.adoc",
+      "sha256": "364701687d1a4c2513411a0cf18eab25add298e3ea73c372ddc491eb36ff156e"
+    },
+    "bootstrap_recovery": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/server/bootstrap-admin-recovery.adoc",
+      "sha256": "7e87d8e803964741dbfabf4c8a48fe6dbb648dcd736a02c7394ecdbf46352215"
+    },
+    "truststore_loader": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/services/src/main/java/org/keycloak/truststore/TruststoreBuilder.java",
+      "sha256": "72baed1db9406fe1c69ec349154f53288dc752e87b46cfbb98a076c30bebf114"
+    },
+    "password_form_source": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java",
+      "sha256": "36516125ab4c214cde9f5f0198bc64c989eb2e1405025978759fc8f846391bb6"
+    },
+    "oidc_endpoints": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/securing-apps/partials/oidc/available-endpoints.adoc",
+      "sha256": "b0b59f33b51de6d444b5e1641d9211af00c3565a754367d9b40ab676e729a258"
+    },
+    "cnpg-1.30-clusters.yaml": {
+      "url": "https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/ec38e6ef0cb37186ac5c4922fd8da1a768e5c9bf/config/crd/bases/postgresql.cnpg.io_clusters.yaml",
+      "sha256": "3a96b6aacc23ef070e9eaca232f79ba12856d0229dea932794d1894cca354bf1"
+    },
+    "keycloak-LICENSE.txt": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/LICENSE.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    "KeycloakRealmImportJobDependentResource.java": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/operator/src/main/java/org/keycloak/operator/controllers/KeycloakRealmImportJobDependentResource.java",
+      "sha256": "e4cb730d81acb65e9028505eeb693655fb343577b21b17b9ecfb7148b89020b5"
+    },
+    "KeycloakUpdateJobDependentResource.java": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/operator/src/main/java/org/keycloak/operator/controllers/KeycloakUpdateJobDependentResource.java",
+      "sha256": "953090496eea45b4561cfe74000632627107de71dfca9a8afe1fddc46a1e7ecf"
+    },
+    "cnpg-1.30-networking.md": {
+      "url": "https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/ec38e6ef0cb37186ac5c4922fd8da1a768e5c9bf/docs/src/networking.md",
+      "sha256": "06f974fdd9476dd0bda0b5bf159b6515ef3ac613bb099e7254ee0a55b74dbbbb"
+    },
+    "cnpg-1.30-operator-config.yaml": {
+      "url": "https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/ec38e6ef0cb37186ac5c4922fd8da1a768e5c9bf/config/default/kustomization.yaml",
+      "sha256": "502bc9a69269662fc026c5103cfc79d5d44f3fe26abdaac150eff47b7855e2dc"
+    },
+    "KeycloakNetworkPolicyDependentResource.java": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/operator/src/main/java/org/keycloak/operator/controllers/KeycloakNetworkPolicyDependentResource.java",
+      "sha256": "3dbca42cd91302f6ffe53a468430e2eb0287bf05c7a13f063a1c50ac1bae64d7"
+    },
+    "RecreateOnImageChangeUpdateLogic.java": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/operator/src/main/java/org/keycloak/operator/update/impl/RecreateOnImageChangeUpdateLogic.java",
+      "sha256": "b953d728182792f10b50b6f987877080371eb0dbff38b7000ee43f0b5279b9db"
+    },
+    "OIDCConfigAttributes.java": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/server-spi-private/src/main/java/org/keycloak/protocol/oidc/OIDCConfigAttributes.java",
+      "sha256": "e4d79405134e159f835233d2b9d8e07e7c84759334b74e2eb8a9d66784ce5081"
+    },
+    "OIDCAdvancedConfigWrapper.java": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/services/src/main/java/org/keycloak/protocol/oidc/OIDCAdvancedConfigWrapper.java",
+      "sha256": "b19b9a9fff9c1de6fa2cc383fee339739198bbb5064ff4ea3e879165395e22e5"
+    },
+    "ClientModel.java": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/server-spi/src/main/java/org/keycloak/models/ClientModel.java",
+      "sha256": "0860fa42c4fb5062b3685b2844f11ad43bf92ef6f84c74e2fd1d718571a8aca5"
+    },
+    "CibaConfig.java": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/server-spi/src/main/java/org/keycloak/models/CibaConfig.java",
+      "sha256": "8124b717ad8bc4d5c0e9bd3141e165f9beb18707e99ddcdb73469dcc42bd689a"
+    },
+    "OAuth2DeviceConfig.java": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/server-spi/src/main/java/org/keycloak/models/OAuth2DeviceConfig.java",
+      "sha256": "0ecb2ad5dc788541478be317f2c0bb293b72f6718f086e43953c6501910349e6"
+    },
+    "cnpg-LICENSE": {
+      "url": "https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/ec38e6ef0cb37186ac5c4922fd8da1a768e5c9bf/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    "postgres-image-index": {
+      "url": "https://ghcr.io/v2/cloudnative-pg/postgresql/manifests/18.4-system-trixie",
+      "sha256": "42708a75345b7a48fdd9257b071830783a97fd228529196b6313187a7198e185",
+      "immutableReference": "ghcr.io/cloudnative-pg/postgresql:18.4-system-trixie@sha256:42708a75345b7a48fdd9257b071830783a97fd228529196b6313187a7198e185",
+      "verification": "Public anonymous registry response bytes rehashed; no layers/signatures/execution/CVE scan."
+    },
+    "eso-LICENSE": {
+      "url": "https://raw.githubusercontent.com/external-secrets/external-secrets/bb86f97bf24b47d2c797816e042ac37a85e802de/LICENSE",
+      "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+    },
+    "pkg_specs_pg_pods.go": {
+      "url": "https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/ec38e6ef0cb37186ac5c4922fd8da1a768e5c9bf/pkg/specs/pg_pods.go",
+      "sha256": "a986b33a4a8f858ea22b7fc692c79663f13753e598080d2d5a494db5a5b2b953"
+    },
+    "pkg_specs_pods.go": {
+      "url": "https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/ec38e6ef0cb37186ac5c4922fd8da1a768e5c9bf/pkg/specs/pods.go",
+      "sha256": "b9bd6f4f3c42535f2bcf423ce6fdc5a88eba6682f9724dbb9043091b88735566"
+    },
+    "pkg_specs_jobs.go": {
+      "url": "https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/ec38e6ef0cb37186ac5c4922fd8da1a768e5c9bf/pkg/specs/jobs.go",
+      "sha256": "09d5f713b5b4f9333c23f41e1108683da73161dceb186ec98c36dd3d64c76abf"
+    },
+    "api_v1_cluster_defaults.go": {
+      "url": "https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/ec38e6ef0cb37186ac5c4922fd8da1a768e5c9bf/api/v1/cluster_defaults.go",
+      "sha256": "ea0c8256f9982176ebe0423c576f256d196cea3a6525a100454d25432c95d688"
+    },
+    "pkg_specs_containers.go": {
+      "url": "https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/ec38e6ef0cb37186ac5c4922fd8da1a768e5c9bf/pkg/specs/containers.go",
+      "sha256": "13678669c301a896dcceb8a58ed254127acf164591ba7ea20f6fd9bb20337b27"
+    },
+    "supported-databases": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/server/templates/databases.adoc",
+      "sha256": "a843dbe554c63f6162323b2991d88cacd043699453c875e0f0219295a3dc9d5b",
+      "gitBlobSha1": "a083383c4e9cbb28c3cfc6394ed1eecb4ff53643",
+      "supportedPostgresqlMajors": [
+        18,
+        17,
+        16,
+        15,
+        14
+      ]
+    },
+    "server-caching.adoc": {
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/server/caching.adoc",
+      "sha256": "1f192b90dd06dd27f815bac9500f2c6c13122b2459e961b0f870cca6f6fd4a77"
+    }
+  },
+  "derivations": {
+    "import": "KeycloakRealmImportJobDependentResource.java:70-86,151-184: app becomes keycloak-realm-import; explicit scheduling replaces all four scheduling fields; explicit spec.resources passed to addResources.",
+    "update": "KeycloakUpdateJobDependentResource.java:132-191: one regular init actual, one desired app container; effective resources use max per resource, not sum; Auto NOT selected.",
+    "tls": "DatabasePropertyMappers.java:241-248,709-738: verify-server becomes sslmode=verify-full; explicit db.url can override JDBC TLS properties, therefore prohibited.",
+    "networkPolicy": "KeycloakNetworkPolicyDependentResource.java:62-67,101-133: empty HTTP source list allows all; local profile disables this additive policy and owns narrow ingress policies.",
+    "serverSelectors": "Constants.java:36-58,66-79 + Utils.java:72-75 + KeycloakDeploymentDependentResource.java:289-292: app=keycloak, managed-by=keycloak-operator, instance=keycloak, component=server; jobs replace app label.",
+    "cnpgResources": "CNPG pkg/specs/pods.go:185-207,211-324 and containers.go:32-52: one Postgres main container plus one regular bootstrap-controller init, both Cluster spec.resources; effective per-resource max, no additional steady request. jobs.go:384-406: primary/replica bootstrap Jobs use same resources and regular init; additional concurrent Job/maintenance Pod requires one DB-vector reserve EACH; concurrency not established offline.",
+    "peerPorts": "Pinned docs/guides/server/caching.adoc:390-405: 7800 unicast transport and 57800 FD_SOCK2, default offset 50000; no port override configured."
+  }
+}

@@ -1,0 +1,28 @@
+# Separate future app-side reader; same client credential, not namespace-isolated authority.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: keycloak-oidc-client
+  namespace: kkamji-platform
+  annotations:
+    argocd.argoproj.io/skip-reconcile: 'true'
+    preparation.kkamji.net/reviewed-commit: UNRESOLVED_REVIEWED_COMMIT
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: parameter-store
+    kind: ClusterSecretStore
+  target:
+    name: keycloak-oidc-client
+    creationPolicy: Orphan
+    deletionPolicy: Retain
+    template:
+      type: Opaque
+  data:
+  - secretKey: client-secret
+    remoteRef:
+      key: /kkamji/keycloak/clients/kkamji-platform
+      property: client_secret
+      conversionStrategy: Default
+      decodingStrategy: None
+      metadataPolicy: None

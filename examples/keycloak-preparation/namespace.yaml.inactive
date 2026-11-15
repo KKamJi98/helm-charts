@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: keycloak
+  annotations:
+    argocd.argoproj.io/skip-reconcile: 'true'
+    preparation.kkamji.net/reviewed-commit: UNRESOLVED_REVIEWED_COMMIT
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false

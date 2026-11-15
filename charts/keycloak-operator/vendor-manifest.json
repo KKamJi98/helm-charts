@@ -1,0 +1,59 @@
+{
+  "release": "26.8.2",
+  "resourcesCommit": "79ba77fd65bb05a8300cd1396d6be9806a0f290f",
+  "sourceCommit": "e514445f9dcdabc5bdcf67cab56c1e49655de067",
+  "artifacts": [
+    {
+      "path": "vendor/README.md",
+      "upstream_path": "README.md",
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/79ba77fd65bb05a8300cd1396d6be9806a0f290f/README.md",
+      "sha256": "697ea8fde0c0621131b6cb3aaba32bf9c26320dfe16087deed5ac015da2a905e"
+    },
+    {
+      "path": "vendor/kubernetes/kubernetes.yml",
+      "upstream_path": "kubernetes/kubernetes.yml",
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/79ba77fd65bb05a8300cd1396d6be9806a0f290f/kubernetes/kubernetes.yml",
+      "sha256": "e1da7dd96a3f4bcea806ad67f13b695fc813d5f37257266bc037dcb21321e6e5"
+    },
+    {
+      "path": "vendor/kubernetes/kustomization.yml",
+      "upstream_path": "kubernetes/kustomization.yml",
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/79ba77fd65bb05a8300cd1396d6be9806a0f290f/kubernetes/kustomization.yml",
+      "sha256": "fd702341f6442d432190e6c83b82c2f105f8ba91b635a99bc300af29343265ac"
+    },
+    {
+      "path": "crds/keycloaks.k8s.keycloak.org-v1.yml",
+      "upstream_path": "kubernetes/keycloaks.k8s.keycloak.org-v1.yml",
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/79ba77fd65bb05a8300cd1396d6be9806a0f290f/kubernetes/keycloaks.k8s.keycloak.org-v1.yml",
+      "sha256": "20c51247cb6cbc6158098caabeaf6b429dc8c016e35829f5ddd9c468b7582667"
+    },
+    {
+      "path": "crds/keycloakrealmimports.k8s.keycloak.org-v1.yml",
+      "upstream_path": "kubernetes/keycloakrealmimports.k8s.keycloak.org-v1.yml",
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/79ba77fd65bb05a8300cd1396d6be9806a0f290f/kubernetes/keycloakrealmimports.k8s.keycloak.org-v1.yml",
+      "sha256": "8d552e1864d78117a07e535479ddb36e16a42b2695726c875f44828e1323edd4"
+    },
+    {
+      "path": "crds/keycloakoidcclients.k8s.keycloak.org-v1.yml",
+      "upstream_path": "kubernetes/keycloakoidcclients.k8s.keycloak.org-v1.yml",
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/79ba77fd65bb05a8300cd1396d6be9806a0f290f/kubernetes/keycloakoidcclients.k8s.keycloak.org-v1.yml",
+      "sha256": "15d9199822d1918438bd1d093eee3ec8406e7f9d0837c4527fd6da99c63b058a"
+    },
+    {
+      "path": "crds/keycloaksamlclients.k8s.keycloak.org-v1.yml",
+      "upstream_path": "kubernetes/keycloaksamlclients.k8s.keycloak.org-v1.yml",
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/79ba77fd65bb05a8300cd1396d6be9806a0f290f/kubernetes/keycloaksamlclients.k8s.keycloak.org-v1.yml",
+      "sha256": "7c69d146f610f3c40acf4466518e89615b6fce7ee2a03d75cd93b7a9a7bf259e"
+    },
+    {
+      "path": "vendor/LICENSE.txt",
+      "upstream_path": "LICENSE.txt",
+      "url": "https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/79ba77fd65bb05a8300cd1396d6be9806a0f290f/LICENSE.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    }
+  ],
+  "images": {
+    "operator": "quay.io/keycloak/keycloak-operator@sha256:df890db951b595fe46f3f985301a38b76fcfcc264f06201c54dfaf28adeba19e",
+    "keycloak": "quay.io/keycloak/keycloak@sha256:c68e286cacd87b942ac1939a0a1481461109d6acd3a57dc496969a319a76bbf0"
+  }
+}

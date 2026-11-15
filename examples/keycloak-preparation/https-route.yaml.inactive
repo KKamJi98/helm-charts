@@ -1,0 +1,32 @@
+# Proposal only; no DNS, listener, certificate or management-port publication.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: keycloak
+  namespace: keycloak
+  annotations:
+    argocd.argoproj.io/skip-reconcile: 'true'
+    preparation.kkamji.net/reviewed-commit: UNRESOLVED_REVIEWED_COMMIT
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: kkamji
+    namespace: envoy-gateway-system
+    sectionName: https
+  hostnames:
+  - sso.kkamji.net
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /realms/kkamji
+    - path:
+        type: PathPrefix
+        value: /resources
+    backendRefs:
+    - group: ''
+      kind: Service
+      name: keycloak-service
+      port: 8080
+      weight: 1
