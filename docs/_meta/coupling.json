@@ -44,6 +44,7 @@
     ".github/workflows/hindsight*.yml"
   ],
   "docs/05_oidc-idp-preparation.md": [
+    "charts/argo-applications/management_local_values.yaml",
     "charts/keycloak-operator/**",
     "charts/keycloak-idp/**",
     "examples/keycloak-preparation/**",

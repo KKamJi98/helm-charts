@@ -310,7 +310,18 @@ class KeycloakPreparationTests(unittest.TestCase):
         for path in (ROOT / "charts/argo-applications").glob("*local_values.yaml"):
             apps = yaml.safe_load(path.read_text()).get("applications", {})
             for name, app in apps.items():
-                self.assertNotEqual(app.get("source", {}).get("path"), "charts/keycloak-operator", name)
+                if app.get("source", {}).get("path") == "charts/keycloak-operator":
+                    self.assertEqual(path.name, "management_local_values.yaml")
+                    self.assertEqual(name, "keycloak-operator")
+                    self.assertEqual(app, {
+                        "enabled": True, "name": "keycloak-operator", "project": "management",
+                        "destination": {"namespace": "keycloak"},
+                        "source": {
+                            "repoURL": "https://github.com/KKamJi98/helm-charts.git",
+                            "targetRevision": "main", "path": "charts/keycloak-operator",
+                            "helm": {"releaseName": "keycloak-operator", "valueFiles": ["kkamji_local_values.yaml"]},
+                        },
+                    })
                 if app.get("source", {}).get("path") == "charts/keycloak-idp":
                     self.assertEqual(path.name, "management_local_values.yaml")
                     self.assertEqual(name, "keycloak-idp")
