@@ -17,6 +17,7 @@
     },
     "template": {
       "metadata": {
+        "annotations": {"hindsight-dot/credential-epoch": {{ .Values.epoch | quote }}},
         "labels": {
           "app": "hindsight-dot",
           "component": "state"
