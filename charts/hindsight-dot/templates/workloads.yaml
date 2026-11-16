@@ -84,6 +84,11 @@
               }
             ],
             "env": [
+              {{- if .Values.durableRegistration }}
+              {"name":"DOT_DURABLE_REGISTRATION","value":"1"},
+              {"name":"DOT_REGISTRATION_REDIS_URL_FILE","value":"/run/dot/registration_redis_url"},
+              {"name":"DOT_REGISTRATION_KEY_FILE","value":"/run/dot/registration_key"},
+              {{- end }}
               {{- if .Values.owner.fromSecret }}
               {"name":"DOT_OWNER_BOUND","value":"1"},
               {"name":"DOT_RATE_REDIS_URL_FILE","value":"/run/dot/rate_redis_url"},
@@ -314,6 +319,11 @@
               }
             ],
             "env": [
+              {{- if .Values.durableRegistration }}
+              {"name":"DOT_DURABLE_REGISTRATION","value":"1"},
+              {"name":"DOT_REGISTRATION_REDIS_URL_FILE","value":"/run/dot/registration_redis_url"},
+              {"name":"DOT_REGISTRATION_KEY_FILE","value":"/run/dot/registration_key"},
+              {{- end }}
               {{- if .Values.owner.fromSecret }}
               {"name":"DOT_OWNER_BOUND","value":"1"},
               {"name":"DOT_RATE_REDIS_URL_FILE","value":"/run/dot/rate_redis_url"},

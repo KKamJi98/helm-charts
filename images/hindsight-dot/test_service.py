@@ -64,6 +64,59 @@ class ServiceTests(FlowTests):
   newstore=FernetEncryptionWrapper(PrefixCollectionsWrapper(self.backing,'dot-oauth-e2:'),fernet=Fernet(self.key))
   new=Application(config('proxy',epoch=2),storage=newstore,read_status=self.state,google_secret='synthetic-secret-only',signing_key='synthetic-signing-key-only',google_http=self.http,outbound_http=self.gateway_http)
   self.assertIsNone(await new.provider.load_access_token(tok))
+ async def test_durable_registration_survives_epoch_without_grants(self):
+  from oauth_storage import OAuthStorage,REGISTRATION_PREFIX
+  from unittest.mock import AsyncMock
+  registrations=FernetEncryptionWrapper(PrefixCollectionsWrapper(self.backing,REGISTRATION_PREFIX),fernet=Fernet(Fernet.generate_key()),raise_on_decryption_error=True)
+  oldstore=OAuthStorage(self.store,registrations)
+  common=dict(read_status=self.state,google_secret='synthetic-secret-only',signing_key='synthetic-signing-key-only',google_http=self.http,outbound_http=self.gateway_http,registration_limiter=AsyncMock())
+  cfg=replace(config('proxy'),synthetic_backend=True,native_url='http://synthetic-backend.hindsight-dot.svc.cluster.local:8080',owner_bound=True,durable_registration=True)
+  old=Application(cfg,storage=oldstore,**common)
+  client=await self.p.get_client('test-client');code=await self.p._code_store.get(key='synthetic-code')
+  await old.provider.register_client(client)
+  await old.provider._code_store.put(key='synthetic-code',value=code)
+  await old.provider._code_store.put(key='unconsumed-code',value=code.model_copy(update={'code':'unconsumed-code'}))
+  async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=old.app),base_url='https://isolated.invalid') as c:
+   response=await c.post('/token',data={'grant_type':'authorization_code','client_id':'test-client','code':'synthetic-code','redirect_uri':'https://client.invalid/callback','code_verifier':self.verifier})
+  self.assertEqual(response.status_code,200,response.text);tokens=response.json()
+  self.assertIsNotNone(await old.provider.load_access_token(tokens['access_token']))
+  # Same signing and session encryption keys deliberately: isolation must not depend on key rotation alone.
+  nextsessions=FernetEncryptionWrapper(PrefixCollectionsWrapper(self.backing,'dot-oauth-e2:'),fernet=Fernet(self.key),raise_on_decryption_error=True)
+  newstore=OAuthStorage(nextsessions,registrations)
+  new=Application(replace(cfg,epoch=2),storage=newstore,**common)
+  restored=await new.provider.get_client('test-client')
+  self.assertIsNotNone(restored);self.assertEqual(restored.client_id,client.client_id)
+  self.assertIsNone(await new.provider.load_access_token(tokens['access_token']))
+  self.assertIsNone(await new.provider.load_refresh_token(restored,tokens['refresh_token']))
+  self.assertIsNone(await new.provider._code_store.get(key='synthetic-code'))
+  # Unconsumed code and transaction/CSRF/unknown collections must also be isolated.
+  for collection in ('mcp-authorization-codes','mcp-oauth-transactions','mcp-consent-csrf-tokens','mcp-upstream-tokens','mcp-jti-mappings','mcp-refresh-tokens','future-sdk-collection'):
+   await oldstore.put('old-record',{'synthetic':'old'},collection=collection)
+   self.assertIsNone(await newstore.get('old-record',collection=collection))
+  self.status=GateStatus(True,2)
+  async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=new.app),base_url='https://isolated.invalid') as c:
+   oldrefresh=await c.post('/token',data={'grant_type':'refresh_token','client_id':'test-client','refresh_token':tokens['refresh_token']})
+   self.assertEqual(oldrefresh.status_code,401,oldrefresh.text);self.assertEqual(oldrefresh.json()['error'],'invalid_grant')
+   oldcode=await c.post('/token',data={'grant_type':'authorization_code','client_id':'test-client','code':'unconsumed-code','redirect_uri':'https://client.invalid/callback','code_verifier':self.verifier})
+   self.assertIn(oldcode.status_code,(400,401));self.assertEqual(oldcode.json()['error'],'invalid_grant')
+   # Existing client, fresh owner authorization fixture; no re-registration.
+   await new.provider._code_store.put(key='fresh-code',value=code.model_copy(update={'code':'fresh-code'}))
+   fresh=await c.post('/token',data={'grant_type':'authorization_code','client_id':'test-client','code':'fresh-code','redirect_uri':'https://client.invalid/callback','code_verifier':self.verifier})
+   self.assertEqual(fresh.status_code,200,fresh.text)
+   self.assertIsNotNone(await new.provider.load_access_token(fresh.json()['access_token']))
+  from types import SimpleNamespace
+  from mcp.server.auth.provider import AuthorizeError
+  with self.assertRaises(AuthorizeError):
+   await new.provider.authorize(restored,SimpleNamespace(redirect_uri='https://attacker.invalid/callback'))
+  changed=Application(replace(cfg,epoch=2,redirects=('https://new.invalid/callback',)),storage=newstore,**common)
+  retained=await changed.provider.get_client('test-client')
+  for uri in ('https://client.invalid/callback','https://new.invalid/callback'):
+   with self.assertRaises(AuthorizeError):await changed.provider.authorize(retained,SimpleNamespace(redirect_uri=uri))
+  await old.http.aclose();await new.http.aclose();await changed.http.aclose()
+
+ async def test_durable_registration_is_synthetic_only(self):
+  with self.assertRaises(ValueError):replace(config('proxy'),durable_registration=True)
+
  async def test_same_store_restart_keeps_session(self):
   tok=(await self.exchange()).json()['access_token']
   newstore=FernetEncryptionWrapper(PrefixCollectionsWrapper(self.backing,'dot-oauth-e1:'),fernet=Fernet(self.key))
@@ -242,3 +295,34 @@ class StateTests(unittest.IsolatedAsyncioTestCase):
   await wrapped.put('fixture',{'access_token':'synthetic-sensitive-token'},collection='oauth')
   raw=await backing.get('fixture',collection='oauth');self.assertNotIn('synthetic-sensitive-token',json.dumps(raw))
   self.assertEqual((await wrapped.get('fixture',collection='oauth'))['access_token'],'synthetic-sensitive-token')
+
+ async def test_all_operations_route_exact_collection_only(self):
+  from oauth_storage import OAuthStorage,REGISTRATION_COLLECTION
+  from unittest.mock import AsyncMock
+  sessions,registrations=AsyncMock(),AsyncMock();store=OAuthStorage(sessions,registrations)
+  for collection in (REGISTRATION_COLLECTION,None,'mcp-refresh-tokens',REGISTRATION_COLLECTION+'-unexpected'):
+   target=registrations if collection==REGISTRATION_COLLECTION else sessions
+   other=sessions if target is registrations else registrations
+   for method,args in [('get',('k',)),('get_many',(['k'],)),('ttl',('k',)),('ttl_many',(['k'],)),('put',('k',{'v':1})),('put_many',(['k'],[{'v':1}])),('delete',('k',)),('delete_many',(['k'],))]:
+    target.reset_mock();other.reset_mock()
+    await getattr(store,method)(*args,collection=collection)
+    getattr(target,method).assert_awaited_once()
+    self.assertEqual(other.mock_calls,[])
+    self.assertEqual(getattr(target,method).call_args.kwargs['collection'],collection)
+ async def test_registration_failure_never_falls_back(self):
+  from oauth_storage import OAuthStorage,REGISTRATION_COLLECTION
+  from unittest.mock import AsyncMock
+  sessions,registrations=AsyncMock(),AsyncMock()
+  registrations.get.side_effect=RuntimeError('unavailable')
+  with self.assertRaises(RuntimeError):await OAuthStorage(sessions,registrations).get('k',collection=REGISTRATION_COLLECTION)
+  self.assertEqual(sessions.mock_calls,[])
+
+ async def test_pinned_registration_collection_separator(self):
+  from oauth_storage import REGISTRATION_PREFIX,REGISTRATION_COLLECTION
+  backing=MemoryStore()
+  wrapped=FernetEncryptionWrapper(PrefixCollectionsWrapper(backing,REGISTRATION_PREFIX),fernet=Fernet(Fernet.generate_key()),raise_on_decryption_error=True)
+  await wrapped.put('fixture',{'synthetic':'registered-client'},collection=REGISTRATION_COLLECTION)
+  self.assertEqual(await wrapped.get('fixture',collection=REGISTRATION_COLLECTION),{'synthetic':'registered-client'})
+  raw=await backing.get('fixture',collection='dot-registration-v1:__mcp-oauth-proxy-clients')
+  self.assertIsNotNone(raw);self.assertNotIn('registered-client',json.dumps(raw))
+  self.assertIsNone(await backing.get('fixture',collection='dot-registration-v1:mcp-oauth-proxy-clients'))

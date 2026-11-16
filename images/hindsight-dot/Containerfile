@@ -7,7 +7,7 @@ COPY requirements.lock.txt ./
 RUN pip install --no-cache-dir --requirement requirements.lock.txt \
     && groupadd --gid 10001 app && useradd --uid 10001 --gid 10001 --no-create-home app
 COPY --from=scanner /usr/bin/gitleaks /usr/local/bin/gitleaks
-COPY rate_limit.py service.py adapter.py owner_bridge.py emergency_gate.py retain_candidate.py recall_gateway.py retain_gateway.py gitleaks.toml ./
+COPY oauth_storage.py rate_limit.py service.py adapter.py owner_bridge.py emergency_gate.py retain_candidate.py recall_gateway.py retain_gateway.py gitleaks.toml ./
 USER 10001:10001
 EXPOSE 8000 8001
 CMD ["uvicorn", "service:factory", "--factory", "--interface", "asgi3", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]

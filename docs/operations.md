@@ -1,6 +1,6 @@
 ---
 title: Makefile operations
-updated: 2026-10-29T19:34:10+09:00
+updated: 2026-11-16T11:54:46.572023+00:00
 type: runbook
 status: current
 ---
@@ -108,3 +108,5 @@ kubectl get externalsecrets --context kkamji-lab -n argocd
 | 유실/삭제 대기/ownership 문제 | 소유자, finalizer, managedFields, 남은 데이터와 영향 | 위 Recovery 절차의 위험 경계를 확인한 뒤 필요한 조치만 승인 |
 
 CI, render, sync/health는 서로 다른 증거입니다. 한 단계가 통과했다고 다른 단계를 성공으로 표시하지 않습니다.
+
+The hindsight-dot secret helper has opt-in --durable-registration and --registration-key for a dedicated owner-only key file. It never imports old runtime bundles or writes AWS; see [synthetic DCR storage](05_hindsight-dot.md#durable-dcr-registration-revocable-synthetic-sessions).

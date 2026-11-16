@@ -66,3 +66,47 @@ CIMD is disabled: only DCR with exact configured client callback URIs is support
 Bootstrap sequence: verify private staging network isolation first; open dedicated callback route in synthetic/recall-only/placeholder configuration; owner completes Google consent; perform one authenticated MCP initialize/tool-discovery request to trigger diagnostic. OAuth token exchange alone does not call `load_access_token`, so no diagnostic is guaranteed until the client contacts `/mcp`. The expected401 may cause clients to reauthenticate: inspect the single result and stop retry loops. Pin the verified sub in GitOps and turn diagnostic OFF; repeat synthetic tests before mounting the separately approved native key. No email-only data-access fallback exists. Already-started/committed operations are not undone by gate changes.
 
 Local secret preparation uses `scripts/hindsight-dot/prepare_staging_secrets.py`. It reads only the explicitly supplied dedicated Google client at execution time, refuses insecure/symlink inputs and existing output directories, creates0700 directory/0600 files, prints no secret values, and never writes AWS. `ssm-runtime.json` contains only runtime keys plus hashed Redis ACL; `operator-local.json` contains the operator plaintext password URL and must NEVER be uploaded to runtime SSM. Operator ACL supports GET/SET of `dot-control:state` only, including Redis8.4 `SET IFEQ` CAS used by gate_control.py. No EVAL/WATCH/admin rights are granted. Start with disabled state; generator does not initialize/enable Redis. Existing native keys are neither read nor included.
+
+
+## Durable DCR registration, revocable synthetic sessions
+
+`durableRegistration` is an opt-in candidate and remains false in deployed values.
+It requires syntheticBackend and a verified secret-backed owner. No native mode,
+new network destination, Google scope, callback, or control privilege is added.
+FastMCP 4.2.0 uses one client_storage for DCR and sessions; the public AsyncKeyValue
+router sends exactly `mcp-oauth-proxy-clients` to a separate encrypted collection.
+Every other collection (including unknown future SDK collections) remains under
+`dot-oauth-e<epoch>:`. There is no migration, old-store fallback, or data restore.
+The image tests cover all eight storage operations and the pinned SDK contract.
+
+The opt-in runtime adds `registration_redis_url` and `registration_key`.
+The dedicated registration Redis user can access only
+`~dot-registration-v1:__mcp-oauth-proxy-clients::*` with the same bounded basic
+store commands; it cannot access session/control/rate keys or administrative
+commands. The double underscore after the prefix is inserted by the pinned
+PrefixCollectionsWrapper; a regression test fixes this wire-format contract.
+Its password may rotate on every epoch. The independent registration
+Fernet key must remain stable while the app connection is retained. Missing key,
+Redis failure, or decryption failure is not treated as permission to use another
+store. Readiness checks both stores when opted in.
+
+`prepare_staging_secrets.py --durable-registration --verified-owner OWNER ...`
+creates a new private `registration-local.json` containing only schema and the
+registration encryption key. For later epochs, explicitly pass
+`--registration-key PRIVATE_REGISTRATION_LOCAL_JSON`; the helper rejects a whole
+runtime bundle, insecure permissions, and symlinks. It preserves only that key,
+rotates session/signing/Redis credentials, and creates no network writes. The
+file is secret, owner-only, and must not be committed or exposed. Losing this key
+requires a new client registration, not restoring old grants.
+
+Initial adoption starts an empty registry: the old ChatGPT client is not recovered.
+A supported reconnect may still use its old client ID; if it does not perform new
+DCR, stop and use the supported new-connection flow only with appropriate approval.
+Prepare this before the bounded public window. Subsequent epochs preserve DCR
+identity but require new owner authorization: old access/refresh tokens, unconsumed
+codes, transactions, CSRF records, upstream tokens and JTI mappings are denied.
+Regression tests hold signing and session encryption keys constant to prove that
+epoch namespace isolation, not just key rotation, rejects the old tokens.
+The public route, fresh image digest, new epoch rollout and operator enable remain
+separate explicitly controlled steps. Never reuse an old epoch or leave the route
+open while investigating OAuth failure.

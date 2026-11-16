@@ -6,6 +6,7 @@
 {{- if not .Values.owner.fromSecret }}{{- $sub := required "owner sub required" .Values.owner.sub }}{{- end }}
 {{- if and .Values.owner.fromSecret .Values.bootstrapIdentityDiagnostic }}{{ fail "secret owner cannot use bootstrap diagnostic" }}{{ end }}
 {{- if and .Values.owner.fromSecret (not .Values.externalSecrets.enabled) }}{{ fail "secret owner requires external secrets" }}{{ end }}
+{{- if and .Values.durableRegistration (or (not .Values.syntheticBackend) (not .Values.owner.fromSecret)) }}{{ fail "durable registration requires bound synthetic owner" }}{{ end }}
 {{- $client := required "google client required" .Values.googleClientId }}
 {{- if empty .Values.redirectUris }}{{ fail "exact redirects required" }}{{ end }}
 {{- range .Values.redirectUris }}{{ if or (not (hasPrefix "https://" .)) (contains "*" .) (contains "[" .) (contains "]" .) (contains "#" .) }}{{ fail "exact HTTPS redirects required" }}{{ end }}{{ end }}
