@@ -1,0 +1,37 @@
+name: Grafana PVC preparation
+on:
+  pull_request:
+    paths:
+      - "charts/kube-prometheus-stack/**"
+      - "tests/test_grafana_pvc_preparation.py"
+      - ".github/workflows/grafana-pvc-lint.yml"
+  push:
+    branches: [main]
+    paths:
+      - "charts/kube-prometheus-stack/**"
+      - "tests/test_grafana_pvc_preparation.py"
+      - ".github/workflows/grafana-pvc-lint.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.2.1
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.5"
+          python-version: "3.12"
+      - name: Offline preparation and whole-monitoring preservation contracts
+        run: |
+          export HELM_BIN="$(command -v helm)"
+          export PYTHONDONTWRITEBYTECODE=1
+          uv run --no-project --python 3.12 --with pyyaml \
+            python -m unittest discover -s tests -p 'test_grafana_pvc_preparation.py' -v

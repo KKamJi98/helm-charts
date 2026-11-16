@@ -1,6 +1,6 @@
 ---
 title: Keycloak OIDC IdP preparation
-updated: 2026-11-16T10:20:04+09:00
+updated: 2026-11-16T11:58:49+09:00
 type: runbook
 status: current
 ---
@@ -20,6 +20,7 @@ status: current
 - 관리 root의 `keycloak-idp`는 기존 `productionPhase=application`, `forceString: true` parameter를 유지합니다. [별도 private admin-access 후보](oidc/04_private-admin-https.md)는 기존 16개 Application 전체 객체를 보존하고 Application 하나만 추가해 management 17개가 됩니다. automation 10개, personal 1개와 기존 앱 로그인은 변경하지 않습니다.
 - 이 차트는 credential 값, AWS IAM이나 SSM 원본을 생성하지 않습니다. Secret 참조가 렌더됐다고 원본 존재를 주장하지 않습니다.
 - 오프라인 schema/render 검증은 admission, 이미지 실행, DB TLS와 사용자 인증 인수의 대체가 아닙니다.
+- [Grafana PVC 준비 전용 후보](oidc/05_grafana-pvc-preparation.md)는 monitoring에 unused PVC 하나만 추가합니다. 기존 Grafana emptyDir와 전체 Deployment/Pod template, config/Secret 참조/route, 다른 monitoring 객체와 UI7 legacy 인증을 보존합니다. fresh backup, binding/copy/restore와 실제 crypto-key decrypt 검증 전에는 원본 Grafana Pod를 교체하지 않으며 이 후보는 migration 완료가 아닙니다.
 
 ## DB 기본값과 private server GitOps 단계
 
