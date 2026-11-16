@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-16T11:28:00.844826+00:00
+updated: 2026-11-16T11:28:28.165111+00:00
 type: runbook
 status: current
 ---
@@ -165,3 +165,8 @@ The owner renewed the personal AWS session and authorized continuing the bounded
 ### Epoch4 attended recall window
 
 Private checks passed after PR87: disabled4 survived Redis restart, both apps use epoch4 synthetic-only without native credentials, new OAuth namespace works, foreign-key access and old Redis authentication are rejected. The fresh rate state was initialized once using NX. This overlay is only for the owner-approved attended MCP recall test, at most 10 minutes. End it with security-stop to disabled5, removal of the overlay and actual route, and external 404 verification. No personal memories are read; the synthetic fixture returns an empty result set.
+
+
+### Epoch4 window closure
+
+This change removes the temporary owner-bound public overlay. The operator must security-stop forward to disabled5 and verify actual route removal and external 404. This closure change alone does not establish a successful recall; report the observed MCP result separately. Preserve the Redis PVC and native Hindsight settings, and never restore epoch3 or epoch4 grants.
