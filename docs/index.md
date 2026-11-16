@@ -1,6 +1,6 @@
 ---
 title: Docs index
-updated: 2026-11-16T11:58:49+09:00
+updated: 2026-11-16T14:26:58+09:00
 type: architecture
 status: current
 ---
@@ -24,7 +24,8 @@ status: current
 - [Platform OIDC client contract](oidc/01_platform-client-contract.md) - 고정 issuer/owner, PKCE/state/nonce와 세션 폐기.
 - [Keycloak DB public CA and backup](oidc/03_db-public-ca-supply.md) - 공개 CA 공급/회전, production 단계와 외부 백업/복원 gate.
 - [Private Keycloak admin HTTPS candidate](oidc/04_private-admin-https.md) - 별도 ClusterIP proxy, DNS suppression과 narrow route/NP의 source 계약 및 미완료 runtime gate.
-- [Grafana PVC preparation only](oidc/05_grafana-pvc-preparation.md) - unused PVC 하나만 준비하고 기존 emptyDir/전체 monitoring 객체와 UI7 legacy 인증을 보존하는 source 계약 및 미완료 데이터 보전 gate.
+- [Grafana PVC preparation only](oidc/05_grafana-pvc-preparation.md) - 고정 PVC 준비 profile과 기존 emptyDir/전체 monitoring 회귀 계약, 후속 후보와 데이터 보전 gate의 구분.
+- [Grafana native PVC activation candidate](oidc/06_grafana-pvc-activation.md) - existingClaim/Recreate 후보, 전체 141개 보존 계약, Draft PR/CI와 운영 전환 분리, 최종 copy/crypto/write 정합성 인수 전 main 병합 금지, PVC 보존 rollback.
 
 ## Rules
 

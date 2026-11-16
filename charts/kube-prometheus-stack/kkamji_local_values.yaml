@@ -1,4 +1,4 @@
-# Preparation only: unused PVC; Grafana still uses its existing emptyDir.
+# Activation candidate only. Do not merge/deploy before verified data recovery and final consistent copy.
 grafanaPvcPreparation: true
 
 kube-prometheus-stack:
@@ -33,6 +33,22 @@ kube-prometheus-stack:
     # Runtime Alertmanager configuration and templates are rendered only by
     # templates/alertmanager-discord-ces.yaml. Keep no duplicate config here.
   grafana:
+    # Candidate only: parent must accept real copy/restore/crypto and final write consistency.
+    replicas: 1
+    deploymentStrategy:
+      type: Recreate
+      rollingUpdate: null
+    persistence:
+      enabled: true
+      type: pvc
+      existingClaim: '{{ include "grafana.fullname" . }}'
+      storageClassName: local-path
+      accessModes:
+        - ReadWriteOnce
+      size: 10Gi
+    # Upstream otherwise adds root init-chown-data on activation. Copy preserves ownership.
+    initChownData:
+      enabled: false
     priorityClassName: kkamji-observability
     admin:
       existingSecret: grafana-auth
