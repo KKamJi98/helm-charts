@@ -1,6 +1,6 @@
 ---
 title: Gateway API routing rules
-updated: 2026-10-29T19:34:10+09:00
+updated: 2026-11-16T10:20:04+09:00
 type: rule
 status: current
 ---
@@ -17,6 +17,12 @@ ArgoCD SSA diff 방지 규칙이다.
 - external-dns 의 gateway 소스는 target annotation 을 HTTPRoute 가 아닌 **Gateway** 에서 읽는다. Gateway 의 target annotation 이 빠지면 A 레코드가 내부 LB IP 로 덮여 외부 접근이 끊긴다.
 - basic auth 는 Envoy SecurityPolicy 로 적용한다 ({SHA} htpasswd 만 지원 - basic-auth secret 의 .htpasswd 키 <- SSM /kkamji/monitoring/ingress/basic-auth-sha).
 - 인증서: letsencrypt-prod 는 DNS-01(route53, zone 한정 cert_manager IAM user) 단일 solver 다. wildcard(*.kkamji.net) 인증서는 DNS-01 로만 발급된다.
+
+## Private management ownership exception
+
+`keycloakAdminPrivate.enabled`로 선택하는 [private Keycloak admin HTTPS 후보](../oidc/04_private-admin-https.md)는 public `kkamji`에 listener나 privileged route를 추가하지 않는다. 플랫폼은 별도 `EnvoyProxy`/`Gateway`와 그 proxy만 선택하는 ingress-deny NetworkPolicy를 소유한다. 서비스 차트 `charts/keycloak-admin-access`는 private HTTPRoute, named backend ReferenceGrant와 narrow server ingress NetworkPolicy만 소유한다.
+
+기존 `GatewayClass/envoy`를 그대로 재사용하며 class parametersRef는 추가하지 않는다. private Gateway의 infrastructure.parametersRef만 전용 EnvoyProxy를 참조하고 `mergeGateways: false`, `envoyService.type: ClusterIP`를 명시한다. wildcard TLS Secret은 같은 namespace의 reference만 재사용한다. public Gateway/redirect/certificate, controller 설정과 vendor/image는 보존한다. private route와 generated Service의 ExternalDNS controller mismatch annotation은 필수다. Gateway annotation 하나로 route exclusion을 보장한다고 가정하지 않으며 global DNS 설정을 바꾸지 않는다. 실제 port-forward/HTTPS/DNS/CNI 검증은 source render와 분리한다.
 
 ## 공유 CRD의 1.8.1 한정 backport
 

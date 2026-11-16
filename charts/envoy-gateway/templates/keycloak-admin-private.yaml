@@ -1,0 +1,85 @@
+{{- $private := .Values.keycloakAdminPrivate -}}
+{{- if and (ne (toJson $private) (toJson (dict "enabled" false))) (ne (toJson $private) (toJson (dict "enabled" true))) -}}
+{{- fail "Private admin blocked: only boolean keycloakAdminPrivate.enabled is supported" -}}
+{{- end -}}
+{{- if $private.enabled -}}
+{{- if or (ne .Release.Namespace "envoy-gateway-system") (ne .Release.Name "envoy-gateway") -}}
+{{- fail "Private admin blocked: exact namespace/release identity required" -}}
+{{- end -}}
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: keycloak-admin-private
+  namespace: envoy-gateway-system
+spec:
+  mergeGateways: false
+  concurrency: 1
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: ClusterIP
+        annotations:
+          external-dns.alpha.kubernetes.io/controller: keycloak-admin-private-disabled
+      envoyDeployment:
+        replicas: 1
+        pod:
+          labels:
+            kkamji.net/access: keycloak-admin-private
+        container:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+  telemetry:
+    accessLog:
+      disable: true
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: keycloak-admin-private
+  namespace: envoy-gateway-system
+  annotations:
+    external-dns.alpha.kubernetes.io/controller: keycloak-admin-private-disabled
+spec:
+  gatewayClassName: envoy
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: keycloak-admin-private
+  listeners:
+    - name: https
+      hostname: sso.kkamji.net
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: wildcard-kkamji-net-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: HTTPRoute
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keycloak-admin-private-deny-ingress
+  namespace: envoy-gateway-system
+spec:
+  podSelector:
+    matchLabels:
+      kkamji.net/access: keycloak-admin-private
+  policyTypes:
+    - Ingress
+  ingress: []
+{{- end }}

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: keycloak-admin-access
+version: 0.1.0
+description: Native private Keycloak admin routing and narrow backend access only.
+type: application

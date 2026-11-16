@@ -4,6 +4,10 @@ on:
     paths:
       - "charts/keycloak-operator/**"
       - "charts/keycloak-idp/**"
+      - "charts/keycloak-admin-access/**"
+      - "charts/envoy-gateway/values.yaml"
+      - "charts/envoy-gateway/kkamji_local_values.yaml"
+      - "charts/envoy-gateway/templates/keycloak-admin-private.yaml"
       - "charts/argo-applications/**"
       - "examples/keycloak-preparation/**"
       - "tests/test_keycloak*.py"
@@ -14,6 +18,10 @@ on:
     paths:
       - "charts/keycloak-operator/**"
       - "charts/keycloak-idp/**"
+      - "charts/keycloak-admin-access/**"
+      - "charts/envoy-gateway/values.yaml"
+      - "charts/envoy-gateway/kkamji_local_values.yaml"
+      - "charts/envoy-gateway/templates/keycloak-admin-private.yaml"
       - "charts/argo-applications/**"
       - "examples/keycloak-preparation/**"
       - "tests/test_keycloak*.py"

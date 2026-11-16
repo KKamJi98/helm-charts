@@ -1,0 +1,3 @@
+# Private management infrastructure is opt-in. Public values remain unchanged.
+keycloakAdminPrivate:
+  enabled: false
