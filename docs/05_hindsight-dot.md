@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-16T12:44:09.452884+00:00
+updated: 2026-11-16T12:45:03.009725+00:00
 type: runbook
 status: current
 ---
@@ -239,3 +239,7 @@ Keep public route off and gate disabled6 during fresh credentials/configuration 
 ### Epoch6 attended fresh-DCR window
 
 This prepared opening adds only the existing owner-bound synthetic public overlay. Before merge or enable, require verified private epoch6 configuration/ACL and an armed automatic closure watchdog. Maximum exposure is 10 minutes. Complete official new-app discovery and verify the already allowed exact generic ChatGPT callback before submitting fresh DCR. Callback mismatch, authentication failure or any unverified condition requires immediate closure rather than allowlist expansion. The fixed synthetic query is permitted only after authenticated metadata/tool readiness. Regardless of result, security-stop forward to disabled7, remove overlay/actual HTTPRoute, and verify external404. Preserve durable client registration, PVC and native Hindsight; never restore old grants or use actual memories.
+
+### Epoch6 fresh-DCR window closure
+
+This paired closing removes the temporary owner-bound overlay. Security-stop to disabled7 on authentication/callback failure or before the 10-minute maximum, then verify actual HTTPRoute deletion and external404. Completion of this source change alone is not evidence of successful DCR or synthetic recall. Preserve durable registration/PVC/native configuration and never restore prior grants or decrement epoch.
