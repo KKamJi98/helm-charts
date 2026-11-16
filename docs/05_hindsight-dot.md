@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-16T12:20:32.522463+00:00
+updated: 2026-11-16T12:25:13.596609+00:00
 type: runbook
 status: current
 ---
@@ -219,3 +219,7 @@ open while investigating OAuth failure.
 ## Private epoch5 synthetic rollout
 
 PR90 separates durable DCR registration from epoch-scoped grants. This private rollout pins the tested commit62c2770 image digest and opts in only the existing synthetic environment at epoch5. Gate must remain disabled5 and the HTTPRoute absent while the fresh runtime/ACL are reconciled and checked. Never restore e3/e4 grants. Verify registry encrypted roundtrip, cross-key ACL denial, revoked Redis credentials, both app configurations, and native service preservation before any separately bounded OAuth window.
+
+### Epoch5 attended synthetic window
+
+This prepared opening adds only the existing owner-bound public overlay for epoch5 synthetic recall. Do not merge or enable before private epoch5 ACL/configuration checks, supported owner OAuth preparation, and a verified automatic closure watchdog are ready. Public exposure is limited to 10 minutes, with immediate closure on authentication failure. The paired closure must security-stop forward to disabled6, remove the overlay and actual HTTPRoute, and verify external 404 regardless of result. No real memories, native credentials, existing Hindsight settings, or old grants are involved. Preserve durable DCR registration, PVC and unrelated services; do not restore a prior epoch.

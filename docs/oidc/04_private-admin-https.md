@@ -1,6 +1,6 @@
 ---
 title: Private Keycloak admin HTTPS candidate
-updated: 2026-11-16T11:41:28.462543+00:00
+updated: 2026-11-16T12:25:13.596864+00:00
 type: runbook
 status: current
 ---
@@ -71,3 +71,5 @@ The owner-approved attended Hindsight epoch4 window updates only the exact autom
 
 
 The attended Hindsight epoch4 closure restores the automation-root snapshot to its original private-only configuration. Keycloak management/personal roots and security contracts remain unchanged.
+
+The prepared attended Hindsight epoch5 window changes only the automation-root snapshot for the existing temporary synthetic overlay. Keycloak management/personal roots and all security assertions remain unchanged. The paired closure restores the exact private-only snapshot. This source preparation does not open the route.
