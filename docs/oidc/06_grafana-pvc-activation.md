@@ -1,11 +1,31 @@
 ---
 title: Grafana native PVC activation candidate
-updated: 2026-11-16T15:47:39+09:00
+updated: 2026-11-17T01:39:57+09:00
 type: runbook
 status: current
 ---
 
 # Grafana native PVC activation candidate
+
+## Current-main consumer integration boundary
+
+부모가 인수한 Grafana native retained-PVC 전환을 현재 기준으로 유지합니다. 아래의
+emptyDir/미배포/전환 전 승인 서술은 당시 준비 또는 PR86 제안의 역사적 기록이며,
+현재 storage/data 인수를 다시 여는 조건이나 현재 운영 상태의 oracle가 아닙니다.
+consumer 기본 인증은 계속 legacy이고, source의 SSO acknowledgement는 false입니다.
+[consumer 계획](02_consumer-sso-plan.md)과 [owner 등록 절차](07_owner-enrollment-source.md)는
+별도의 owner/MFA/UI 인수를 요구합니다. 이 leaf는 runtime/dataMigrationAccepted를 false로 유지합니다.
+
+새 keycloakSSO 기본값은 additive입니다. 기존 default/preparation/activation의 고정
+whole-object/raw/hash, crypto, sidecar, ownership guard는 그대로이며 defaults exact
+검사만 새 legacy 필드를 명시합니다. 별도 current-main 회귀는 131/141 객체와
+retained-PVC + synthetic canary/final 조합을 immutable 9a baseline으로 검사합니다.
+mutable values 두 벌의 동등성으로 storage 검증을 대체하지 않습니다.
+
+## Historical preparation and activation proposal
+
+이하 절차와 관측 시제는 원래 제안 시점의 기록입니다.
+
 
 ## 오프라인 후보이며 배포 승인이 아님
 

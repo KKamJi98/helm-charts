@@ -3,3 +3,18 @@ kube-prometheus-stack: {}
 # Safe default: no prepared PVC and no Grafana persistence activation.
 # Local values are an offline activation candidate, not migration approval.
 grafanaPvcPreparation: false
+
+# Explicit rollout only; no automatic fallback on IdP failure.
+keycloakSSO:
+  # Parent must enable/verify the shared native Backend API and strict upstream TLS.
+  backendTLSReady: false
+  grafana:
+    mode: legacy
+    cutoverApproved: false
+    # Acknowledgements after parent readback, not evidence produced by Helm.
+    dataPreservationReady: false
+    accessLogsSafe: false
+  prometheus:
+    mode: legacy
+  alertmanager:
+    mode: legacy

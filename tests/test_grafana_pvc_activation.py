@@ -138,7 +138,11 @@ class GrafanaPvcActivationTests(unittest.TestCase):
 
     def test_source_defaults_remain_disabled_and_fixed_for_both_render_profiles(self):
         self.assertEqual(yaml.safe_load((prep.CHART / "values.yaml").read_text()),
-                         {"kube-prometheus-stack": {}, "grafanaPvcPreparation": False})
+                         {"kube-prometheus-stack": {}, "grafanaPvcPreparation": False,
+                          "keycloakSSO": {"backendTLSReady": False,
+                              "grafana": {"mode": "legacy", "cutoverApproved": False,
+                                          "dataPreservationReady": False, "accessLogsSafe": False},
+                              "prometheus": {"mode": "legacy"}, "alertmanager": {"mode": "legacy"}}})
         for crds in (False, True):
             with self.subTest(include_crds=crds):
                 objects, raw = prep.raw_documents(active_render(copy.deepcopy(prep.FIXTURE), local=False, include_crds=crds))

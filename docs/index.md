@@ -1,6 +1,6 @@
 ---
 title: Docs index
-updated: 2026-11-16T14:26:58+09:00
+updated: 2026-11-17T01:39:57+09:00
 type: architecture
 status: current
 ---
@@ -22,6 +22,8 @@ status: current
 
 - [Keycloak OIDC preparation and phased deployment](05_oidc-idp-preparation.md) - 전용 DB 단계, 별도 앱 활성화, MFA/복구와 기존 인증 보존.
 - [Platform OIDC client contract](oidc/01_platform-client-contract.md) - 고정 issuer/owner, PKCE/state/nonce와 세션 폐기.
+- [Staged Keycloak consumer SSO](oidc/02_consumer-sso-plan.md) - Disabled current-main integration, retained-PVC composition and native machine-auth boundaries.
+- [Controlled Keycloak owner enrollment](oidc/07_owner-enrollment-source.md) - Seven disabled clients, signed groups, private parent-owned enrollment and pending human/runtime gates.
 - [Keycloak DB public CA and backup](oidc/03_db-public-ca-supply.md) - 공개 CA 공급/회전, production 단계와 외부 백업/복원 gate.
 - [Private Keycloak admin HTTPS candidate](oidc/04_private-admin-https.md) - 별도 ClusterIP proxy, DNS suppression과 narrow route/NP의 source 계약 및 미완료 runtime gate.
 - [Grafana PVC preparation only](oidc/05_grafana-pvc-preparation.md) - 고정 PVC 준비 profile과 기존 emptyDir/전체 monitoring 회귀 계약, 후속 후보와 데이터 보전 gate의 구분.

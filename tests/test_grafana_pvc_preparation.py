@@ -186,7 +186,11 @@ class GrafanaPvcPreparationTests(unittest.TestCase):
 
     def test_default_disabled_local_opt_in_and_upstream_capacity(self):
         self.assertEqual(yaml.safe_load((CHART / "values.yaml").read_text()),
-                         {"kube-prometheus-stack": {}, "grafanaPvcPreparation": False})
+                         {"kube-prometheus-stack": {}, "grafanaPvcPreparation": False,
+                          "keycloakSSO": {"backendTLSReady": False,
+                              "grafana": {"mode": "legacy", "cutoverApproved": False,
+                                          "dataPreservationReady": False, "accessLogsSafe": False},
+                              "prometheus": {"mode": "legacy"}, "alertmanager": {"mode": "legacy"}}})
         self.assertIs(yaml.safe_load((CHART / "kkamji_local_values.yaml").read_text())["grafanaPvcPreparation"], True)
         self.assertNotIn(PVC_KEY, documents(render(local=False)).keys())
         self.assertEqual(documents(render())[PVC_KEY], EXPECTED_PVC)

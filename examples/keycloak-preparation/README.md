@@ -303,3 +303,14 @@ unknown declared spec fields; it does not emulate CEL/defaulting/admission or
 prove runtime compatibility, Secret content, authorization, scheduling or CNI.
 No live proof, image execution, credentials, provisioning, publication,
 installation or application authentication changes are included.
+
+
+## Separate disabled consumer contract
+
+[consumer-contract/seven-clients.yaml.inactive](consumer-contract/seven-clients.yaml.inactive)
+is a source-only, non-applyable seven-client/groups/secure-ref contract, not a
+seventh Kubernetes manifest or a replacement for the historical create-only seed.
+No users, owner mappings, secrets or flow IDs are provided. All service clients
+remain disabled. Use the [controlled enrollment source checklist](../../docs/oidc/07_owner-enrollment-source.md)
+for parent-owned private HTTPS, actual flow export/binding/session-cookie review,
+human UV plus independent backup/recovery and supported Admin API readback/update/rotation.

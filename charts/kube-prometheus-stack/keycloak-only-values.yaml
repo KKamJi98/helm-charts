@@ -1,0 +1,10 @@
+# Compose AFTER keycloak-canary-values.yaml. Parent supplies readiness/approval flags.
+keycloakSSO:
+  grafana:
+    mode: only
+kube-prometheus-stack:
+  grafana:
+    grafana.ini:
+      auth:
+        disable_login_form: true
+        signout_redirect_url: https://grafana.kkamji.net/oauth2/keycloak-logout

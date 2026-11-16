@@ -1,6 +1,6 @@
 ---
 title: Keycloak OIDC IdP preparation
-updated: 2026-11-16T11:58:49+09:00
+updated: 2026-11-17T01:39:57+09:00
 type: runbook
 status: current
 ---
@@ -243,3 +243,18 @@ Helm4.2.1 strict lint/template, immutable 원본/overlay/schema, credential refs
 - [Pinned Operator docs](https://github.com/keycloak/keycloak/tree/e514445f9dcdabc5bdcf67cab56c1e49655de067/docs/guides/operator)
 - [HA overview](https://www.keycloak.org/high-availability/introduction)
 - [PostgreSQL JDBC SSL](https://jdbc.postgresql.org/documentation/ssl/)
+
+
+## Disabled seven-client source contract and enrollment boundary
+
+The [consumer integration](oidc/02_consumer-sso-plan.md) preserves current server
+runtime fixes and the historical one-client create-only seed. The separate
+[seven-client source contract](../examples/keycloak-preparation/consumer-contract/seven-clients.yaml.inactive)
+is not an applyable manifest or ready Admin API payload. All clients stay disabled;
+refs contain names only. No active root, IdP/operator/private-admin object, flow
+execution or owner is changed. [Controlled owner enrollment](oidc/07_owner-enrollment-source.md)
+requires the parent's private HTTPS path, actual clone/export/binding and cookie
+bypass review, human WebAuthn UV and independent backup/recovery, then trusted
+private same-owner iss/sub and existing Grafana identity readback. RealmImport
+reapply and ESO refresh are not existing-realm updates or client rotation.
+The accepted Grafana storage migration is not reopened or converted into SSO approval.

@@ -139,3 +139,9 @@ server:
     kubernetes.io/hostname: k8s-w2
   autoscaling:
     enabled: false
+
+# Explicit rollout only; no automatic fallback on IdP failure.
+keycloakSSO:
+  # Parent must enable/verify the shared native Backend API and strict upstream TLS.
+  backendTLSReady: false
+  mode: legacy
