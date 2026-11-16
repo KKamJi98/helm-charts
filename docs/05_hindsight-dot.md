@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-16T12:26:07.951815+00:00
+updated: 2026-11-16T12:41:43.521922+00:00
 type: runbook
 status: current
 ---
@@ -227,3 +227,11 @@ This prepared opening adds only the existing owner-bound public overlay for epoc
 ### Epoch5 synthetic window closure
 
 This prepared closing removes only the temporary public overlay. The operator must security-stop to disabled6 immediately on authentication failure or before the 10-minute maximum, then verify actual HTTPRoute removal and external 404. This source change is not evidence of execution or successful recall. Preserve the durable client registry, PVC, existing native Hindsight configuration and unrelated services. Never restore old epoch grants or lower the control epoch.
+
+## Private epoch6 fresh-registration preparation
+
+The epoch5 existing-app reconnect returned Client Not Registered. That window was closed with gate disabled6, route removal and external404; no successful recall was established. This private-only source change advances deployed configuration to epoch6 while retaining the tested image digest, durable registration isolation, and existing exact generic ChatGPT callback. No old grants or client records are restored.
+
+The official new-app form may display a connection-specific callback while discovery is unavailable on the closed URL. The pinned FastMCP provider advertises authorization response issuer support. Before submitting fresh DCR, perform discovery in the bounded attended window and verify that the form uses the already allowed exact `https://chatgpt.com/connector_platform_oauth_redirect`. Do not add a fallback callback, wildcard, new scope or permission based only on the closed-route display. If the observed flow still requires a different URI, stop and review rather than widening the allowlist during the window. Existing app deletion and native access are outside this preparation.
+
+Keep public route off and gate disabled6 during fresh credentials/configuration verification. A later attended window requires separate opening/closing changes, automatic maximum-10-minute closure, immediate close on authentication failure, and forward security-stop to disabled7 with route/external404 verification.

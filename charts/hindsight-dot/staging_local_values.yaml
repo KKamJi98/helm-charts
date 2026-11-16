@@ -2,7 +2,7 @@
 enabled: true
 syntheticBackend: true
 bootstrapIdentityDiagnostic: false
-epoch: 5
+epoch: 6
 durableRegistration: true
 capabilities: [hindsight:recall]
 image:
