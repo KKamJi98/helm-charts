@@ -1,3 +1,6 @@
+# Preparation only: unused PVC; Grafana still uses its existing emptyDir.
+grafanaPvcPreparation: true
+
 kube-prometheus-stack:
   alertmanager:
     # 외부 노출은 Envoy Gateway HTTPRoute(charts/envoy-gateway)가 담당

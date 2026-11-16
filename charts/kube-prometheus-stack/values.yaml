@@ -1,1 +1,4 @@
 kube-prometheus-stack: {}
+
+# Create only an unused PVC. Never activates Grafana persistence or migrates data.
+grafanaPvcPreparation: false

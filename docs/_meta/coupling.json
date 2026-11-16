@@ -52,6 +52,11 @@
     "tests/test_keycloak_private_admin.py",
     ".github/workflows/keycloak-lint.yml"
   ],
+  "docs/oidc/05_grafana-pvc-preparation.md": [
+    "charts/kube-prometheus-stack/**",
+    "tests/test_grafana_pvc_preparation.py",
+    ".github/workflows/grafana-pvc-lint.yml"
+  ],
   "docs/05_oidc-idp-preparation.md": [
     "charts/argo-applications/management_local_values.yaml",
     "charts/keycloak-operator/**",
