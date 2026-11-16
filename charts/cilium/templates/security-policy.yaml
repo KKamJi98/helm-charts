@@ -5,7 +5,7 @@ basic auth 를 적용한다. {SHA} 형식 htpasswd 만 지원 - basic-auth secre
 */}}
 {{- $root := . }}
 {{- range $name, $r := .Values.gatewayRoutes }}
-{{- if $r.basicAuth }}
+{{- if and $r.basicAuth (ne $root.Values.keycloakSSO.mode "only") }}
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy

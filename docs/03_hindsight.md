@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-16T11:54:46.571710+00:00
+updated: 2026-11-17T01:39:57+09:00
 type: runbook
 status: current
 ---
@@ -194,3 +194,13 @@ Optional owner.fromSecret injects verified owner subject from the dedicated runt
 The dedicated owner_synthetic_window_values overlay retains verified owner binding, admission quota, synthetic-only recall and no native key. It is distinct from the inactive deny-all diagnostic overlay. Private epoch3 checks passed and gate was restored disabled3 before publication. The short supervised OAuth test must end with forward security-stop epoch4 and removal of the overlay/actual route. Quota is 5 attempts/600 seconds, 32 total per epoch (2 used by private acceptance checks); do not reset counters. This is not permanent public availability or real memory consent.
 
 Hindsight-dot synthetic DCR storage now has opt-in isolated registry contracts and regression tests. This does not change private Hindsight or native access.
+
+
+## Disabled Keycloak native-UI source integration
+
+The [consumer source plan](oidc/02_consumer-sso-plan.md) adds legacy-default native
+Hindsight UI routes only. Existing API/client-key, Bearer and internal control-plane
+auth remain native. No active Application overlay is selected. Hindsight-dot
+Google OAuth, owner refs, private epoch/DCR and Redis AOF/PVC/ACL remain independent
+and unchanged; they are not Keycloak identity or MFA evidence. Current-main legacy
+object equality and canary/final machine exclusions are offline source checks only.

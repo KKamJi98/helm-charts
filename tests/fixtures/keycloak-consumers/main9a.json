@@ -1,0 +1,41 @@
+{
+  "base": "9a2e266300e72cfd6e1ece62a2897a73780aa603",
+  "helm": "v4.2.1+gd591a19",
+  "kubeVersion": "1.36.1",
+  "skipTests": true,
+  "local": {
+    "argocd": {
+      "count": 68,
+      "objectsSha256": "34ae41acb30ed0998968b4c65a7a273814177679932dc26bb7e436de34890f86"
+    },
+    "cilium": {
+      "count": 54,
+      "objectsSha256": "a8c89496cfa152669d16a4fa4ec2ef0ee3d9cbffb8632197dc3e6ab7e785c87a"
+    },
+    "hindsight": {
+      "count": 28,
+      "objectsSha256": "2cf1b2289b39fe094423dfbbd4158ef3c584093bf88f5b11eafcf8b5d45be49e"
+    },
+    "kube-prometheus-stack": {
+      "count": 131,
+      "objectsSha256": "b158e051e926e3e778041705624434eb98c5dd51295ee459326e62fe6bb54b14",
+      "grafanaAnnotations": [
+        "checksum/config",
+        "checksum/sc-dashboard-provider-config",
+        "kubectl.kubernetes.io/default-container"
+      ],
+      "grafanaWithoutConfigChecksumSha256": "31048995c0554ae15d949e3b50a604d0c3ac14e4c7124a463681cac01ddcb5cb"
+    }
+  },
+  "kpsIncludeCRDs": {
+    "count": 141,
+    "objectsSha256": "739e6276fee3310ccfc9e507789556834794116a078d9fea595ca2ac90cfcc18",
+    "grafanaAnnotations": [
+      "checksum/config",
+      "checksum/sc-dashboard-provider-config",
+      "kubectl.kubernetes.io/default-container"
+    ],
+    "grafanaWithoutConfigChecksumSha256": "31048995c0554ae15d949e3b50a604d0c3ac14e4c7124a463681cac01ddcb5cb"
+  },
+  "storageGuardSha256": "7c740ee244c487dcee6e036e3b9bc45b64d2e93f54830b565c26abc94195464f"
+}

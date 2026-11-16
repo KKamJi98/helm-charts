@@ -26,6 +26,24 @@ spec:
         - path:
             type: PathPrefix
             value: /
+      {{- if and (eq $name "grafana") (ne $root.Values.keycloakSSO.grafana.mode "legacy") }}
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            {{- $remove := include "grafana-keycloak.untrustedHeaders" $root | fromJsonArray }}
+            {{- if eq $root.Values.keycloakSSO.grafana.mode "only" }}
+            # Lua injected this one signed token. Remove every alternative credential.
+            remove: {{ concat (without $remove "X-Grafana-Keycloak-Id-Token") (list "Cookie" "Authorization") | toJson }}
+            {{- else }}
+            # Normal canary traffic remains legacy, but cannot spoof the new JWT path.
+            remove: {{ $remove | toJson }}
+            {{- end }}
+      {{- else if and (has $name (list "prometheus" "alertmanager")) (eq (index $root.Values.keycloakSSO $name).mode "only") }}
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            remove: [X-Forwarded-User, X-Forwarded-Email, X-Forwarded-Groups, X-Auth-Request-User, X-Auth-Request-Email, X-Auth-Request-Groups]
+      {{- end }}
       backendRefs:
         - group: ""
           kind: Service

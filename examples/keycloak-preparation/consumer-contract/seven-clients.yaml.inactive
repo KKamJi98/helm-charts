@@ -1,0 +1,339 @@
+# SOURCE CONTRACT ONLY. Not a Kubernetes manifest, RealmImport or Admin API payload.
+# No credentials, flow IDs or owner identities. Parent resolves refs and reviews readback.
+keycloakVersion: 26.8.2
+issuer: https://sso.kkamji.net/realms/kkamji
+runtimeAccepted: false
+dataMigrationAccepted: false
+realm:
+  realm: kkamji
+  enabled: false
+  registrationAllowed: false
+  resetPasswordAllowed: false
+  rememberMe: false
+  sslRequired: external
+  identityProviders: []
+  webAuthnPolicyUserVerificationRequirement: required
+  webAuthnPolicyRpId: sso.kkamji.net
+  webAuthnPolicyPasswordlessPasskeysEnabled: false
+  defaultSignatureAlgorithm: RS256
+  defaultDefaultClientScopes: []
+  defaultOptionalClientScopes: []
+  clients:
+  - clientId: kkamji-platform
+    enabled: false
+    protocol: openid-connect
+    clientAuthenticatorType: client-secret
+    publicClient: false
+    bearerOnly: false
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: false
+    implicitFlowEnabled: false
+    serviceAccountsEnabled: false
+    fullScopeAllowed: false
+    redirectUris:
+    - https://platform.kkamji.net/api/auth/oidc/callback
+    webOrigins:
+    - https://platform.kkamji.net
+    defaultClientScopes: []
+    optionalClientScopes: []
+    authenticationFlowBindingOverrides: {}
+    attributes:
+      pkce.code.challenge.method: S256
+      id.token.signed.response.alg: RS256
+      oauth2.device.authorization.grant.enabled: 'false'
+      oidc.ciba.grant.enabled: 'false'
+      standard.token.exchange.enabled: 'false'
+      oauth2.jwt.authorization.grant.enabled: 'false'
+      external.token.enabled: 'false'
+  - clientId: argocd
+    enabled: false
+    protocol: openid-connect
+    clientAuthenticatorType: client-secret
+    publicClient: false
+    bearerOnly: false
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: false
+    implicitFlowEnabled: false
+    serviceAccountsEnabled: false
+    fullScopeAllowed: false
+    redirectUris:
+    - https://argocd.kkamji.net/auth/callback
+    webOrigins:
+    - https://argocd.kkamji.net
+    defaultClientScopes: []
+    optionalClientScopes:
+    - profile
+    - groups
+    authenticationFlowBindingOverrides: {}
+    attributes:
+      pkce.code.challenge.method: S256
+      id.token.signed.response.alg: RS256
+      oauth2.device.authorization.grant.enabled: 'false'
+      oidc.ciba.grant.enabled: 'false'
+      standard.token.exchange.enabled: 'false'
+      oauth2.jwt.authorization.grant.enabled: 'false'
+      external.token.enabled: 'false'
+  - clientId: grafana
+    enabled: false
+    protocol: openid-connect
+    clientAuthenticatorType: client-secret
+    publicClient: false
+    bearerOnly: false
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: false
+    implicitFlowEnabled: false
+    serviceAccountsEnabled: false
+    fullScopeAllowed: false
+    redirectUris:
+    - https://grafana.kkamji.net/oauth2/keycloak-callback
+    webOrigins:
+    - https://grafana.kkamji.net
+    defaultClientScopes: []
+    optionalClientScopes:
+    - groups
+    authenticationFlowBindingOverrides: {}
+    attributes:
+      pkce.code.challenge.method: S256
+      id.token.signed.response.alg: RS256
+      oauth2.device.authorization.grant.enabled: 'false'
+      oidc.ciba.grant.enabled: 'false'
+      standard.token.exchange.enabled: 'false'
+      oauth2.jwt.authorization.grant.enabled: 'false'
+      external.token.enabled: 'false'
+  - clientId: hindsight-ui
+    enabled: false
+    protocol: openid-connect
+    clientAuthenticatorType: client-secret
+    publicClient: false
+    bearerOnly: false
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: false
+    implicitFlowEnabled: false
+    serviceAccountsEnabled: false
+    fullScopeAllowed: false
+    redirectUris:
+    - https://hindsight.kkamji.net/oauth2/keycloak-callback
+    webOrigins:
+    - https://hindsight.kkamji.net
+    defaultClientScopes: []
+    optionalClientScopes:
+    - profile
+    - groups
+    authenticationFlowBindingOverrides: {}
+    attributes:
+      pkce.code.challenge.method: S256
+      id.token.signed.response.alg: RS256
+      oauth2.device.authorization.grant.enabled: 'false'
+      oidc.ciba.grant.enabled: 'false'
+      standard.token.exchange.enabled: 'false'
+      oauth2.jwt.authorization.grant.enabled: 'false'
+      external.token.enabled: 'false'
+  - clientId: hubble
+    enabled: false
+    protocol: openid-connect
+    clientAuthenticatorType: client-secret
+    publicClient: false
+    bearerOnly: false
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: false
+    implicitFlowEnabled: false
+    serviceAccountsEnabled: false
+    fullScopeAllowed: false
+    redirectUris:
+    - https://hubble.kkamji.net/oauth2/keycloak-callback
+    webOrigins:
+    - https://hubble.kkamji.net
+    defaultClientScopes: []
+    optionalClientScopes:
+    - profile
+    - groups
+    authenticationFlowBindingOverrides: {}
+    attributes:
+      pkce.code.challenge.method: S256
+      id.token.signed.response.alg: RS256
+      oauth2.device.authorization.grant.enabled: 'false'
+      oidc.ciba.grant.enabled: 'false'
+      standard.token.exchange.enabled: 'false'
+      oauth2.jwt.authorization.grant.enabled: 'false'
+      external.token.enabled: 'false'
+  - clientId: prometheus
+    enabled: false
+    protocol: openid-connect
+    clientAuthenticatorType: client-secret
+    publicClient: false
+    bearerOnly: false
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: false
+    implicitFlowEnabled: false
+    serviceAccountsEnabled: false
+    fullScopeAllowed: false
+    redirectUris:
+    - https://prometheus.kkamji.net/oauth2/keycloak-callback
+    webOrigins:
+    - https://prometheus.kkamji.net
+    defaultClientScopes: []
+    optionalClientScopes:
+    - profile
+    - groups
+    authenticationFlowBindingOverrides: {}
+    attributes:
+      pkce.code.challenge.method: S256
+      id.token.signed.response.alg: RS256
+      oauth2.device.authorization.grant.enabled: 'false'
+      oidc.ciba.grant.enabled: 'false'
+      standard.token.exchange.enabled: 'false'
+      oauth2.jwt.authorization.grant.enabled: 'false'
+      external.token.enabled: 'false'
+  - clientId: alertmanager
+    enabled: false
+    protocol: openid-connect
+    clientAuthenticatorType: client-secret
+    publicClient: false
+    bearerOnly: false
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: false
+    implicitFlowEnabled: false
+    serviceAccountsEnabled: false
+    fullScopeAllowed: false
+    redirectUris:
+    - https://alertmanager.kkamji.net/oauth2/keycloak-callback
+    webOrigins:
+    - https://alertmanager.kkamji.net
+    defaultClientScopes: []
+    optionalClientScopes:
+    - profile
+    - groups
+    authenticationFlowBindingOverrides: {}
+    attributes:
+      pkce.code.challenge.method: S256
+      id.token.signed.response.alg: RS256
+      oauth2.device.authorization.grant.enabled: 'false'
+      oidc.ciba.grant.enabled: 'false'
+      standard.token.exchange.enabled: 'false'
+      oauth2.jwt.authorization.grant.enabled: 'false'
+      external.token.enabled: 'false'
+  groups:
+  - name: argocd-admins
+  - name: grafana-admins
+  - name: homelab-admins
+  clientScopes:
+  - name: groups
+    protocol: openid-connect
+    protocolMappers:
+    - name: signed-full-path-groups
+      protocol: openid-connect
+      protocolMapper: oidc-group-membership-mapper
+      config:
+        claim.name: groups
+        full.path: 'true'
+        id.token.claim: 'true'
+        access.token.claim: 'false'
+        userinfo.token.claim: 'false'
+        introspection.token.claim: 'false'
+        lightweight.claim: 'false'
+clientSecretRefs:
+  argocd:
+    remoteRef:
+      key: /kkamji/keycloak/clients/argocd
+      property: client_secret
+    secretStoreRef:
+      name: parameter-store
+      kind: ClusterSecretStore
+    existingESORef:
+      namespace: argocd
+      name: argocd-keycloak-oidc
+      secretKey: client-secret
+    creationPolicy: Orphan
+    deletionPolicy: Retain
+  grafana:
+    remoteRef:
+      key: /kkamji/keycloak/clients/grafana
+      property: client_secret
+    secretStoreRef:
+      name: parameter-store
+      kind: ClusterSecretStore
+    existingESORef:
+      namespace: monitoring
+      name: grafana-keycloak-oidc
+      secretKey: client-secret
+    creationPolicy: Orphan
+    deletionPolicy: Retain
+  hindsight-ui:
+    remoteRef:
+      key: /kkamji/keycloak/clients/hindsight-ui
+      property: client_secret
+    secretStoreRef:
+      name: parameter-store
+      kind: ClusterSecretStore
+    existingESORef:
+      namespace: hindsight
+      name: hindsight-ui-keycloak-oidc
+      secretKey: client-secret
+    creationPolicy: Orphan
+    deletionPolicy: Retain
+  hubble:
+    remoteRef:
+      key: /kkamji/keycloak/clients/hubble
+      property: client_secret
+    secretStoreRef:
+      name: parameter-store
+      kind: ClusterSecretStore
+    existingESORef:
+      namespace: kube-system
+      name: hubble-keycloak-oidc
+      secretKey: client-secret
+    creationPolicy: Orphan
+    deletionPolicy: Retain
+  prometheus:
+    remoteRef:
+      key: /kkamji/keycloak/clients/prometheus
+      property: client_secret
+    secretStoreRef:
+      name: parameter-store
+      kind: ClusterSecretStore
+    existingESORef:
+      namespace: monitoring
+      name: prometheus-keycloak-oidc
+      secretKey: client-secret
+    creationPolicy: Orphan
+    deletionPolicy: Retain
+  alertmanager:
+    remoteRef:
+      key: /kkamji/keycloak/clients/alertmanager
+      property: client_secret
+    secretStoreRef:
+      name: parameter-store
+      kind: ClusterSecretStore
+    existingESORef:
+      namespace: monitoring
+      name: alertmanager-keycloak-oidc
+      secretKey: client-secret
+    creationPolicy: Orphan
+    deletionPolicy: Retain
+  kkamji-platform:
+    remoteRef:
+      key: /kkamji/keycloak/clients/kkamji-platform
+      property: client_secret
+    secretStoreRef:
+      name: parameter-store
+      kind: ClusterSecretStore
+    existingESORef:
+      namespace: keycloak
+      name: keycloak-oidc-client
+      secretKey: client-secret
+    creationPolicy: Orphan
+    deletionPolicy: Retain
+grafanaIdentityRef:
+  namespace: monitoring
+  name: grafana-keycloak-identity
+  remoteKey: /kkamji/keycloak/consumers/grafana
+  properties:
+  - username_attribute_path
+  - expect_claims
+lifecycle:
+  historicalCreateOnlySeed: ../realm-import.yaml.inactive
+  existingRealmUpdate: supported Admin API or console with exact before/after readback
+  realmImportReapplyUpdatesExistingRealm: false
+  esoRefreshRotatesIdpClient: false
+ownerInputStatus: login ID missing; parent asks human, private iss/sub and legacy
+  identity readback pending

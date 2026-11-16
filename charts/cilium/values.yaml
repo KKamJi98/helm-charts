@@ -1,3 +1,8 @@
 # Wrapper chart placeholder.
 # Real overrides live in `kkamji_local_values.yaml` under the `cilium:` key.
-{}
+
+# Explicit rollout only; no automatic fallback on IdP failure.
+keycloakSSO:
+  # Parent must enable/verify the shared native Backend API and strict upstream TLS.
+  backendTLSReady: false
+  mode: legacy

@@ -23,6 +23,11 @@ spec:
             type: PathPrefix
             value: /
       filters:
+        {{- if eq .Values.keycloakSSO.mode "only" }}
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            remove: [X-Forwarded-User, X-Forwarded-Email, X-Forwarded-Groups, X-Auth-Request-User, X-Auth-Request-Email, X-Auth-Request-Groups]
+        {{- end }}
         - type: ResponseHeaderModifier
           responseHeaderModifier:
             set:
@@ -83,6 +88,7 @@ spec:
           name: {{ .Values.name }}-api
           port: 8888
           weight: 1
+{{- if ne .Values.keycloakSSO.mode "only" }}
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
@@ -135,6 +141,7 @@ spec:
               - name: email
                 valueType: String
                 values: [rlaxowl5460@gmail.com]
+{{- end }}
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy

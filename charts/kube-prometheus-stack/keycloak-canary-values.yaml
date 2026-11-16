@@ -1,0 +1,58 @@
+# Compose after kkamji_local_values.yaml. Grafana only; other consumers stay unchanged.
+# DO NOT enable before parent SQLite backup/PVC migration and private identity readback.
+keycloakSSO:
+  grafana:
+    mode: canary
+kube-prometheus-stack:
+  grafana:
+    envValueFrom:
+      # Custom names avoid Grafana logging GF_* override values during startup.
+      KEYCLOAK_GRAFANA_USERNAME_ATTRIBUTE_PATH:
+        secretKeyRef:
+          name: grafana-keycloak-identity
+          key: username_attribute_path
+      KEYCLOAK_GRAFANA_EXPECT_CLAIMS:
+        secretKeyRef:
+          name: grafana-keycloak-identity
+          key: expect_claims
+    grafana.ini:
+      server:
+        root_url: https://grafana.kkamji.net
+        router_logging: false
+      security:
+        cookie_secure: true
+        cookie_samesite: lax
+        csrf_always_check: true
+        csrf_trusted_origins: ""
+        csrf_additional_headers: ""
+      auth:
+        disable_login: false
+        disable_login_form: false
+        oauth_allow_insecure_email_lookup: false
+      auth.basic:
+        # Required by unchanged localhost dashboard/datasource reload sidecars.
+        enabled: true
+      auth.anonymous:
+        enabled: false
+      auth.proxy:
+        enabled: false
+      auth.generic_oauth:
+        enabled: false
+      auth.jwt:
+        enabled: true
+        header_name: X-Grafana-Keycloak-Id-Token
+        # Explicitly clear defaults BEFORE enabling attribute-path lookup.
+        username_claim: ""
+        email_claim: ""
+        email_attribute_path: ""
+        username_attribute_path: '$__env{KEYCLOAK_GRAFANA_USERNAME_ATTRIBUTE_PATH}'
+        expect_claims: '$__env{KEYCLOAK_GRAFANA_EXPECT_CLAIMS}'
+        jwk_set_url: https://sso.kkamji.net/realms/kkamji/protocol/openid-connect/certs
+        tls_skip_verify_insecure: false
+        url_login: false
+        auto_sign_up: false
+        skip_org_role_sync: true
+        allow_assign_grafana_admin: false
+        groups_attribute_path: ""
+        role_attribute_path: ""
+        org_attribute_path: ""

@@ -1,0 +1,7 @@
+# Compose AFTER keycloak-canary-values.yaml. Parent must confirm admin-token audit.
+keycloakSSO:
+  mode: only
+argocd:
+  configs:
+    cm:
+      admin.enabled: "false"

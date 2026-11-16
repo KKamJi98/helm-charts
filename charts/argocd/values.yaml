@@ -1,0 +1,4 @@
+# Native SSO is opt-in via the explicit overlay, never enabled by a render.
+keycloakSSO:
+  mode: legacy
+  adminTokenMigrationConfirmed: false

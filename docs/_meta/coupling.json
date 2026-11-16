@@ -74,5 +74,23 @@
     "tests/test_keycloak_gitops_activation.py",
     "tests/fixtures/keycloak-idp/**",
     ".github/workflows/keycloak-lint.yml"
+  ],
+  "docs/oidc/02_consumer-sso-plan.md": [
+    "charts/argocd/keycloak*",
+    "charts/argocd/values.yaml",
+    "charts/argocd/templates/keycloak-sso.yaml.tpl",
+    "charts/cilium/**",
+    "charts/hindsight/**",
+    "charts/kube-prometheus-stack/**",
+    "tests/test_keycloak_consumers.py",
+    "tests/test_grafana_keycloak.py",
+    "tests/test_keycloak_current_main.py",
+    "tests/fixtures/keycloak-consumers/**",
+    ".github/workflows/keycloak-consumer-lint.yml"
+  ],
+  "docs/oidc/07_owner-enrollment-source.md": [
+    "examples/keycloak-preparation/consumer-contract/**",
+    "tests/test_keycloak_seven_clients.py",
+    ".github/workflows/keycloak-consumer-lint.yml"
   ]
 }

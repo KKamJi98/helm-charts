@@ -1,0 +1,63 @@
+name: Keycloak disabled consumer source contracts
+on:
+  pull_request:
+    paths:
+      - "charts/argocd/**"
+      - "charts/cilium/**"
+      - "charts/hindsight/**"
+      - "charts/kube-prometheus-stack/**"
+      - "charts/envoy-gateway/charts/**"
+      - "tests/test_keycloak_consumers.py"
+      - "tests/test_grafana_keycloak.py"
+      - "tests/test_keycloak_current_main.py"
+      - "tests/test_keycloak_seven_clients.py"
+      - "tests/test_grafana_pvc_preparation.py"
+      - "tests/fixtures/keycloak-consumers/**"
+      - "examples/keycloak-preparation/consumer-contract/**"
+      - "examples/keycloak-preparation/realm-import.yaml.inactive"
+      - ".github/workflows/keycloak-consumer-lint.yml"
+  push:
+    branches: [main]
+    paths:
+      - "charts/argocd/**"
+      - "charts/cilium/**"
+      - "charts/hindsight/**"
+      - "charts/kube-prometheus-stack/**"
+      - "charts/envoy-gateway/charts/**"
+      - "tests/test_keycloak_consumers.py"
+      - "tests/test_grafana_keycloak.py"
+      - "tests/test_keycloak_current_main.py"
+      - "tests/test_keycloak_seven_clients.py"
+      - "tests/test_grafana_pvc_preparation.py"
+      - "tests/fixtures/keycloak-consumers/**"
+      - "examples/keycloak-preparation/consumer-contract/**"
+      - "examples/keycloak-preparation/realm-import.yaml.inactive"
+      - ".github/workflows/keycloak-consumer-lint.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.2.1
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.5"
+          python-version: "3.12"
+      # In-memory captures only. No render/credential artifacts or live providers.
+      - name: Focused offline consumer contracts
+        run: |
+          export HELM="$(command -v helm)"
+          export HELM_BIN="$HELM"
+          export PYTHONDONTWRITEBYTECODE=1
+          export PYTHONPATH=tests
+          uv run --no-project --python 3.12 --with pyyaml --with jsonschema --with lupa \
+            python -m unittest test_keycloak_consumers test_grafana_keycloak \
+            test_keycloak_current_main test_keycloak_seven_clients -v

@@ -1,0 +1,25 @@
+# Compose after kkamji_local_values.yaml. No automatic error fallback.
+keycloakSSO:
+  mode: canary
+argocd:
+  configs:
+    cm:
+      url: https://argocd.kkamji.net
+      admin.enabled: "true"
+      users.anonymous.enabled: "false"
+      oidc.tls.insecure.skip.verify: "false"
+      oidc.config: |
+        name: Keycloak
+        issuer: https://sso.kkamji.net/realms/kkamji
+        clientID: argocd
+        clientSecret: $argocd-keycloak-oidc:client-secret
+        enablePKCEAuthentication: true
+        requestedScopes: [openid, profile, groups]
+        requestedIDTokenClaims:
+          groups:
+            essential: true
+    rbac:
+      policy.default: role:no-access
+      policy.csv: |
+        g, /argocd-admins, role:admin
+      scopes: '[groups]'
