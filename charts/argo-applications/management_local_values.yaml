@@ -101,6 +101,10 @@ applications:
         valueFiles:
           - kkamji_local_values.yaml
           - production-values.yaml
+        parameters:
+          - name: productionPhase
+            value: application
+            forceString: true
 
   metrics-server:
     enabled: true

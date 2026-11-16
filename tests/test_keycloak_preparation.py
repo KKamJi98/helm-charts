@@ -325,9 +325,18 @@ class KeycloakPreparationTests(unittest.TestCase):
                 if app.get("source", {}).get("path") == "charts/keycloak-idp":
                     self.assertEqual(path.name, "management_local_values.yaml")
                     self.assertEqual(name, "keycloak-idp")
-                    self.assertEqual(app["source"]["helm"], {
-                        "releaseName": "keycloak",
-                        "valueFiles": ["kkamji_local_values.yaml", "production-values.yaml"],
+                    self.assertEqual(app, {
+                        "enabled": True, "name": "keycloak-idp", "project": "management",
+                        "destination": {"namespace": "keycloak"},
+                        "source": {
+                            "repoURL": "https://github.com/KKamJi98/helm-charts.git",
+                            "targetRevision": "main", "path": "charts/keycloak-idp",
+                            "helm": {
+                                "releaseName": "keycloak",
+                                "valueFiles": ["kkamji_local_values.yaml", "production-values.yaml"],
+                                "parameters": [{"name": "productionPhase", "value": "application", "forceString": True}],
+                            },
+                        },
                     })
 
     def test_images_nonoptimized_start_and_edge_only_supported_fields(self):
