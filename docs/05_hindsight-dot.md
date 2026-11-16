@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-16T12:45:03.009725+00:00
+updated: 2026-11-16T23:36:47.836184+00:00
 type: runbook
 status: current
 ---
@@ -243,3 +243,7 @@ This prepared opening adds only the existing owner-bound synthetic public overla
 ### Epoch6 fresh-DCR window closure
 
 This paired closing removes the temporary owner-bound overlay. Security-stop to disabled7 on authentication/callback failure or before the 10-minute maximum, then verify actual HTTPRoute deletion and external404. Completion of this source change alone is not evidence of successful DCR or synthetic recall. Preserve durable registration/PVC/native configuration and never restore prior grants or decrement epoch.
+
+## Private epoch7 durable-app synthetic retry
+
+The epoch6 new durable app completed OAuth, but the intended durable-app recall was not demonstrated before closure. That window ended with disabled7 and external404. This private preparation advances only the deployed epoch to7; tested image, durable client-registration key contract, callback, scopes and native isolation remain unchanged. Preserve the registered client identity, never restore epoch6 grants, and use fresh owner authorization. Keep route absent/gate disabled7 during private verification. A later bounded window must target the existing Hindsight synthetic durable recall tool, not the retired epoch3 tool, with the fixed fictional query only. Pair opening with automatic maximum-10-minute closure, immediate stop on authentication failure, security-stop disabled8, route removal and external404 verification regardless of result.
