@@ -1,6 +1,6 @@
 ---
 title: Keycloak OIDC IdP preparation
-updated: 2026-11-15T22:12:46+00:00
+updated: 2026-11-16T08:35:59+09:00
 type: runbook
 status: current
 ---
@@ -10,38 +10,51 @@ status: current
 ## 현재 상태와 승인 경계
 
 기업 IAM과 장기 운영 기준을 우선한다는 사용자 선택에 따라 Keycloak으로 준비합니다.
-운영 전환을 위한 단계별 후보입니다. 관리 root에는 기존 전용 DB 단계와 별도 Operator-only 단계를 선언합니다. 소스 선언은 운영 설치, realm/client 생성이나 실제 로그인 인수의 성공을 뜻하지 않습니다.
+운영 전환을 위한 단계별 후보입니다. 관리 root에는 기존 Operator 선언을 유지하고, 전용 DB 기본값 위에 private server-only application 단계를 명시합니다. 소스 선언은 서버 배포, realm/client 생성이나 실제 로그인 인수의 성공을 뜻하지 않습니다.
 
 - Community Keycloak 26.8.2와 공식 namespace-scoped Operator YAML을 고정합니다.
 - Red Hat build of Keycloak의 상용 지원/SLA가 이 community 후보에 포함되는 것은 아닙니다.
 - 공식 YAML을 감싼 얇은 로컬 Helm chart이며 공식 application Helm이라고 부르지 않습니다.
 - experimental cluster-wide Operator Helm, OLM, preview Client CR와 custom provider를 사용하지 않습니다.
 - 기본 준비 렌더는 외부 HTTPRoute, Application과 RealmImport를 생성하지 않습니다.
-- 관리 root의 `keycloak-idp` Application은 production database 단계만 유지하고, 새 `keycloak-operator` Application만 추가합니다. 기존 자식 Application 전체 객체, AppProject, Gateway listener와 앱 로그인은 보존합니다.
+- 관리 root의 `keycloak-idp` source.helm에 `productionPhase=application`, `forceString: true` parameter 하나만 추가합니다. `keycloak-operator`를 포함한 나머지 15개 Application 전체 객체, AppProject, Gateway listener와 앱 로그인은 보존합니다. management 16개, automation 10개, personal 1개 개수도 바꾸지 않습니다.
 - 이 차트는 credential 값, AWS IAM이나 SSM 원본을 생성하지 않습니다. Secret 참조가 렌더됐다고 원본 존재를 주장하지 않습니다.
 - 오프라인 schema/render 검증은 admission, 이미지 실행, DB TLS와 사용자 인증 인수의 대체가 아닙니다.
 
-## DB 단계의 GitOps 연결
+## DB 기본값과 private server GitOps 단계
 
 `charts/argo-applications/management_local_values.yaml`은 `charts/keycloak-idp`를 release `keycloak`, namespace `keycloak`로 연결합니다. valueFiles 순서는 `kkamji_local_values.yaml`, `production-values.yaml`입니다.
 
-production overlay의 기본 `productionPhase: database`는 16개 namespaced 객체를 생성합니다. CNPG Cluster, 공개 CA projection과 외부 백업 참조/일정을 준비하지만 Keycloak 서버, Operator Application, RealmImport와 공개 HTTPRoute는 생성하지 않습니다. main 반영은 이 DB 단계의 실제 배포 경계입니다.
+production overlay의 기본 `productionPhase: database`는 그대로 두며 16개 namespaced 객체를 생성합니다. CNPG Cluster, 공개 CA projection과 외부 백업 참조/일정을 준비하지만 Keycloak 서버, Operator Application, RealmImport와 공개 HTTPRoute는 생성하지 않습니다.
 
-`productionPhase: application`은 별도 전환입니다. 실제 CA keyset/RBAC/TLS 인수와 백업 기반을 확인하기 전에 활성화하지 않습니다. 실제 Keycloak 상태의 외부 백업/격리 복원, 소유자 MFA/복구와 서비스별 로그인 검증은 기존 사람용 인증 종료 전에 완료해야 합니다.
+이 후보는 기존 source factory를 수정하지 않고 `keycloak-idp`의 source.helm에 다음 parameter 하나만 추가합니다. release/namespace와 valueFiles 순서는 위와 같고 production overlay 자체는 바꾸지 않습니다.
 
-`tests/test_keycloak_gitops_activation.py`는 고정된 release/valueFiles, DB 전용 렌더와 새 항목 유무에 따른 기존 Application 전체 객체 보존을 검사합니다. 전용 Keycloak CI는 기존 Helm 4.2.1/uv 경로로 준비, CA, production과 GitOps 계약을 오프라인 검증합니다. 클러스터, AWS와 실제 credential에 접근하지 않습니다.
+```yaml
+parameters:
+  - name: productionPhase
+    value: application
+    forceString: true
+```
+
+Argo Helm parameter를 `--set-string productionPhase=application`으로 반영한 렌더는 17개 객체입니다. 기존 DB 16개는 동일하며 `Keycloak/keycloak` CR 하나만 추가합니다. stock digest, `startOptimized: false`, 2 instances와 requests `1 CPU / 2 Gi`, 엄격한 DB TLS/FQDN과 public-only trust Secret 참조를 유지합니다. 빈 DB tolerations 생략을 보존하고 임시 reconcile bypass는 넣지 않습니다.
+
+이 전환은 private server만 대상으로 하며 HTTPRoute/Ingress, RealmImport/OIDCClient/SAMLClient, Job/CronJob, Application이나 Secret 값을 생성하지 않습니다. 내부 HTTP8080은 통제된 인증 HTTPS 관리 경로를 의미하지 않습니다. 공개/admin/master 경로와 realm/client는 닫힌 상태이며 사람용/기계용 인증이나 기존 앱 로그인은 바꾸지 않습니다. main 반영은 서버 CR을 생성하는 실제 배포 경계입니다.
+
+서버 적용은 부모의 실제 DB/공개 CA keyset/RBAC/TLS, 외부 백업/격리 복원과 Operator 인수를 선행조건으로 합니다. 준비 DB의 libpq TLS 결과는 실제 Keycloak JDBC 인수가 아닙니다. 실제 JDBC의 정상/잘못된 CA/host/downgrade 거부와 CA rotation/uptake, populated realm/MFA 상태의 외부 백업/격리 복원, 소유자 등록과 UI7은 부모의 미완료 gate입니다. 사람용 인증이나 realm/client를 이 후보로 열지 않습니다.
+
+`tests/test_keycloak_gitops_activation.py`는 고정된 source/namespace/release/valueFiles/parameter, DB16 보존과 서버 전용17 렌더, 기존 Application 전체 객체 비간섭을 검사합니다. fixture helper는 명시적 forceString parameter를 `--set-string`으로 전달합니다. parameter 추가/이름/phase, release/namespace/valueFiles 변경과 realm/public/client 활성화 거부를 별도로 검사하며 mutable HEAD를 oracle로 쓰지 않습니다. 전용 Keycloak CI는 기존 Helm 4.2.1/uv 경로로 준비, CA, production과 GitOps 계약을 오프라인 검증합니다. 클러스터, AWS와 실제 credential에 접근하지 않습니다.
 
 ## Operator-only GitOps 단계
 
-같은 management root factory에 `keycloak-operator` Application 하나만 추가합니다. project는 `management`, source는 `charts/keycloak-operator`, release는 `keycloak-operator`, destination namespace는 `keycloak`이며 valueFiles는 `kkamji_local_values.yaml` 하나입니다. 공식 pinned YAML을 감싼 기존 로컬 chart와 image digest를 그대로 사용합니다.
+선행 Operator-only 단계가 같은 management root factory에 추가한 `keycloak-operator` Application을 그대로 유지합니다. project는 `management`, source는 `charts/keycloak-operator`, release는 `keycloak-operator`, destination namespace는 `keycloak`이며 valueFiles는 `kkamji_local_values.yaml` 하나입니다. 공식 pinned YAML을 감싼 기존 로컬 chart와 image digest를 그대로 사용합니다.
 
 기존 factory의 자동 sync/prune/selfHeal, ServerSideApply와 Application finalizer를 상속합니다. inactive 예제를 활성 파일로 옮기거나 별도 배포 경로를 만들지 않습니다. main 반영은 실제 CRD/권한/Operator 배포 경계이며, Application 제거도 prune 영향을 검토해야 합니다.
 
-이 Application은 CRD 4개, ClusterRole 5개, ClusterRoleBinding 1개, namespaced RoleBinding 5개, ServiceAccount/ClusterIP Service/Operator Deployment 각 1개로 총 18개 객체를 렌더합니다. Keycloak 서버 CR, RealmImport, preview client CR, 공개 route나 Secret 값은 생성하지 않습니다. `keycloak-idp`의 source/release/valueFiles와 `productionPhase: database`의 16개 객체는 그대로 유지합니다.
+이 Application은 CRD 4개, ClusterRole 5개, ClusterRoleBinding 1개, namespaced RoleBinding 5개, ServiceAccount/ClusterIP Service/Operator Deployment 각 1개로 총 18개 객체를 렌더합니다. Operator chart 자체는 Keycloak 서버 CR, RealmImport, preview client CR, 공개 route나 Secret 값을 생성하지 않습니다. 이번 서버 후보도 이 18개 객체와 별도의 production database 기본값 16개를 그대로 유지합니다.
 
 준비 테스트의 Operator source 전면 금지는 이 정확한 management-root 선언 하나만 허용하는 계약으로 전환합니다. 다른 profile/이름/값의 선언과 활성 예제는 계속 거부합니다. 회귀 테스트는 root factory 비간섭, pinned 18개 객체, namespace/release/profile 변경 거부와 IdP/realm/공개 route 분리를 검사합니다. 변경 전 base와의 기존 Application byte/semantic 비교는 별도 작업 증적으로 남기며, 영구 테스트는 mutable HEAD를 oracle로 쓰지 않습니다.
 
-이 단계의 소스와 오프라인 검증은 Operator 설치 성공이나 실제 TLS/백업/격리 복원 gate 통과를 뜻하지 않습니다. 서버 단계는 실제 CA keyset/RBAC/TLS와 DB 백업/복구 인수 뒤 별도로 승인합니다. 소유자 MFA/복구, 실제 Keycloak 상태의 백업/복원과 서비스 로그인/negative 인수 전에는 사람용 인증을 열거나 기존 인증을 종료하지 않습니다.
+이 단계의 소스와 오프라인 검증은 Operator 설치 성공이나 실제 TLS/백업/격리 복원 gate 통과를 뜻하지 않습니다. 부모가 확보한 선행 운영 증거와 이번 source candidate의 검증을 구분합니다. 소유자 MFA/복구, 실제 Keycloak 상태의 백업/복원과 서비스 로그인/negative 인수 전에는 사람용 인증을 열거나 기존 인증을 종료하지 않습니다.
 
 ## 소스와 이미지 고정
 
@@ -137,7 +150,7 @@ JRE 기본 trust anchors도 남으므로 DB 전용 CA만 허용하는 독점 pin
 다른 CA key로의 전환은 구/신 public-root overlap과 별도 검토한 maintenance/writer-handoff 후보가 필요합니다. 현재 production guard를 꺼서 임의로 수행하지 않습니다.
 
 인수에는 정상 CA/host 연결과 잘못된 CA/SAN, plaintext downgrade 거부, CA 회전 후 재연결이 필요합니다.
-현재 이 runtime 검증은 미실행입니다.
+실제 Keycloak JDBC 연결과 CA 회전/uptake runtime 인수는 아직 부모 gate입니다. 준비 DB의 libpq 검증이나 이 후보의 strict TLS 참조만으로 완료를 주장하지 않습니다.
 
 ## Envoy와 노출
 
@@ -182,7 +195,7 @@ RP 코드와 배포 상태는 해당 저장소와 rollout 증적으로 별도 �
 1. 정확한 검토 revision과 운영 적용 승인을 확보합니다. 새 CRD/권한과 원본 입력을 preview합니다.
 2. DB 단계에서 namespace, ESO 입력과 전용 DB owner/TLS/공개 CA 및 외부 백업 기반을 확인합니다.
 3. Operator-only 변경의 CRD/ClusterRole diff와 namespaced Secret/workload 신뢰 범위를 검토하고, 별도 승인된 적용 뒤 Operator readiness와 실제 watch/RBAC를 인수합니다. 서버/realm/route는 만들지 않습니다.
-4. DB TLS/백업/격리 복구 gate 뒤 별도로 application 단계를 승인하고 Keycloak readiness를 인수합니다. 실제 Keycloak 상태의 off-host backup/격리 복원은 기존 사람용 인증을 닫기 전에 검증합니다.
+4. DB TLS/백업/격리 복구와 Operator gate 뒤 private server-only application 후보를 별도로 적용하고 Keycloak readiness, 실제 JDBC와 CA uptake를 인수합니다. 이번 source 변경은 이 단계의 후보이며 실제 적용 증거가 아닙니다. populated realm/MFA 상태의 off-host backup/격리 복원은 기존 사람용 인증을 닫기 전에 검증합니다.
 5. 통제된 HTTPS 관리 접근으로 비활성 realm을 필요한 범위만 열고 client는 닫은 채 소유자를 등록합니다.
 6. effective flow/export를 민감 정보 없이 확인하고 정상/우회/SSO/분실/복구 시험을 수행합니다.
 7. 별도 Admin API/console 동작으로 client를 활성화하고 실제 issuer/discovery/JWKS/negative를 검증합니다.
