@@ -1,15 +1,17 @@
-name: Grafana PVC preparation
+name: Grafana PVC native storage candidate
 on:
   pull_request:
     paths:
       - "charts/kube-prometheus-stack/**"
       - "tests/test_grafana_pvc_preparation.py"
+      - "tests/test_grafana_pvc_activation.py"
       - ".github/workflows/grafana-pvc-lint.yml"
   push:
     branches: [main]
     paths:
       - "charts/kube-prometheus-stack/**"
       - "tests/test_grafana_pvc_preparation.py"
+      - "tests/test_grafana_pvc_activation.py"
       - ".github/workflows/grafana-pvc-lint.yml"
   workflow_dispatch:
 permissions:
@@ -29,9 +31,11 @@ jobs:
         with:
           version: "0.13.5"
           python-version: "3.12"
-      - name: Offline preparation and whole-monitoring preservation contracts
+      # Includes an actual canonical native local render with --include-crds;
+      # Helm lint alone can log fail as INFO and still exit zero.
+      - name: Native activation and fixed prepared/default whole-monitoring contracts
         run: |
           export HELM_BIN="$(command -v helm)"
           export PYTHONDONTWRITEBYTECODE=1
           uv run --no-project --python 3.12 --with pyyaml \
-            python -m unittest discover -s tests -p 'test_grafana_pvc_preparation.py' -v
+            python -m unittest discover -s tests -p 'test_grafana_pvc_*.py' -v

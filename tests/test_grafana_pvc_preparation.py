@@ -17,6 +17,32 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 CHART = ROOT / "charts/kube-prometheus-stack"
 HELM = os.environ.get("HELM_BIN", "")
+
+
+class HelmLoader(yaml.SafeLoader):
+    """Pinned CRDs contain the unquoted enum scalar '='; keep loading safe."""
+
+
+HelmLoader.add_constructor("tag:yaml.org,2002:value", HelmLoader.construct_scalar)
+
+# Explicit legacy source fixture: these four native settings did not exist in
+# prepared local values. Remove them only from that input fixture, never from
+# an active render/result. Helm 4 retains null for absent upstream keys, so a
+# null overlay cannot represent the original pinned persistence defaults.
+PREPARED_KEYS = ("persistence", "deploymentStrategy", "initChownData", "replicas")
+
+
+def helm_command(command):
+    result = subprocess.run(command, capture_output=True, text=True, timeout=90)
+    # Optional evidence sink: never write a render, even for failed entry points.
+    if path := os.environ.get("GRAFANA_PVC_EVENTS"):
+        with Path(path).open("a") as stream:
+            stream.write(json.dumps({"argv": command, "native_exit": result.returncode,
+                                    "stdout_sha256": hashlib.sha256(result.stdout.encode()).hexdigest(),
+                                    "stderr_sha256": hashlib.sha256(result.stderr.encode()).hexdigest()}) + "\n")
+    return result
+
+
 PVC_KEY = ("v1", "PersistentVolumeClaim", "monitoring", "kube-prometheus-stack-grafana")
 EXPECTED_PVC = {
     "apiVersion": "v1", "kind": "PersistentVolumeClaim",
@@ -27,28 +53,47 @@ EXPECTED_PVC = {
 }
 
 
-def render(override=None, local=True, chart=CHART, release="kube-prometheus-stack", namespace="monitoring"):
+def render(override=None, local=True, chart=CHART, release="kube-prometheus-stack", namespace="monitoring",
+           prepared=True, include_crds=False):
+    """Legacy tests explicitly render preparation; activation opts out of that fixture."""
     command = [HELM, "template", release, str(chart), "-n", namespace,
                "--kube-version", "1.36.1", "--skip-tests"]
-    if local:
-        command += ["-f", str(chart / "kkamji_local_values.yaml")]
+    if include_crds:
+        command += ["--include-crds"]
     with tempfile.TemporaryDirectory(prefix="grafana-pvc-") as temporary:
+        if local:
+            path = chart / "kkamji_local_values.yaml"
+            if prepared:
+                source = yaml.safe_load(path.read_text())
+                grafana = source["kube-prometheus-stack"]["grafana"]
+                for key in PREPARED_KEYS:
+                    grafana.pop(key, None)
+                path = Path(temporary) / "legacy-prepared.yaml"
+                path.write_text(yaml.safe_dump(source))
+            command += ["-f", str(path)]
         if override is not None:
             path = Path(temporary) / "override.json"
             path.write_text(json.dumps(override))
             command += ["-f", str(path)]
-        return subprocess.run(command, capture_output=True, text=True, timeout=90)
+        return helm_command(command)
 
 
 def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+def load_documents(text):
+    try:
+        return list(yaml.load_all(text, Loader=HelmLoader))
+    except yaml.YAMLError:
+        raise AssertionError("Helm YAML parse refused (render withheld)") from None
+
+
 def documents(result):
     if result.returncode:
-        raise AssertionError("Helm render refused: " + result.stderr)
+        raise AssertionError("Helm render refused (stderr sha256=" + hashlib.sha256(result.stderr.encode()).hexdigest() + ")")
     objects = {}
-    for obj in yaml.safe_load_all(result.stdout):
+    for obj in load_documents(result.stdout):
         if not obj:
             continue
         key = (obj["apiVersion"], obj["kind"], obj["metadata"].get("namespace", ""), obj["metadata"]["name"])
@@ -80,7 +125,8 @@ def raw_documents(result):
     objects = documents(result)
     raw = {}
     for chunk in re.split(r"(?m)^---\s*\n", result.stdout):
-        obj = yaml.safe_load(chunk)
+        parsed = load_documents(chunk)
+        obj = parsed[0] if parsed else None
         if not obj:
             continue
         key = (obj["apiVersion"], obj["kind"], obj["metadata"].get("namespace", ""), obj["metadata"]["name"])
@@ -200,7 +246,7 @@ class GrafanaPvcPreparationTests(unittest.TestCase):
                 args = [HELM, "lint", str(CHART), "--strict", "-n", "monitoring", "--kube-version", "1.36.1"]
                 if local:
                     args += ["-f", str(CHART / "kkamji_local_values.yaml")]
-                result = subprocess.run(args, capture_output=True, text=True, timeout=90)
+                result = helm_command(args)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_pvc_presence_refusals_do_not_include_rendered_secret_data(self):

@@ -57,6 +57,12 @@
     "tests/test_grafana_pvc_preparation.py",
     ".github/workflows/grafana-pvc-lint.yml"
   ],
+  "docs/oidc/06_grafana-pvc-activation.md": [
+    "charts/kube-prometheus-stack/**",
+    "tests/test_grafana_pvc_preparation.py",
+    "tests/test_grafana_pvc_activation.py",
+    ".github/workflows/grafana-pvc-lint.yml"
+  ],
   "docs/05_oidc-idp-preparation.md": [
     "charts/argo-applications/management_local_values.yaml",
     "charts/keycloak-operator/**",

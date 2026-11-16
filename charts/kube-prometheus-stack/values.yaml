@@ -1,4 +1,5 @@
 kube-prometheus-stack: {}
 
-# Create only an unused PVC. Never activates Grafana persistence or migrates data.
+# Safe default: no prepared PVC and no Grafana persistence activation.
+# Local values are an offline activation candidate, not migration approval.
 grafanaPvcPreparation: false
