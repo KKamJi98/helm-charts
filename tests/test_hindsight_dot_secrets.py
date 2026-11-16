@@ -48,3 +48,22 @@ class BundleTests(unittest.TestCase):
   rate=next(x for x in runtime['redis_acl'].splitlines() if x.startswith('user rate '))
   self.assertIn('~dot-dcr-e3:state',rate);self.assertIn('+set',rate);self.assertNotIn('+eval',rate);self.assertNotIn('dot-control',rate)
   self.assertIn('%RW~dot-dcr-e3:state',runtime['redis_acl'])
+
+ def test_durable_registration_key_only_survives_epoch(self):
+  owner=self.root/'owner.json';owner.write_text(json.dumps({'sub':'fixture-owner','email':'rlaxowl5460@gmail.com','tools_denied':True}));owner.chmod(0o600)
+  first=self.root/'first';second=self.root/'second'
+  prepare(self.google,first,5,owner,durable_registration=True)
+  prepare(self.google,second,6,owner,durable_registration=True,registration_key_path=first/'registration-local.json')
+  a=json.loads((first/'ssm-runtime.json').read_text());b=json.loads((second/'ssm-runtime.json').read_text())
+  self.assertEqual(a['registration_key'],b['registration_key'])
+  for name in ('registration_redis_url','oauth_redis_url','gate_redis_url','storage_key','signing_key'):self.assertNotEqual(a[name],b[name])
+  registry=next(x for x in b['redis_acl'].splitlines() if x.startswith('user registration '))
+  self.assertIn('~dot-registration-v1:__mcp-oauth-proxy-clients::*',registry)
+  self.assertNotIn('dot-oauth',registry);self.assertNotIn('dot-control',registry);self.assertNotIn('+@',registry)
+  self.assertEqual(set(json.loads((first/'registration-local.json').read_text())),{'schema','registration_key'})
+  self.assertEqual(stat.S_IMODE((first/'registration-local.json').stat().st_mode),0o600)
+  with self.assertRaises(BundleError):prepare(self.google,self.root/'bad',7,owner,durable_registration=True,registration_key_path=first/'ssm-runtime.json')
+  (first/'registration-local.json').chmod(0o644)
+  with self.assertRaises(BundleError):prepare(self.google,self.root/'insecure',7,owner,durable_registration=True,registration_key_path=first/'registration-local.json')
+ def test_durable_registration_requires_verified_owner(self):
+  with self.assertRaises(BundleError):prepare(self.google,self.root/'bad',5,durable_registration=True)

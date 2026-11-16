@@ -22,6 +22,7 @@ from redis.backoff import NoBackoff
 from redis.retry import Retry
 from starlette.responses import JSONResponse
 
+from oauth_storage import OAuthStorage, REGISTRATION_PREFIX
 from rate_limit import RedisDCRLimiter, RegistrationLimited as DCRLimitExceeded, RegistrationUnavailable as DCRLimiterUnavailable
 from adapter import safe_text
 from emergency_gate import EmergencyGate, GateStatus
@@ -46,8 +47,10 @@ class Config:
     synthetic_backend: bool = False
     bootstrap_identity_diagnostic: bool = False
     owner_bound: bool = False
+    durable_registration: bool = False
 
     def __post_init__(self):
+        if self.durable_registration and (not self.synthetic_backend or not self.owner_bound):raise ValueError('durable registration requires bound synthetic owner')
         if self.mode not in ('proxy','gateway') or type(self.epoch) is not int or self.epoch<1: raise ValueError('mode/epoch')
         u=urlsplit(self.public_url)
         if u.scheme!='https' or not u.hostname or u.path not in ('','/') or u.query or u.fragment or u.username: raise ValueError('public URL')
@@ -168,6 +171,8 @@ class Application:
                 try:
                     state=await asyncio.wait_for(self.read_status(),0.5)
                     await asyncio.wait_for(self.storage.get('__readiness__',collection='dot-health'),0.5)
+                    if self.config.durable_registration:
+                        await asyncio.wait_for(self.storage.get('__readiness__',collection='mcp-oauth-proxy-clients'),0.5)
                     if state!=GateStatus(True,self.config.epoch):status=503
                 except Exception:status=503
             return await JSONResponse({'status':'ok' if status==200 else 'unavailable'},status,headers={'Cache-Control':'no-store'})(scope,receive,send)
@@ -225,11 +230,16 @@ def factory():
         gateway_url=os.environ.get('DOT_GATEWAY_URL','http://backend-policy.hindsight-dot.svc.cluster.local:8001'),
         native_url=os.environ.get('DOT_NATIVE_URL','http://hindsight-api.hindsight.svc.cluster.local:8888'),
         synthetic_backend=os.environ.get('DOT_STAGING_SYNTHETIC','0')=='1',
-        bootstrap_identity_diagnostic=os.environ.get('DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC','0')=='1',owner_bound=os.environ.get('DOT_OWNER_BOUND','0')=='1')
+        bootstrap_identity_diagnostic=os.environ.get('DOT_BOOTSTRAP_IDENTITY_DIAGNOSTIC','0')=='1',owner_bound=os.environ.get('DOT_OWNER_BOUND','0')=='1',
+        durable_registration=os.environ.get('DOT_DURABLE_REGISTRATION','0')=='1')
     # Dedicated ACL users: oauth store key RW; gate key GET-only. Never admin/default user.
     oauth_redis=Redis.from_url(secret('DOT_OAUTH_REDIS_URL'),decode_responses=True,socket_timeout=.3,socket_connect_timeout=.3,retry=Retry(NoBackoff(),0),retry_on_timeout=False)
     gate_redis=Redis.from_url(secret('DOT_GATE_REDIS_URL'),decode_responses=True,socket_timeout=.3,socket_connect_timeout=.3,retry=Retry(NoBackoff(),0),retry_on_timeout=False)
     store=encrypted_store(oauth_redis,secret('DOT_STORAGE_KEY').encode(),config.epoch)
+    if config.durable_registration:
+        registration_redis=Redis.from_url(secret('DOT_REGISTRATION_REDIS_URL'),decode_responses=True,socket_timeout=.3,socket_connect_timeout=.3,retry=Retry(NoBackoff(),0),retry_on_timeout=False)
+        registration_store=FernetEncryptionWrapper(PrefixCollectionsWrapper(RedisStore(client=registration_redis),prefix=REGISTRATION_PREFIX),fernet=Fernet(secret('DOT_REGISTRATION_KEY').encode()),raise_on_decryption_error=True)
+        store=OAuthStorage(store,registration_store)
     headers=None
     if config.mode=='gateway' and not config.synthetic_backend:
         headers={'Authorization':'Bearer '+secret('DOT_NATIVE_API_KEY')}

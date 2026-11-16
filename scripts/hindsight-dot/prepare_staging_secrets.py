@@ -54,7 +54,19 @@ def write_new_json(directory,name,value):
     with os.fdopen(fd,'w') as f:
         json.dump(value,f,ensure_ascii=True,indent=2);f.write('\n');f.flush();os.fsync(f.fileno())
 
-def prepare(google_path,output_dir,epoch,owner_path=None):
+def read_registration_key(path):
+    path=Path(path);reject_symlink_components(path)
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
+    with os.fdopen(fd,'rb') as f:
+        st=os.fstat(f.fileno())
+        if not stat.S_ISREG(st.st_mode) or st.st_uid!=os.getuid() or stat.S_IMODE(st.st_mode)&0o077 or st.st_size>2048:raise BundleError('Registration key permissions')
+        data=json.load(f)
+    if not isinstance(data,dict) or set(data)!={'schema','registration_key'} or data['schema']!=1:raise BundleError('Registration key schema')
+    key=data['registration_key']
+    if not isinstance(key,str) or not re.fullmatch(r'[A-Za-z0-9_-]{43}=',key) or len(base64.urlsafe_b64decode(key))!=32:raise BundleError('Registration key format')
+    return key
+
+def prepare(google_path,output_dir,epoch,owner_path=None,*,durable_registration=False,registration_key_path=None):
     owner=None
     if owner_path is not None:
         owner_path=Path(owner_path);reject_symlink_components(owner_path)
@@ -64,6 +76,10 @@ def prepare(google_path,output_dir,epoch,owner_path=None):
             if not stat.S_ISREG(st.st_mode) or st.st_uid!=os.getuid() or stat.S_IMODE(st.st_mode)&0o077 or st.st_size>2048:raise BundleError('Owner file permissions')
             owner=json.load(f)
         if not isinstance(owner,dict) or owner.get('email')!='rlaxowl5460@gmail.com' or owner.get('tools_denied') is not True or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}',str(owner.get('sub',''))):raise BundleError('Verified owner required')
+
+    if registration_key_path is not None and not durable_registration:raise BundleError('Registration key requires opt-in')
+    if durable_registration and owner is None:raise BundleError('Registration requires verified synthetic owner')
+    registration_key=(read_registration_key(registration_key_path) if registration_key_path is not None else base64.urlsafe_b64encode(secrets.token_bytes(32)).decode()) if durable_registration else None
 
     if type(epoch) is not int or not 1<=epoch<=1000000:raise BundleError('Invalid epoch')
     google_path=Path(google_path);output_dir=Path(output_dir)
@@ -94,6 +110,12 @@ def prepare(google_path,output_dir,epoch,owner_path=None):
         runtime['owner_sub']=owner['sub']
         runtime['rate_redis_url']=url('rate')
         runtime['redis_acl']=acl.replace(f'%RW~dot-control:state',f'%RW~dot-control:state %RW~dot-dcr-e{epoch}:state')+f'user rate on #{hashed["rate"]} ~dot-dcr-e{epoch}:state +get +set +time +ttl +ping +client|setinfo\n'
+    if durable_registration:
+        registration_password=secrets.token_urlsafe(48)
+        registration_hash=hashlib.sha256(registration_password.encode()).hexdigest()
+        runtime['registration_redis_url']=f'redis://registration:{quote(registration_password,safe="")}@{REDIS_HOST}:6379/0'
+        runtime['registration_key']=registration_key
+        runtime['redis_acl']+=f'user registration on #{registration_hash} ~dot-registration-v1:__mcp-oauth-proxy-clients::* +get +set +setex +del +mget +mset +ping +client|setinfo\n'
     # Operator plaintext never enters runtime JSON/SSM or service pod mounts.
     operator={
         'redis_url':url('operator'),'state_key':'dot-control:state',
@@ -113,6 +135,7 @@ def prepare(google_path,output_dir,epoch,owner_path=None):
     write_new_json(output_dir,'ssm-runtime.json',runtime)
     write_new_json(output_dir,'operator-local.json',operator)
     write_new_json(output_dir,'manifest.json',manifest)
+    if durable_registration:write_new_json(output_dir,'registration-local.json',{'schema':1,'registration_key':registration_key})
     directory_fd=os.open(output_dir,os.O_RDONLY)
     try:os.fsync(directory_fd)
     finally:os.close(directory_fd)
@@ -124,9 +147,11 @@ def main(argv=None):
     parser.add_argument('--output-dir',type=Path,required=True)
     parser.add_argument('--epoch',type=int,required=True)
     parser.add_argument('--verified-owner',type=Path)
+    parser.add_argument('--durable-registration',action='store_true')
+    parser.add_argument('--registration-key',type=Path,help='Private registration-local.json only; never an old runtime bundle')
     args=parser.parse_args(argv)
     os.umask(0o077)
-    try:prepare(args.google_client,args.output_dir,args.epoch,args.verified_owner)
+    try:prepare(args.google_client,args.output_dir,args.epoch,args.verified_owner,durable_registration=args.durable_registration,registration_key_path=args.registration_key)
     except Exception:
         print('Secret bundle not completed. Check private input permissions, project/callback and unused output directory. No AWS writes were attempted.',file=sys.stderr)
         return 1

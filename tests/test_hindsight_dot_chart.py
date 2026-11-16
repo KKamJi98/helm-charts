@@ -105,4 +105,24 @@ class Chart(unittest.TestCase):
    self.assertEqual(json.loads(env['DOT_CAPABILITIES']['value']),['hindsight:recall'])
    self.assertEqual(json.loads(env['DOT_REDIRECT_URIS']['value']),['https://chatgpt.com/connector_platform_oauth_redirect'])
 
+
+
+ def test_durable_registration_opt_in_containment(self):
+  opts=['--set','durableRegistration=true','--set','owner.fromSecret=true','--set','externalSecrets.enabled=true']
+  ds=render(opts)
+  for name in ('proxy','backend-policy'):
+   env={e['name']:e.get('value') for e in named(ds,'Deployment',name)['spec']['template']['spec']['containers'][0]['env']}
+   self.assertEqual(env['DOT_DURABLE_REGISTRATION'],'1')
+   self.assertEqual(env['DOT_REGISTRATION_KEY_FILE'],'/run/dot/registration_key')
+   self.assertEqual(env['DOT_REGISTRATION_REDIS_URL_FILE'],'/run/dot/registration_redis_url')
+  props={d['secretKey']:d['remoteRef']['property'] for d in named(ds,'ExternalSecret','hindsight-dot-runtime')['spec']['data']}
+  self.assertEqual(props['registration_key'],'registration_key')
+  self.assertEqual(props['registration_redis_url'],'registration_redis_url')
+  self.assertNotIn('hindsight-dot-native',json.dumps(ds))
+  self.assertFalse(any(d['kind']=='HTTPRoute' for d in ds))
+  for bad in (['--set','owner.fromSecret=false'],['--set','syntheticBackend=false','--set','native.approved=true']):
+   self.assertNotEqual(render(opts+bad,ok=False),0)
+  default=render()
+  self.assertNotIn('DOT_REGISTRATION_KEY_FILE',json.dumps(default))
+
 if __name__=='__main__':unittest.main()

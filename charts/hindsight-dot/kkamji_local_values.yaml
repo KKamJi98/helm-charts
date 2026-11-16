@@ -2,6 +2,8 @@
 enabled: false
 syntheticBackend: true
 bootstrapIdentityDiagnostic: false
+# Opt-in candidate only; no deployed change until separate epoch/image rollout.
+durableRegistration: false
 epoch: 1
 capabilities: [hindsight:recall]
 image: {repository: "", digest: "", pullSecrets: []}
