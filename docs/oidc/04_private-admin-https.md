@@ -1,6 +1,6 @@
 ---
 title: Private Keycloak admin HTTPS candidate
-updated: 2026-11-16T10:43:30+09:00
+updated: 2026-11-16T11:40:08.504263+00:00
 type: runbook
 status: current
 ---
@@ -65,3 +65,6 @@ key 누락이나 `dns-controller` 값은 skip하지 않습니다. 지원되지 �
 철회도 두 GitOps 소유자의 prune 영향과 순서를 부모가 검토해야 합니다. service access를 먼저 닫고 private platform infrastructure를 제거하는 source 역변경을 검토하되 기존 public Gateway/class, wildcard Secret/Certificate, Keycloak/DB/PVC와 기존 인증은 삭제하지 않습니다.
 
 관련 정본: [Gateway ownership](../rules/gateway-api-routing.md), [Keycloak 단계](../05_oidc-idp-preparation.md), [DB public CA](03_db-public-ca-supply.md).
+
+
+The attended Hindsight epoch4 closure restores the automation-root snapshot to its original private-only configuration. Keycloak management/personal roots and security contracts remain unchanged.
