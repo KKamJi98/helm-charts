@@ -1,6 +1,6 @@
 ---
 title: Private Keycloak admin HTTPS candidate
-updated: 2026-11-16T11:40:48.490759+00:00
+updated: 2026-11-16T11:41:28.462543+00:00
 type: runbook
 status: current
 ---
@@ -68,3 +68,6 @@ key 누락이나 `dns-controller` 값은 skip하지 않습니다. 지원되지 �
 
 
 The owner-approved attended Hindsight epoch4 window updates only the exact automation-root snapshot for its temporary synthetic overlay. Keycloak management/personal roots and security contracts remain unchanged. The paired closure restores the original private-only snapshot; no assertion is skipped.
+
+
+The attended Hindsight epoch4 closure restores the automation-root snapshot to its original private-only configuration. Keycloak management/personal roots and security contracts remain unchanged.
