@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-16T12:41:43.521922+00:00
+updated: 2026-11-16T12:44:09.452884+00:00
 type: runbook
 status: current
 ---
@@ -235,3 +235,7 @@ The epoch5 existing-app reconnect returned Client Not Registered. That window wa
 The official new-app form may display a connection-specific callback while discovery is unavailable on the closed URL. The pinned FastMCP provider advertises authorization response issuer support. Before submitting fresh DCR, perform discovery in the bounded attended window and verify that the form uses the already allowed exact `https://chatgpt.com/connector_platform_oauth_redirect`. Do not add a fallback callback, wildcard, new scope or permission based only on the closed-route display. If the observed flow still requires a different URI, stop and review rather than widening the allowlist during the window. Existing app deletion and native access are outside this preparation.
 
 Keep public route off and gate disabled6 during fresh credentials/configuration verification. A later attended window requires separate opening/closing changes, automatic maximum-10-minute closure, immediate close on authentication failure, and forward security-stop to disabled7 with route/external404 verification.
+
+### Epoch6 attended fresh-DCR window
+
+This prepared opening adds only the existing owner-bound synthetic public overlay. Before merge or enable, require verified private epoch6 configuration/ACL and an armed automatic closure watchdog. Maximum exposure is 10 minutes. Complete official new-app discovery and verify the already allowed exact generic ChatGPT callback before submitting fresh DCR. Callback mismatch, authentication failure or any unverified condition requires immediate closure rather than allowlist expansion. The fixed synthetic query is permitted only after authenticated metadata/tool readiness. Regardless of result, security-stop forward to disabled7, remove overlay/actual HTTPRoute, and verify external404. Preserve durable client registration, PVC and native Hindsight; never restore old grants or use actual memories.
