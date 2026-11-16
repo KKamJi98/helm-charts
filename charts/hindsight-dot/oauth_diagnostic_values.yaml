@@ -1,3 +1,5 @@
+# Diagnostic deny-all bootstrap cannot use owner-bound durable registration.
+durableRegistration: false
 # Owner-approved public synthetic identity diagnostic only.
 # Node administrators/local host processes remain trusted.
 bootstrapIdentityDiagnostic: true

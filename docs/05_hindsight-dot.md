@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-16T11:54:46.571291+00:00
+updated: 2026-11-16T12:20:32.522463+00:00
 type: runbook
 status: current
 ---
@@ -214,3 +214,8 @@ epoch namespace isolation, not just key rotation, rejects the old tokens.
 The public route, fresh image digest, new epoch rollout and operator enable remain
 separate explicitly controlled steps. Never reuse an old epoch or leave the route
 open while investigating OAuth failure.
+
+
+## Private epoch5 synthetic rollout
+
+PR90 separates durable DCR registration from epoch-scoped grants. This private rollout pins the tested commit62c2770 image digest and opts in only the existing synthetic environment at epoch5. Gate must remain disabled5 and the HTTPRoute absent while the fresh runtime/ACL are reconciled and checked. Never restore e3/e4 grants. Verify registry encrypted roundtrip, cross-key ACL denial, revoked Redis credentials, both app configurations, and native service preservation before any separately bounded OAuth window.

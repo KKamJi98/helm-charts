@@ -2,11 +2,12 @@
 enabled: true
 syntheticBackend: true
 bootstrapIdentityDiagnostic: false
-epoch: 4
+epoch: 5
+durableRegistration: true
 capabilities: [hindsight:recall]
 image:
   repository: ghcr.io/kkamji98/hindsight-dot
-  digest: sha256:11e43a03f6bdf255aa9b35dc661444947ecb425329b698a5383e088de3cd9112
+  digest: sha256:3919bc570a197490ccff59119db5520221c5ff455c24902b95151cf99e8a9e65
 owner:
   fromSecret: true
   sub: bootstrap-unverified-deny-all
