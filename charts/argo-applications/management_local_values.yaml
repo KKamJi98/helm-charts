@@ -106,6 +106,21 @@ applications:
             value: application
             forceString: true
 
+  keycloak-admin-access:
+    enabled: true
+    name: keycloak-admin-access
+    project: management
+    destination:
+      namespace: envoy-gateway-system
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/keycloak-admin-access
+      helm:
+        releaseName: keycloak-admin-access
+        valueFiles:
+          - kkamji_local_values.yaml
+
   metrics-server:
     enabled: true
     name: metrics-server

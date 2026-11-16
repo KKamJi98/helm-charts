@@ -43,6 +43,15 @@
     "tests/test_hindsight*.py",
     ".github/workflows/hindsight*.yml"
   ],
+  "docs/oidc/04_private-admin-https.md": [
+    "charts/keycloak-admin-access/**",
+    "charts/envoy-gateway/values.yaml",
+    "charts/envoy-gateway/kkamji_local_values.yaml",
+    "charts/envoy-gateway/templates/keycloak-admin-private.yaml",
+    "charts/argo-applications/management_local_values.yaml",
+    "tests/test_keycloak_private_admin.py",
+    ".github/workflows/keycloak-lint.yml"
+  ],
   "docs/05_oidc-idp-preparation.md": [
     "charts/argo-applications/management_local_values.yaml",
     "charts/keycloak-operator/**",

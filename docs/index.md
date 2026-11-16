@@ -1,6 +1,6 @@
 ---
 title: Docs index
-updated: 2026-11-16T04:36:04+09:00
+updated: 2026-11-16T10:20:04+09:00
 type: architecture
 status: current
 ---
@@ -23,6 +23,7 @@ status: current
 - [Keycloak OIDC preparation and phased deployment](05_oidc-idp-preparation.md) - 전용 DB 단계, 별도 앱 활성화, MFA/복구와 기존 인증 보존.
 - [Platform OIDC client contract](oidc/01_platform-client-contract.md) - 고정 issuer/owner, PKCE/state/nonce와 세션 폐기.
 - [Keycloak DB public CA and backup](oidc/03_db-public-ca-supply.md) - 공개 CA 공급/회전, production 단계와 외부 백업/복원 gate.
+- [Private Keycloak admin HTTPS candidate](oidc/04_private-admin-https.md) - 별도 ClusterIP proxy, DNS suppression과 narrow route/NP의 source 계약 및 미완료 runtime gate.
 
 ## Rules
 
