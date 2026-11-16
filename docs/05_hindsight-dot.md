@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-16T12:25:13.596609+00:00
+updated: 2026-11-16T12:26:07.951815+00:00
 type: runbook
 status: current
 ---
@@ -223,3 +223,7 @@ PR90 separates durable DCR registration from epoch-scoped grants. This private r
 ### Epoch5 attended synthetic window
 
 This prepared opening adds only the existing owner-bound public overlay for epoch5 synthetic recall. Do not merge or enable before private epoch5 ACL/configuration checks, supported owner OAuth preparation, and a verified automatic closure watchdog are ready. Public exposure is limited to 10 minutes, with immediate closure on authentication failure. The paired closure must security-stop forward to disabled6, remove the overlay and actual HTTPRoute, and verify external 404 regardless of result. No real memories, native credentials, existing Hindsight settings, or old grants are involved. Preserve durable DCR registration, PVC and unrelated services; do not restore a prior epoch.
+
+### Epoch5 synthetic window closure
+
+This prepared closing removes only the temporary public overlay. The operator must security-stop to disabled6 immediately on authentication failure or before the 10-minute maximum, then verify actual HTTPRoute removal and external 404. This source change is not evidence of execution or successful recall. Preserve the durable client registry, PVC, existing native Hindsight configuration and unrelated services. Never restore old epoch grants or lower the control epoch.
