@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-16T11:05:21.534700+00:00
+updated: 2026-11-16T11:28:00.844826+00:00
 type: runbook
 status: current
 ---
@@ -160,3 +160,8 @@ ChatGPT reported Primary connection complete for a new epoch3 synthetic plugin a
 ### Epoch4 private resume
 
 The owner renewed the personal AWS session and authorized continuing the bounded synthetic recall test. A fresh epoch4 runtime bundle was stored as SSM version4 with a new local-only operator credential. Existing disabled epoch4 control state and PVC must be preserved. The rollout remains private with no public route and no native credentials. Before enabling, verify both ESO Secrets, deployed ACL, epoch4 OAuth/rate access and old credential rejection. A later attended public window is limited to 10 minutes and must finish with disabled epoch5, actual route removal and external refusal. OAuth reconnection may be necessary; this change does not establish recall success.
+
+
+### Epoch4 attended recall window
+
+Private checks passed after PR87: disabled4 survived Redis restart, both apps use epoch4 synthetic-only without native credentials, new OAuth namespace works, foreign-key access and old Redis authentication are rejected. The fresh rate state was initialized once using NX. This overlay is only for the owner-approved attended MCP recall test, at most 10 minutes. End it with security-stop to disabled5, removal of the overlay and actual route, and external 404 verification. No personal memories are read; the synthetic fixture returns an empty result set.
