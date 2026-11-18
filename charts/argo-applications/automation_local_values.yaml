@@ -193,4 +193,3 @@ applications:
         valueFiles:
           - kkamji_local_values.yaml
           - staging_local_values.yaml
-          - owner_synthetic_window_values.yaml

@@ -1,6 +1,6 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-16T23:37:28.374939+00:00
+updated: 2026-11-16T23:37:55.152343+00:00
 type: runbook
 status: current
 ---
@@ -251,3 +251,7 @@ The epoch6 new durable app completed OAuth, but the intended durable-app recall 
 ### Epoch7 durable-app open
 
 This prepared opening adds only the existing synthetic owner-window overlay after private epoch7 verification and automatic closure readiness. Use the existing Hindsight synthetic durable app with fresh OAuth and fixed fictional query only. No new app, callback, scope, image or native permission is added. Exposure must end within10 minutes or immediately on authentication failure, advancing gate to disabled8 and removing overlay/actual HTTPRoute with external404 verification. Preserve durable registry/PVC; never restore prior grants.
+
+### Epoch7 durable-app close
+
+This paired closure removes only the temporary owner-window overlay and restores the original private-only automation snapshot. Security-stop forward to disabled8 within10 minutes or immediately on authentication failure, then verify actual HTTPRoute removal and external404 regardless of recall result. Preserve durable registration/PVC/native services. Source closure does not itself prove recall success or runtime cleanup.
