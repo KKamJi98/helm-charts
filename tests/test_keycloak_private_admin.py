@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import unittest
@@ -60,8 +61,22 @@ PROXY = {
     "gateway.envoyproxy.io/owning-gateway-namespace": NAMESPACE,
     **ACCESS,
 }
+METRICS = ("CiliumNetworkPolicy", NAMESPACE, NAME + "-prometheus-ingress")
+PROMETHEUS = {
+    "k8s:io.kubernetes.pod.namespace": "monitoring",
+    "k8s:io.cilium.k8s.policy.serviceaccount": "kube-prometheus-stack-prometheus",
+}
+METRICS_SPEC = {
+    "endpointSelector": {"matchLabels": {"k8s:" + key: value for key, value in PROXY.items()}},
+    "ingress": [{
+        "fromEndpoints": [{"matchLabels": PROMETHEUS}],
+        "toPorts": [{"ports": [{"port": "19001", "protocol": "TCP"}],
+                     "rules": {"http": [{"method": "GET", "path": "^/stats/prometheus$"}]}}],
+    }],
+}
 # Fixed security assertions, not projections of mutable values/profile files.
 EXPECTED = {
+    METRICS: METRICS_SPEC,
     ("EnvoyProxy", NAMESPACE, NAME): {
         "mergeGateways": False, "concurrency": 1,
         "provider": {"type": "Kubernetes", "kubernetes": {
@@ -121,23 +136,78 @@ def assert_contract(case, objects):
             "EnvoyProxy": "gateway.envoyproxy.io/v1alpha1", "Gateway": "gateway.networking.k8s.io/v1",
             "HTTPRoute": "gateway.networking.k8s.io/v1", "ReferenceGrant": "gateway.networking.k8s.io/v1beta1",
             "NetworkPolicy": "networking.k8s.io/v1",
+            "CiliumNetworkPolicy": "cilium.io/v2",
         }[key[0]])
 
 
+def metrics_exception_allows(policy, target, source, port=19001, protocol="TCP",
+                             method="GET", path="/stats/prometheus"):
+    """Only the added allow rule's source model, not Cilium execution or total policy evaluation."""
+    matches = lambda selector, labels: all(labels.get(k) == v for k, v in selector["matchLabels"].items())
+    if not matches(policy["spec"]["endpointSelector"], {"k8s:" + k: v for k, v in target.items()}):
+        return False
+    for ingress in policy["spec"]["ingress"]:
+        if not any(matches(peer, source) for peer in ingress["fromEndpoints"]):
+            continue
+        for to_ports in ingress["toPorts"]:
+            if not any(p["port"] == str(port) and p["protocol"] == protocol for p in to_ports["ports"]):
+                continue
+            if any(re.fullmatch(rule["method"], method) and re.fullmatch(rule["path"], path)
+                   for rule in to_ports["rules"]["http"]):
+                return True
+    return False
+
+
 class PrivateServiceTests(unittest.TestCase):
-    def test_service_defaults_disabled_and_local_adds_three_objects(self):
+    def test_metrics_requires_exact_prometheus_identity_and_http_get(self):
+        objects = documents(render(SERVICE))
+        self.assertIn(METRICS, objects, "private Envoy metrics require a narrow Cilium L7 allow")
+        self.assertEqual(objects[METRICS]["spec"], METRICS_SPEC)
+
+    def test_metrics_model_rejects_wrong_identity_and_non_private_targets(self):
+        policy = documents(render(SERVICE))[METRICS]
+        self.assertTrue(metrics_exception_allows(policy, PROXY, PROMETHEUS))
+        for field in PROMETHEUS:
+            for value in (None, "default", "other"):
+                with self.subTest(source_field=field, value=value):
+                    source = {**PROMETHEUS, field: value}
+                    self.assertFalse(metrics_exception_allows(policy, PROXY, source))
+        for field in PROXY:
+            for value in (None, "kkamji"):
+                with self.subTest(target_field=field, value=value):
+                    self.assertFalse(metrics_exception_allows(policy, {**PROXY, field: value}, PROMETHEUS))
+        self.assertFalse(metrics_exception_allows(policy, PROXY, {}))
+
+    def test_metrics_model_rejects_admin_paths_methods_and_other_ports(self):
+        policy = documents(render(SERVICE))[METRICS]
+        self.assertTrue(metrics_exception_allows(policy, PROXY, PROMETHEUS))
+        for port in (80, 443, 8080, 9000, 10443, 19000, 19002):
+            with self.subTest(port=port):
+                self.assertFalse(metrics_exception_allows(policy, PROXY, PROMETHEUS, port=port))
+        self.assertFalse(metrics_exception_allows(policy, PROXY, PROMETHEUS, protocol="UDP"))
+        for method in ("HEAD", "POST", "PUT", "DELETE", "GETTING", "get"):
+            with self.subTest(method=method):
+                self.assertFalse(metrics_exception_allows(policy, PROXY, PROMETHEUS, method=method))
+        for path in ("/", "/config_dump", "/server_info", "/ready", "/stats", "/quitquitquit",
+                     "/stats/prometheus/", "/stats/prometheus-extra", "/prefix/stats/prometheus",
+                     "/stats/prometheus?format=json", "/stats/prometheus%2f", "/Stats/prometheus"):
+            with self.subTest(path=path):
+                self.assertFalse(metrics_exception_allows(policy, PROXY, PROMETHEUS, path=path))
+
+    def test_service_defaults_disabled_and_local_adds_four_objects(self):
         self.assertEqual(documents(render(SERVICE, local=False)), {})
         enabled = documents(render(SERVICE))
         self.assertEqual(set(enabled), {
             ("HTTPRoute", NAMESPACE, NAME), ("ReferenceGrant", "keycloak", NAME),
             ("NetworkPolicy", "keycloak", NAME + "-server-ingress"),
+            METRICS,
         })
         self.assertEqual(yaml.safe_load((SERVICE / "values.yaml").read_text()), {"keycloakAdminPrivate": {"enabled": False}})
         self.assertEqual(yaml.safe_load((SERVICE / "kkamji_local_values.yaml").read_text()), {"keycloakAdminPrivate": {"enabled": True}})
         self.assertNotIn("dependencies", yaml.safe_load((SERVICE / "Chart.yaml").read_text()))
         self.assertFalse((SERVICE / "Chart.lock").exists())
 
-    def test_combined_exact_six_resource_security_contract(self):
+    def test_combined_exact_seven_resource_security_contract(self):
         assert_contract(self, combined())
 
 
@@ -207,6 +277,8 @@ class PrivateRefusalTests(unittest.TestCase):
             ("hostNetwork", True), ("mergeGateways", True), ("podLabels", {}),
             ("accessLog", {"disable": False}), ("backendPort", 9000), ("egress", [{}]),
             ("referenceGrant", {"to": [{"kind": "Secret"}]}), ("unknown", True),
+            ("metricsPort", 19000), ("metricsPath", "/.*"), ("metricsServiceAccount", "default"),
+            ("metricsNamespace", "default"), ("metricsL7", False), ("metricsPeers", [{}]),
         ]]
         for chart in (PLATFORM, SERVICE):
             cases = unsafe + ([{"namespaceOverride": "default"}, {"fullnameOverride": "other"},
@@ -260,6 +332,19 @@ class PrivateRefusalTests(unittest.TestCase):
             (ingress, ("spec", "ingress", 0, "from", 0, "podSelector"), {}),
             (ingress, ("spec", "ingress", 0, "ports", 0, "port"), 5432),
             (ingress, ("spec", "egress"), [{}]),
+            (METRICS, ("spec", "endpointSelector"), {}),
+            (METRICS, ("spec", "endpointSelector", "matchLabels"), {"k8s:kkamji.net/access": NAME}),
+            (METRICS, ("spec", "ingress", 0, "fromEndpoints"), [{"matchLabels": {}}]),
+            (METRICS, ("spec", "ingress", 0, "fromEndpoints", 0, "matchLabels"),
+             {"k8s:io.kubernetes.pod.namespace": "monitoring"}),
+            (METRICS, ("spec", "ingress", 0, "fromEndpoints", 0, "matchLabels"),
+             {"k8s:io.cilium.k8s.policy.serviceaccount": "kube-prometheus-stack-prometheus"}),
+            (METRICS, ("spec", "ingress", 0, "toPorts", 0, "ports", 0, "port"), "19000"),
+            (METRICS, ("spec", "ingress", 0, "toPorts", 0, "rules"), {}),
+            (METRICS, ("spec", "ingress", 0, "toPorts", 0, "rules", "http", 0), {}),
+            (METRICS, ("spec", "ingress", 0, "toPorts", 0, "rules", "http", 0, "method"), ".*"),
+            (METRICS, ("spec", "ingress", 0, "toPorts", 0, "rules", "http", 0, "path"), "^/stats/.*$"),
+            (METRICS, ("spec", "egress"), [{}]),
         ]
         mutations += [(key, ("metadata", "annotations"), annotations) for key in (gateway, route)
                       for annotations in ({}, {DNS_KEY: "dns-controller"}, {"external-dns.alpha.kubernetes.io/exclude": "true"})]

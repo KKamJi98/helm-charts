@@ -77,4 +77,33 @@ spec:
       ports:
         - protocol: TCP
           port: 8080
+---
+# Keep proxy HTTPS default-deny. Only Prometheus may use the metrics listener,
+# and never as a generic Envoy admin API. These Cilium identity labels are not
+# caller-controlled HTTP headers or ordinary Pod labels.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: keycloak-admin-private-prometheus-ingress
+  namespace: envoy-gateway-system
+spec:
+  endpointSelector:
+    matchLabels:
+      k8s:app.kubernetes.io/component: proxy
+      k8s:gateway.envoyproxy.io/owning-gateway-name: keycloak-admin-private
+      k8s:gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway-system
+      k8s:kkamji.net/access: keycloak-admin-private
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: monitoring
+            k8s:io.cilium.k8s.policy.serviceaccount: kube-prometheus-stack-prometheus
+      toPorts:
+        - ports:
+            - port: "19001"
+              protocol: TCP
+          rules:
+            http:
+              - method: GET
+                path: "^/stats/prometheus$"
 {{- end }}
