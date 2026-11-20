@@ -2,6 +2,8 @@
 # Apply after kkamji_local_values.yaml; values are references/public metadata only.
 preparationProfile: keycloak-26.8.2-production
 productionPhase: database
+keycloak:
+  instances: 1
 publicCaProjection:
   enabled: true
 database:

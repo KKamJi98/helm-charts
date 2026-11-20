@@ -37,6 +37,7 @@ BACKUP = {
 PRODUCTION = {
     "preparationProfile": "keycloak-26.8.2-production",
     "productionPhase": "database",
+    "keycloak": {"instances": 1},
     "publicCaProjection": {"enabled": True},
     "database": {"backup": BACKUP},
 }
@@ -78,7 +79,7 @@ def command(override=None, phase="database", skip_schema=False, namespace="keycl
     if skip_schema:
         args += ["--skip-schema-validation"]
     if override is None:
-        return subprocess.run(args + ["--set", "productionPhase=" + phase], capture_output=True, text=True)
+        return subprocess.run(args + ["--set-string", "productionPhase=" + phase], capture_output=True, text=True)
     with tempfile.TemporaryDirectory(prefix="keycloak-production-negative-") as tmp:
         path = Path(tmp) / "override.json"
         path.write_text(json.dumps({"productionPhase": phase, **override}))
@@ -100,6 +101,86 @@ class KeycloakProductionProfileTests(unittest.TestCase):
         result = command(phase=phase)
         self.assertEqual(result.returncode, 0, result.stderr)
         return documents(result.stdout)
+
+    def test_production_single_app_preserves_preparation_and_all_other_fields(self):
+        result = preparation.KeycloakPreparationTests.command(preparation.APP)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        local = next(obj for obj in documents(result.stdout) if obj["kind"] == "Keycloak")
+        production = next(obj for obj in self.render("application") if obj["kind"] == "Keycloak")
+        self.assertEqual(local["spec"]["instances"], 2)
+        self.assertEqual(production["spec"]["instances"], 1)
+        expected = copy.deepcopy(local["spec"])
+        expected["instances"] = 1
+        self.assertEqual(production["spec"], expected)
+        for phase in ("database", "application"):
+            cluster = next(obj for obj in self.render(phase) if obj["kind"] == "Cluster")
+            self.assertEqual(cluster["spec"]["instances"], 3)
+
+    def test_instance_counts_remain_profile_specific_even_without_schema(self):
+        for phase in ("database", "application"):
+            for count in (0, 2, 3, "1", True, None):
+                for skip in (False, True):
+                    with self.subTest(phase=phase, count=count, skip_schema=skip):
+                        result = command({"keycloak": {"instances": count}}, phase=phase, skip_schema=skip)
+                        self.assertNotEqual(result.returncode, 0)
+                        if skip:
+                            self.assertIn("immutable supported-field profile mismatch", result.stderr)
+            for skip in (False, True):
+                result = command({"database": {"instances": 2}}, phase=phase, skip_schema=skip)
+                self.assertNotEqual(result.returncode, 0)
+        for ca_enabled in (False, True):
+            for skip in (False, True):
+                result = preparation.KeycloakPreparationTests.command(
+                    preparation.APP, override={"publicCaProjection": {"enabled": ca_enabled},
+                                               "keycloak": {"instances": 1}}, skip_schema=skip)
+                self.assertNotEqual(result.returncode, 0)
+                if skip:
+                    self.assertIn("immutable supported-field profile mismatch", result.stderr)
+
+    def test_schema_keeps_every_non_instance_keycloak_field_immutable(self):
+        local = yaml.safe_load((preparation.APP / "values.yaml").read_text())
+        production = copy.deepcopy(local)
+        production.update({key: value for key, value in PRODUCTION.items() if key not in ("database", "keycloak")})
+        production["keycloak"]["instances"] = 1
+        production["database"]["backup"] = copy.deepcopy(BACKUP)
+        for candidate in (local, {**local, "publicCaProjection": {"enabled": True}},
+                          production, {**production, "productionPhase": "application"}):
+            jsonschema.validate(candidate, self.schema)
+            invalids = []
+            for field in candidate["keycloak"]:
+                missing = copy.deepcopy(candidate)
+                missing["keycloak"].pop(field)
+                invalids.append(missing)
+                changed = copy.deepcopy(candidate)
+                changed["keycloak"][field] = None
+                invalids.append(changed)
+            unknown = copy.deepcopy(candidate)
+            unknown["keycloak"]["unsupported"] = True
+            invalids.append(unknown)
+            wrong_count = copy.deepcopy(candidate)
+            wrong_count["keycloak"]["instances"] = 1 if candidate["keycloak"]["instances"] == 2 else 2
+            invalids.append(wrong_count)
+            for invalid in invalids:
+                with self.assertRaises(jsonschema.ValidationError):
+                    jsonschema.validate(invalid, self.schema)
+
+    def test_single_app_render_derived_resource_budget(self):
+        objects = self.render("application")
+        app = next(obj for obj in objects if obj["kind"] == "Keycloak")["spec"]
+        db = next(obj for obj in objects if obj["kind"] == "Cluster")["spec"]
+        operator = preparation.KeycloakPreparationTests.render(preparation.OPERATOR)
+        deployment = next(obj for obj in operator if obj["kind"] == "Deployment")
+        op = preparation.resource_vector(deployment["spec"]["template"]["spec"]["containers"][0]["resources"])
+        server = preparation.resource_vector(app["resources"])
+        database = preparation.resource_vector(db["resources"])
+        self.assertEqual((app["instances"], db["instances"]), (1, 3))
+        steady = preparation.sum_vectors(op, *([server] * app["instances"]), *([database] * db["instances"]))
+        self.assertEqual(steady, (2050, 5570, 5700, 5570))
+        # Hypothetical import, Operator surge and one spare CNPG Pod; not live concurrency proof.
+        self.assertEqual(preparation.sum_vectors(steady, server), (3050, 7618, 7700, 7618))
+        self.assertEqual(preparation.sum_vectors(steady, server, op), (3350, 8068, 8400, 8068))
+        self.assertEqual(preparation.sum_vectors(steady, server, op, database), (3600, 9092, 9400, 9092))
+        self.assertEqual(db["instances"] * 10, 30)
 
     def test_database_tolerations_are_omitted_for_podspec_snapshot_stability(self):
         for phase in ("database", "application"):
@@ -152,7 +233,9 @@ class KeycloakProductionProfileTests(unittest.TestCase):
             if key[0] not in ("Keycloak", "Cluster"):
                 self.assertEqual(app_by[key], obj)
         app = app_by[("Keycloak", "keycloak")]
-        self.assertEqual(app["spec"], baseline[("Keycloak", "keycloak")]["spec"])
+        expected_app = copy.deepcopy(baseline[("Keycloak", "keycloak")]["spec"])
+        expected_app["instances"] = 1
+        self.assertEqual(app["spec"], expected_app)
         self.assertEqual(app["metadata"]["annotations"], {"argocd.argoproj.io/sync-wave": "1"})
         db = copy.deepcopy(app_by[("Cluster", "keycloak-db")])
         self.assertEqual(db["spec"].pop("backup"), BACKUP)
@@ -272,7 +355,7 @@ class KeycloakProductionProfileTests(unittest.TestCase):
             {"productionPhase": "application", "publicCaProjection": {"enabled": False}},
             {"preparationProfile": "keycloak-26.8.2-local-only"},
             {"preparationProfile": "keycloak-26.8.2-anything"},
-            {"keycloak": {"instances": 1}},
+            {"keycloak": {"instances": 2}},
             {"keycloak": {"automountServiceAccountToken": True}},
             {"keycloak": {"additionalOptions": [{"name": "db-tls-mode", "value": "disabled"}]}},
             {"database": {"affinity": {"nodeAffinity": None}}},
@@ -293,7 +376,8 @@ class KeycloakProductionProfileTests(unittest.TestCase):
     def test_values_schema_enforces_profile_pairs_without_template_guard(self):
         values = yaml.safe_load((preparation.APP / "values.yaml").read_text())
         production = copy.deepcopy(values)
-        production.update({key: value for key, value in PRODUCTION.items() if key != "database"})
+        production.update({key: value for key, value in PRODUCTION.items() if key not in ("database", "keycloak")})
+        production["keycloak"]["instances"] = 1
         production["database"]["backup"] = copy.deepcopy(BACKUP)
         jsonschema.Draft7Validator.check_schema(self.schema)
         for candidate in (values, production, {**production, "productionPhase": "application"}):
@@ -320,7 +404,7 @@ class KeycloakProductionProfileTests(unittest.TestCase):
             result = subprocess.run([preparation.HELM, "lint", str(preparation.APP), "--strict",
                                      "-f", str(preparation.APP / "kkamji_local_values.yaml"),
                                      "-f", str(preparation.APP / "production-values.yaml"),
-                                     "--set", "productionPhase=" + phase], capture_output=True, text=True)
+                                     "--set-string", "productionPhase=" + phase], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 

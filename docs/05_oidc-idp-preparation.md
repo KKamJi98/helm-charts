@@ -1,6 +1,6 @@
 ---
 title: Keycloak OIDC IdP preparation
-updated: 2026-11-17T01:39:57+09:00
+updated: 2026-11-20T00:01:11+09:00
 type: runbook
 status: current
 ---
@@ -37,7 +37,9 @@ parameters:
     forceString: true
 ```
 
-Argo Helm parameter를 `--set-string productionPhase=application`으로 반영한 렌더는 17개 객체입니다. 기존 DB 16개는 동일하며 `Keycloak/keycloak` CR 하나만 추가합니다. stock digest, `startOptimized: false`, 2 instances와 requests `1 CPU / 2 Gi`, 엄격한 DB TLS/FQDN과 public-only trust Secret 참조를 유지합니다. 빈 DB tolerations 생략을 보존하고 임시 reconcile bypass는 넣지 않습니다.
+Argo Helm parameter를 `--set-string productionPhase=application`으로 반영한 렌더는 17개 객체입니다. 기존 DB 16개는 동일하며 `Keycloak/keycloak` CR 하나만 추가합니다. production overlay와 독립 canonical profile은 app `instances: 1`을 고정합니다. 기존 production application 렌더와의 유일한 의미 차이는 `Keycloak/keycloak.spec.instances`의 2 -> 1입니다. stock digest, `startOptimized: false`, instance당 requests `1 CPU / 2 Gi`, 엄격한 DB TLS/FQDN과 public-only trust Secret 참조를 유지합니다. 빈 DB tolerations 생략을 보존하고 임시 reconcile bypass는 넣지 않습니다.
+
+기본 local/CA-only 준비 profile은 2 app instances 그대로이며 production DB 기본 phase는 서버 없이 16개 객체 그대로입니다. 모든 profile의 DB 3 instances, PVC/storage, backup/retention, bootstrap/credential refs, namespace, 인증과 realm/client 상태를 바꾸지 않습니다. schema는 profile별 2/1 count를 제한하고, 독립 template guard는 schema 우회 시에도 다른 count나 보안 설정 변경을 거부합니다. 단일 app은 재시작, CA uptake나 해당 worker 장애 시 서비스 중단이 가능하며 app HA를 제공하지 않습니다. 배포 후 실제 readiness/연결과 기존 인증 보존은 부모가 별도로 확인합니다.
 
 이 전환은 private server만 대상으로 하며 HTTPRoute/Ingress, RealmImport/OIDCClient/SAMLClient, Job/CronJob, Application이나 Secret 값을 생성하지 않습니다. 내부 HTTP8080은 통제된 인증 HTTPS 관리 경로를 의미하지 않습니다. 공개/admin/master 경로와 realm/client는 닫힌 상태이며 사람용/기계용 인증이나 기존 앱 로그인은 바꾸지 않습니다. main 반영은 서버 CR을 생성하는 실제 배포 경계입니다.
 
@@ -89,8 +91,8 @@ Keycloak/RealmImport 작성자는 namespace 관리자와 같은 신뢰 범위로
 
 - Keycloak CR은 `k8s.keycloak.org/v2beta1`, name/release는 `keycloak`입니다.
 - stock image를 `spec.image`로 고정하므로 `spec.startOptimized: false`도 명시합니다.
-- Keycloak 2 replicas와 전용 CNPG 3 instances를 목표로 합니다. 플랫폼 DB와 공유하지 않습니다.
-- app replica는 실제 Operator labels에 맞는 hostname anti-affinity로 두 worker에 나눕니다.
+- production Keycloak은 1 replica, local/CA-only 준비는 2 replicas이며 전용 CNPG는 모두 3 instances입니다. 플랫폼 DB와 공유하지 않습니다.
+- app의 기존 worker affinity와 실제 Operator labels에 맞는 hostname anti-affinity는 유지합니다. 단일 production replica를 두 worker에 동시에 나눌 수는 없습니다.
 - DB 3개는 두 worker에서 엄격한 3-node anti-affinity를 만족할 수 없으므로 preferred 배치를 사용합니다.
 - control-plane NoSchedule taint를 해제하지 않습니다. app에는 공유 RWO data PVC를 만들지 않습니다.
 - 이미지 변경의 update strategy는 `RecreateOnImageChange`입니다. 업데이트 중단을 허용하는 선택입니다.
@@ -105,10 +107,12 @@ Import/Auto-update Job은 서버 scheduling을 상속할 수 있습니다.
 목표는 각 Keycloak requests `1 CPU / 2 Gi`, limits `2 CPU / 2 Gi`입니다.
 각 DB는 requests `250m / 1 Gi`, limits `1 CPU / 1 Gi`, storage `10 Gi`입니다.
 Operator는 upstream requests `300m / 450 Mi`, limits `700m / 450 Mi`를 유지합니다.
-실제 렌더/고정 Operator 소스로 계산한 정상 모델은 6 Pods, requests `3050m / 7618 Mi`, limits `7700m / 7618 Mi`, DB `30 Gi`입니다.
+local/CA-only 2-app 렌더와 고정 Operator 소스로 계산한 정상 모델은 6 Pods, requests `3050m / 7618 Mi`, limits `7700m / 7618 Mi`, DB `30 Gi`입니다.
 import 1개는 7 Pods/requests `4050m / 9666 Mi`, Operator 기본 surge까지 겹치면 8 Pods/`4350m / 10116 Mi`입니다.
 추가 CNPG Pod 하나를 여유로 더한 9 Pods/`4600m / 11140 Mi`는 보수적 reserve이며 controller가 그 동시성을 보장한다는 뜻이 아닙니다.
 규칙적인 init/main은 순차 자원의 max로 계산했습니다. 실제 스케줄러, admission 변경과 운영 동시성은 미검증입니다.
+
+1-app production 정상 모델은 5 Pods, requests `2050m / 5570 Mi`, limits `5700m / 5570 Mi`, DB `30 Gi`입니다. app instance당 resources는 줄이지 않습니다. 같은 가정의 import 1개를 더하면 6 Pods/requests `3050m / 7618 Mi`, Operator surge까지는 7 Pods/`3350m / 8068 Mi`, CNPG spare 1개까지의 보수적 reserve는 8 Pods/`3600m / 9092 Mi`입니다. 현재 application 렌더는 import Job을 만들지 않으며 이 계산은 실제 동시성이나 중단 없는 rollout을 보장하지 않습니다.
 
 조사 시 requests headroom은 worker 1 `6575m / 8240.7 Mi`, worker 2 `4795m / 3882.7 Mi`였습니다.
 이는 실제 RAM 여유나 처리량의 증거가 아닙니다. worker 2의 기존 memory limits 합계는 allocatable을 초과했습니다.
@@ -235,6 +239,8 @@ Helm4.2.1 strict lint/template, immutable 원본/overlay/schema, credential refs
 원본 공개 hash를 generic-api-key로 탐지한 raw scan6건은 원문/해시로 분류하며 억제하거나 raw exit1을 clean으로 표시하지 않습니다.
 실제 결과는 [후보 README](../examples/keycloak-preparation/README.md)와 task 증적의 최종 review manifest/보고서로 관리합니다.
 미커밋 docs 검사는 구조 검사이며 --base origin/main commit freshness/coupling CI 완료로 부르지 않습니다.
+
+단일 production app 회귀는 local 2-app과 production 1-app의 전체 spec에서 count 외 동일성, DB 3-instance 보존, schema의 모든 app 필드 필수/불변성과 양 phase의 잘못된 count 거부를 검사합니다. Helm schema 우회 시에도 독립 guard를 시험합니다. main 반영 직전 최신 origin/main에 대해 동일한 렌더 diff를 다시 확인하고 최종 커밋에서 docs freshness/coupling과 CI를 실행합니다. 게시와 main 반영은 별도 부모 승인 경계이며 이 로컬 후보는 commit/push/live write를 수행하지 않습니다.
 
 ## 공식 근거
 

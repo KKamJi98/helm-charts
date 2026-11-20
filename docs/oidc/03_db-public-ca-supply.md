@@ -1,6 +1,6 @@
 ---
 title: Keycloak database public CA supply
-updated: 2026-11-16T04:36:04+09:00
+updated: 2026-11-20T00:01:11+09:00
 type: runbook
 status: current
 ---
@@ -42,18 +42,25 @@ schema validation is bypassed. No rendered production object says local-only.
 
 | Explicit profile/phase | IdP objects | App CR | Backup |
 | --- | --- | --- | --- |
-| Local default | 8 | Present, still unaccepted preparation | Absent |
-| Local plus CA flag | 15 | Present, still unaccepted preparation | Absent |
+| Local default | 8 | Present, 2 instances, still unaccepted preparation | Absent |
+| Local plus CA flag | 15 | Present, 2 instances, still unaccepted preparation | Absent |
 | Production, `productionPhase: database` | 16 | **Absent** | Required |
-| Production, `productionPhase: application` | 17 | Present, sync-wave 1 | Required |
+| Production, `productionPhase: application` | 17 | Present, 1 instance, sync-wave 1 | Required |
 
 The production overlay deliberately starts in **database** phase. It renders
 the DB, credential references, public-CA reader/Store/projection, ingress-only
 policies, backup ExternalSecret and ScheduledBackup, but no Keycloak app.
-The app/database images, resources, 2-app/3-DB counts, worker-node affinity,
-app anti-affinity, tokenless app, HTTPS hostname, JDBC `verify-full` mapping,
-private management and disabled ingress are unchanged. There is no Namespace,
+Production fixes the app count at 1; local/CA-only preparation stays at 2.
+All profiles preserve 3 DB instances, app/database images, per-instance resources,
+worker-node affinity, app anti-affinity, tokenless app, HTTPS hostname,
+JDBC `verify-full` mapping, private management and disabled ingress. There is no Namespace,
 Application, route or realm/client import. No owner or MFA state is generated.
+
+The production application scale-down changes only the app CR's `spec.instances`
+from 2 to 1. All 16 database-phase objects, PVC/storage/backup declarations and
+credential/authentication references remain unchanged. Both schema and the
+independent template guard reject other counts. One app instance has no app
+redundancy; restart, CA uptake and worker failure can interrupt service.
 
 An offline production render is:
 
@@ -65,7 +72,7 @@ helm template keycloak charts/keycloak-idp -n keycloak \
 ```
 
 Only after parent acceptance of the first phase may the reviewed rollout add
-`--set productionPhase=application`, or its equivalent explicit GitOps value.
+`--set-string productionPhase=application`, or its equivalent explicit GitOps value.
 The phase is an operator decision, **not proof of live readiness**. Before that
 switch, the parent must verify DB readiness, credential/Store/ExternalSecret
 states, actual target `{ca.crt}` public-only content and single writer, and the
@@ -146,7 +153,7 @@ archiving/restart effect when changing a live Cluster. The pinned object-store
 docs defer authentication execution to Barman; schema support is not proof of
 AWS authentication, TLS or a working backup.[23]
 
-Application phase still requires both replacement app Pods/fresh connections
+Application phase still requires all desired replacement app Pods/fresh connections
 and before/after wrong-CA, wrong-hostname and downgrade rejection. Different
 CA-key rotation remains the separately reviewed overlap procedure below. An
 AWS foundation, successful render, ScheduledBackup CR or `SecretSynced` state
@@ -287,8 +294,8 @@ the dependent resource returns the updated StatefulSet for that path.[15][12]
 Despite legacy class/method names containing "Deployment", the resource here is
 a StatefulSet. The source supports restart-based uptake. An updated Secret,
 mounted file or successful ESO condition alone does **not** prove Java/JDBC
-trust reloading. Parent acceptance must observe the Pod-template hash, both
-replacement Pods reaching ready, and newly established JDBC/TLS connections.
+trust reloading. Parent acceptance must observe the Pod-template hash, every
+desired replacement Pod reaching ready (1 production, 2 local preparation), and newly established JDBC/TLS connections.
 
 ### A different CA key: explicit old/new public-root overlap required
 
@@ -364,7 +371,7 @@ rotation was performed by this source task.
   deadlock a later DB creation by waiting for an as-yet nonexistent source.
 - Confirm source/target public certificate fingerprints and validity match;
   verify `{ca.crt}` is the target's entire data keyset and PEM is public-only.
-- Observe normal same-key CA renewal propagation, both app Pod replacements and
+- Observe normal same-key CA renewal propagation, all desired app Pod replacements and
   fresh JDBC `verify-full` success. Require wrong-CA/wrong-hostname/downgrade
   rejection before and after renewal and any separately approved key rotation.
 - Monitor expiry, ESO error/stale-target state, unavailable source, failed

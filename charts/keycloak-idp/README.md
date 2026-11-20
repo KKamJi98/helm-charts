@@ -5,7 +5,7 @@ The candidate path is `charts/keycloak-idp`, not `charts/keycloak`. No Helm
 install/upgrade or human-MFA action is performed by this source alone. The
 default local preparation profile does not declare an active GitOps Application,
 Namespace, public route or realm/client import. The current management root
-separately selects the production database phase; see the
+separately selects the production application phase; see the
 [phased GitOps deployment](../../docs/05_oidc-idp-preparation.md). That declaration
 does not prove actual DB readiness, backup/restore or owner login acceptance.
 
@@ -13,10 +13,10 @@ does not prove actual DB readiness, backup/restore or owner login acceptance.
 
 | Values | IdP objects | Meaning |
 | --- | --- | --- |
-| `kkamji_local_values.yaml` | 8 | Unchanged local preparation; backup absent |
-| Same plus `publicCaProjection.enabled=true` | 15 | Public CA supply only; backup absent |
+| `kkamji_local_values.yaml` | 8 | Unchanged 2-app local preparation; backup absent |
+| Same plus `publicCaProjection.enabled=true` | 15 | Unchanged 2-app public CA supply only; backup absent |
 | Same plus `production-values.yaml` | 16 | Production database phase; **no app CR** |
-| Production plus `productionPhase=application` | 17 | Explicit app activation after parent runtime acceptance |
+| Production plus `productionPhase=application` | 17 | Exactly 1 app instance after parent runtime acceptance |
 
 The production overlay must follow `kkamji_local_values.yaml`. It selects the
 exact `keycloak-26.8.2-production` enum and requires public-only CA projection
@@ -25,13 +25,21 @@ the DB, ESO credential references, public CA supply and daily backup schedule
 before any Keycloak app exists. Application phase is a separate reviewed
 operator decision, not an automatic assertion that live gates have passed.
 
-Both schema and independent template guard preserve the image digests,
-2-app/3-DB sizing, resources, worker affinity/anti-affinity, tokenless app,
+Both schema and independent template guard require 1 app instance in production
+and preserve 2 app instances in local/CA-only preparation. All profiles retain
+3 DB instances, the image digests, per-instance resources, worker affinity/anti-affinity, tokenless app,
 strict HTTPS/JDBC verify-full behavior, private management and disabled
 ingress. No egress allow-all, unsupported podTemplate or weak JDBC URL is added.
 Production requires the exact backup bucket/prefix, named credential selectors,
 gzip/AES256 data and WAL, 30-day retention window and daily schedule. All
 credential material remains outside source; only refs/public metadata are here.
+
+The production scale-down changes only `Keycloak/keycloak.spec.instances` from
+2 to 1 in the effective application render. Database-phase objects, DB/PVC/data,
+credentials, authentication, realm/client state and namespace are unchanged.
+One app instance removes app-level redundancy: its restart or worker outage can
+interrupt service. The retained anti-affinity is not HA with a single replica.
+Publish only through reviewed GitOps; do not use Helm upgrade or live scale.
 
 Do not pass the CNPG whole CA Secret to the app: it contains `ca.key`.
 The optional ESO Kubernetes provider maps only `ca.crt` to the existing whole-
