@@ -135,13 +135,17 @@ class ManagementServerActivationTests(unittest.TestCase):
         default = {preparation.identity(obj): obj for obj in preparation.documents(preparation_result.stdout)}
         self.assertEqual(len(default), 8)
         server = rendered["Keycloak", "keycloak"]
-        self.assertEqual(server["spec"], default["Keycloak", "keycloak"]["spec"])
+        expected_spec = copy.deepcopy(default["Keycloak", "keycloak"]["spec"])
+        expected_spec["instances"] = 1
+        self.assertEqual(server["spec"], expected_spec)
+        self.assertEqual(default["Keycloak", "keycloak"]["spec"]["instances"], 2)
+        self.assertEqual(cluster["spec"]["instances"], 3)
         self.assertEqual(server["apiVersion"], "k8s.keycloak.org/v2beta1")
         self.assertEqual(server["metadata"]["annotations"], {"argocd.argoproj.io/sync-wave": "1"})
         spec = server["spec"]
         self.assertEqual(spec["image"], preparation.SERVER_IMAGE)
         self.assertIs(spec["startOptimized"], False)
-        self.assertEqual(spec["instances"], 2)
+        self.assertEqual(spec["instances"], 1)
         self.assertEqual(spec["resources"]["requests"], {"cpu": "1", "memory": "2Gi"})
         self.assertEqual(spec["additionalOptions"], [{"name": "db-tls-mode", "value": "verify-server"}])
         self.assertEqual(spec["db"]["host"], "keycloak-db-rw.keycloak.svc.cluster.local")

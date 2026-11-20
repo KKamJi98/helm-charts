@@ -28,140 +28,160 @@
       ]
     },
     "keycloak": {
-      "const": {
-        "instances": 2,
-        "image": "quay.io/keycloak/keycloak@sha256:c68e286cacd87b942ac1939a0a1481461109d6acd3a57dc496969a319a76bbf0",
-        "startOptimized": false,
-        "automountServiceAccountToken": false,
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instances",
+        "image",
+        "startOptimized",
+        "automountServiceAccountToken",
+        "resources",
+        "db",
+        "truststores",
+        "additionalOptions",
+        "hostname",
+        "http",
+        "httpManagement",
+        "proxy",
+        "ingress",
+        "networkPolicy",
+        "bootstrapAdmin",
+        "update",
+        "scheduling",
+        "import"
+      ],
+      "properties": {
+        "instances": {
+          "type": "integer",
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "image": {
+          "const": "quay.io/keycloak/keycloak@sha256:c68e286cacd87b942ac1939a0a1481461109d6acd3a57dc496969a319a76bbf0"
+        },
+        "startOptimized": {
+          "const": false
+        },
+        "automountServiceAccountToken": {
+          "const": false
+        },
         "resources": {
-          "requests": {
-            "cpu": "1",
-            "memory": "2Gi"
-          },
-          "limits": {
-            "cpu": "2",
-            "memory": "2Gi"
-          }
-        },
-        "db": {
-          "vendor": "postgres",
-          "host": "keycloak-db-rw.keycloak.svc.cluster.local",
-          "port": 5432,
-          "database": "keycloak",
-          "usernameSecret": {
-            "name": "keycloak-db-app",
-            "key": "username"
-          },
-          "passwordSecret": {
-            "name": "keycloak-db-app",
-            "key": "password"
-          }
-        },
-        "truststores": {
-          "database": {
-            "secret": {
-              "name": "keycloak-db-client-trust",
-              "optional": false
+          "const": {
+            "requests": {
+              "cpu": "1",
+              "memory": "2Gi"
+            },
+            "limits": {
+              "cpu": "2",
+              "memory": "2Gi"
             }
           }
         },
-        "additionalOptions": [
-          {
-            "name": "db-tls-mode",
-            "value": "verify-server"
+        "db": {
+          "const": {
+            "vendor": "postgres",
+            "host": "keycloak-db-rw.keycloak.svc.cluster.local",
+            "port": 5432,
+            "database": "keycloak",
+            "usernameSecret": {
+              "name": "keycloak-db-app",
+              "key": "username"
+            },
+            "passwordSecret": {
+              "name": "keycloak-db-app",
+              "key": "password"
+            }
           }
-        ],
+        },
+        "truststores": {
+          "const": {
+            "database": {
+              "secret": {
+                "name": "keycloak-db-client-trust",
+                "optional": false
+              }
+            }
+          }
+        },
+        "additionalOptions": {
+          "const": [
+            {
+              "name": "db-tls-mode",
+              "value": "verify-server"
+            }
+          ]
+        },
         "hostname": {
-          "hostname": "https://sso.kkamji.net",
-          "strict": true
+          "const": {
+            "hostname": "https://sso.kkamji.net",
+            "strict": true
+          }
         },
         "http": {
-          "httpEnabled": true,
-          "httpPort": 8080
+          "const": {
+            "httpEnabled": true,
+            "httpPort": 8080
+          }
         },
         "httpManagement": {
-          "port": 9000
+          "const": {
+            "port": 9000
+          }
         },
         "proxy": {
-          "headers": "xforwarded"
+          "const": {
+            "headers": "xforwarded"
+          }
         },
         "ingress": {
-          "enabled": false
+          "const": {
+            "enabled": false
+          }
         },
         "networkPolicy": {
-          "enabled": false
+          "const": {
+            "enabled": false
+          }
         },
         "bootstrapAdmin": {
-          "user": {
-            "secret": "keycloak-bootstrap-admin"
+          "const": {
+            "user": {
+              "secret": "keycloak-bootstrap-admin"
+            }
           }
         },
         "update": {
-          "strategy": "RecreateOnImageChange",
-          "scheduling": {
-            "affinity": {
-              "nodeAffinity": {
-                "requiredDuringSchedulingIgnoredDuringExecution": {
-                  "nodeSelectorTerms": [
-                    {
-                      "matchExpressions": [
-                        {
-                          "key": "kubernetes.io/hostname",
-                          "operator": "In",
-                          "values": [
-                            "k8s-w1",
-                            "k8s-w2"
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                }
-              }
-            },
-            "tolerations": []
-          }
-        },
-        "scheduling": {
-          "affinity": {
-            "nodeAffinity": {
-              "requiredDuringSchedulingIgnoredDuringExecution": {
-                "nodeSelectorTerms": [
-                  {
-                    "matchExpressions": [
+          "const": {
+            "strategy": "RecreateOnImageChange",
+            "scheduling": {
+              "affinity": {
+                "nodeAffinity": {
+                  "requiredDuringSchedulingIgnoredDuringExecution": {
+                    "nodeSelectorTerms": [
                       {
-                        "key": "kubernetes.io/hostname",
-                        "operator": "In",
-                        "values": [
-                          "k8s-w1",
-                          "k8s-w2"
+                        "matchExpressions": [
+                          {
+                            "key": "kubernetes.io/hostname",
+                            "operator": "In",
+                            "values": [
+                              "k8s-w1",
+                              "k8s-w2"
+                            ]
+                          }
                         ]
                       }
                     ]
                   }
-                ]
-              }
-            },
-            "podAntiAffinity": {
-              "requiredDuringSchedulingIgnoredDuringExecution": [
-                {
-                  "labelSelector": {
-                    "matchLabels": {
-                      "app": "keycloak",
-                      "app.kubernetes.io/instance": "keycloak",
-                      "app.kubernetes.io/managed-by": "keycloak-operator",
-                      "app.kubernetes.io/component": "server"
-                    }
-                  },
-                  "topologyKey": "kubernetes.io/hostname"
                 }
-              ]
+              },
+              "tolerations": []
             }
-          },
-          "tolerations": []
+          }
         },
-        "import": {
-          "scheduling": {
+        "scheduling": {
+          "const": {
             "affinity": {
               "nodeAffinity": {
                 "requiredDuringSchedulingIgnoredDuringExecution": {
@@ -180,9 +200,51 @@
                     }
                   ]
                 }
+              },
+              "podAntiAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": [
+                  {
+                    "labelSelector": {
+                      "matchLabels": {
+                        "app": "keycloak",
+                        "app.kubernetes.io/instance": "keycloak",
+                        "app.kubernetes.io/managed-by": "keycloak-operator",
+                        "app.kubernetes.io/component": "server"
+                      }
+                    },
+                    "topologyKey": "kubernetes.io/hostname"
+                  }
+                ]
               }
             },
             "tolerations": []
+          }
+        },
+        "import": {
+          "const": {
+            "scheduling": {
+              "affinity": {
+                "nodeAffinity": {
+                  "requiredDuringSchedulingIgnoredDuringExecution": {
+                    "nodeSelectorTerms": [
+                      {
+                        "matchExpressions": [
+                          {
+                            "key": "kubernetes.io/hostname",
+                            "operator": "In",
+                            "values": [
+                              "k8s-w1",
+                              "k8s-w2"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              "tolerations": []
+            }
           }
         }
       }
@@ -205,6 +267,13 @@
         },
         "database": {
           "$ref": "#/definitions/preparationDatabase"
+        },
+        "keycloak": {
+          "properties": {
+            "instances": {
+              "const": 2
+            }
+          }
         }
       },
       "not": {
@@ -228,6 +297,13 @@
         },
         "database": {
           "$ref": "#/definitions/productionDatabase"
+        },
+        "keycloak": {
+          "properties": {
+            "instances": {
+              "const": 1
+            }
+          }
         }
       }
     }
