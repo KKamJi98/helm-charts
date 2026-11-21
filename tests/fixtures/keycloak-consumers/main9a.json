@@ -14,7 +14,8 @@
     },
     "hindsight": {
       "count": 30,
-      "objectsSha256": "c1b1da2e89306604754b2826842eb39c47e91125e0aeedb546d96b9fa45caf2a"
+      "objectsSha256": "e41c67a7f50213acb48ac7eb251b0f276be2d850738192945c8dc3d1f2fee600",
+      "rebaselined": "2026-11-22: HINDSIGHT_API_LLM_MAX_CONCURRENT 1 -> 4 on the API container; no other object changed"
     },
     "kube-prometheus-stack": {
       "count": 131,

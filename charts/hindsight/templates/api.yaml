@@ -137,7 +137,7 @@ spec:
             - name: HINDSIGHT_API_LLM_CHATGPT_HOME
               value: /auth/chatgpt
             - name: HINDSIGHT_API_LLM_MAX_CONCURRENT
-              value: "1"
+              value: {{ .Values.runtime.llmMaxConcurrent | quote }}
             - name: HINDSIGHT_API_WORKERS
               value: "1"
             - name: HINDSIGHT_API_WORKER_ENABLED
