@@ -1,0 +1,4 @@
+mokaRecallOAuth:
+  canaryEnabled: true
+  publicEnabled: false
+  image: ghcr.io/kkamji98/hindsight-dot@sha256:a1ed13ace22e517e6228c094c703a7b31ddeed79cdf2cebfc07e1cac19ba4c08

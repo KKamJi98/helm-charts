@@ -256,7 +256,7 @@ class PrivateActivationTests(unittest.TestCase):
                                     "app.kubernetes.io/managed-by": "Helm", "helm.sh/chart": "argo-applications-0.1.0"},
                          "annotations": {"argocd.argoproj.io/manifest-generate-paths": "."}})
         for root, count, expected in [
-            ("automation", 10, "376f1ae5efddd6703925b7c9df48fb4c72e985deb7bd26424bf9f64de12c00fa"),
+            ("automation", 10, "5ae0bc81b17e2407f104254f936eef2ca4b32d58cfdadf0aaef4eb4d0c9e1291"),
             ("personal", 1, "1d978181ac405ff5c821b96954ce48565e20c34e296f41ab638dc74ef27886d7"),
         ]:
             args[2] = root + "-root"

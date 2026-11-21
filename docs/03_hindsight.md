@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-17T01:39:57+09:00
+updated: 2026-11-21T15:19:44+09:00
 type: runbook
 status: current
 ---
@@ -8,6 +8,22 @@ status: current
 # 개인용 Hindsight
 
 ## 상태와 범위
+
+### 모카 전용 OAuth 비공개 사전검증
+
+모카는 별도 Hindsight 인스턴스 없이 기존 `personal_shared`의 recall만 사용합니다. OpenAI Secure MCP Tunnel은 MCP 데이터 경로를 사설로 유지합니다. 브라우저가 접근할 OAuth endpoint만 기존 `hindsight.kkamji.net`에서 제공합니다. 기존 `/v1`, `/mcp`, UI OAuth 및 비공개 Keycloak은 변경하지 않습니다.
+
+`mokaRecallOAuth.publicEnabled`는 기본 `false`입니다. 활성화 후보는 RFC 8414/9728 discovery 2개와 `/moka-recall` 아래 authorize, token, register, consent, Google callback 5개를 exact path로만 지정합니다. 공개 Service는 OAuth 전용 ASGI 경계로 전달해야 합니다. 공개 Service에 `/moka-recall/mcp`나 네이티브 API handler를 연결하지 않습니다. Google Web application의 전용 callback은 `https://hindsight.kkamji.net/moka-recall/google/callback`입니다. Google의 callback과 ChatGPT 클라이언트의 callback은 서로 다른 등록 대상입니다.
+
+FastMCP 4.2.0의 실제 ASGI 경로로 metadata, DCR, PKCE, 정확한 resource, 동의, Google redirect를 합성 값으로 검증했습니다. 합성 Google tokeninfo 응답으로 승인된 `sub`의 토큰 교환 및 사설 `connection_check` 호출도 시험했습니다. 이 결과는 실제 Google 로그인이나 기억 접근 성공을 뜻하지 않습니다.
+
+전용 Google Web application의 OAuth 자격증명은 기존 AWS 서울 SSM의 새 SecureString에서 제공합니다. ESO는 `client_id`, `client_secret`과 검증해 둔 `owner_sub` property만 가져옵니다. 기존 광역 Hindsight 키는 주입하지 않습니다. 합성 canary는 최대 10분의 고정 종료 시각, 메모리 전용 등록과 세션, 120초 access token과 refresh 비활성화를 적용합니다. MCP listener는 Pod의 IPv4 loopback에만 있고 `connection_check`만 제공합니다. 종료 시각 이후 두 포트는 새 요청을 거절합니다. 라우트 자체 정리는 별도입니다.
+
+`moka_private_values.yaml`은 기존 Application에만 적용하는 값 파일입니다. 모델 정책 생성물은 변경하지 않습니다. 비공개 모드는 OAuth 메타데이터만 응답하고, 등록, 로그인, 토큰 발급, MCP 호출은 거절합니다. Cilium은 kubelet 상태 검사에 필요한 노드 포트만 허용하고 새 외부 연결은 금지합니다. 공개 HTTPRoute를 생성하지 않습니다. 롤백은 Hindsight Application에서 이 값 파일 참조를 되돌리는 GitOps 변경이며, 기존 네이티브 서비스와 SSM 키는 보존합니다.
+
+전용 이미지의 빌드 입력은 `images/hindsight-moka-oauth/`에 있습니다. 기존 공개 GHCR 패키지의 `moka-oauth-*` 태그를 사용하되 배포는 검증한 OCI digest로 고정합니다. 이 패키지 선택은 별도 Hindsight 설치를 뜻하지 않습니다.
+
+공개 활성화 전에 새 ESO target과 실제 네트워크 경계를 확인하고, 소유자가 참여하는 합성 OAuth 시험에서 ChatGPT를 통과한 실제 실행까지 확인합니다. 지속적 grant 저장, 읽기 전용 백엔드, 다른 계정/bank/쓰기 거절은 상시 운영 연결의 별도 인수 조건입니다.
 
 2026-10-27에 승인된 `kkamji-lab` 배포, 도메인, 전용 UI/API/MCP 인증과 합성 인수를 완료했습니다. 구독 retain/recall, OAuth 갱신의 PVC 저장, seed 삭제 후 Pod 재생성과 추가 구독 호출을 실제 확인했습니다. 실제 대화 자동 수집, 프로젝트 hook, 전역 Hermes/Claude Code 통합은 켜지 않았습니다. 아래 잔여 High 취약점과 관리자/키 신뢰 경계는 기능 인수 성공과 별개로 유지됩니다.
 
