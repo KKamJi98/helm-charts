@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-22T02:35:12+09:00
+updated: 2026-11-22T02:43:06+09:00
 type: runbook
 status: current
 ---
@@ -29,7 +29,17 @@ status: current
 
 - 확장은 배포 이미지 `hindsight-security:1.1.0-20261029` 안에서 실제 `create_app`, 로더 설정 키, `MemoryEngine.recall_async` signature로 18개 검사를 통과했습니다. CI는 stub 기반 [test_moka_oauth_recall_ext.py](../tests/test_moka_oauth_recall_ext.py)로 같은 계약을 검사합니다.
 - 서비스 모드는 [test_moka_oauth_service.py](../tests/test_moka_oauth_service.py)에서 grant 암호화 저장과 재시작 유지, 소유자 이외 거절, 고정 URL/bank의 recall 도구, 공개 port의 MCP 404를 검사합니다. 로컬 `tunnel-client`는 non-root/read-only로 기동해 사설 MCP 401과 PRM을 인식했습니다.
-- 실제 Google 로그인, ChatGPT 커넥터의 recall, 다른 bank/쓰기 거절의 live 결과는 아래 인수 기록에 남깁니다.
+- 2026-11-22 live 인수(main `c277ca6`, `kkamji-lab`):
+  - Argo `hindsight`는 Synced/Healthy입니다. ESO target 3개가 Ready이고, grant PVC가 Bound입니다. `hindsight-api-0`은 1회 재시작한 뒤 Ready입니다.
+  - Hindsight API 직접 시험(port-forward): 전용 키로 `/ext/moka-recall/recall`을 호출하면 200이고, `personal_shared` 결과 38건을 공개 필드만으로 반환했습니다. 키가 없으면 401입니다. `bank_id` 필드를 넣으면 400이고, 다른 ext 경로는 404입니다. 같은 키로 `/v1` bank 목록, recall, retain, 다른 bank recall, native `/mcp`를 호출하면 모두 401입니다.
+  - 외부 경계: `/ext/...`는 Google 로그인(302)으로 갑니다. `/moka-recall/mcp`와 `/moka-recall/unknown`은 404이고, discovery 2개는 200입니다. 기존 `/v1`, `/mcp`는 키 없이 401이며 이전과 같습니다.
+  - tunnel-client: 터널 `Hindsight Recall` metadata를 조회했고, harpoon OAuth 대상 7개를 등록했으며, poller가 동작합니다.
+  - ChatGPT 커넥터 `Hindsight Recall`(Tunnel, OAuth DCR)을 만들었고, 소유자 Google 계정으로 OAuth를 마쳤습니다. 노출된 도구는 읽기 전용 `recall` 하나입니다. 새 대화의 recall 요청은 API 로그에서 `personal` bank recall(budget 300, max_tokens 4096)로 확인했습니다. 쓰기 요청과 `kkamji_private` 요청에 대해 ChatGPT는 도구가 할 수 없다고 답했고, 서버에는 쓰기 경로가 없습니다.
+  - 배포 중 고친 것:
+    - route 전환 직후 discovery가 404였습니다. Pod를 1회 재생성해 해결했습니다.
+    - Harpoon 채널 미허용으로 "OAuth 설정을 찾지 못했습니다"가 났습니다. [PR109](https://github.com/KKamJi98/helm-charts/pull/109)로 고쳤습니다.
+    - ChatGPT callback ID URI 거절로 DCR이 400이었습니다. [PR110](https://github.com/KKamJi98/helm-charts/pull/110)으로 고쳤습니다.
+  - 남은 범위: 다른 Google 계정의 거절은 테스트로만 검증했고, live로는 시험하지 않았습니다. refresh token에 의한 1시간 이후 유지도 아직 관찰하지 않았습니다.
 
 롤백: `moka_private_values.yaml`에서 `service.enabled`와 `publicEnabled`를 `false`로 되돌리면 비공개 metadata 모드로 돌아가고 API 확장 env/ConfigMap이 빠집니다(API Pod 1회 재시작). grant PVC와 SSM 값은 보존되므로 다시 켜면 기존 연결을 재사용합니다. 이전 합성 canary(10분 attended window, 메모리 전용, `connection_check`)는 `service.enabled=false`에서 그대로 동작합니다. 전용 이미지의 빌드 입력은 `images/hindsight-moka-oauth/`이며 배포는 검증한 OCI digest로 고정합니다.
 
