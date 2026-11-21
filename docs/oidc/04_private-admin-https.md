@@ -1,6 +1,6 @@
 ---
 title: Private Keycloak admin HTTPS candidate
-updated: 2026-11-22
+updated: 2026-11-22T02:08:14+09:00
 type: runbook
 status: current
 ---
@@ -17,7 +17,7 @@ status: current
 
 management root는 `keycloak-admin-access` Application 하나를 추가합니다. destination은 `envoy-gateway-system`, release는 `keycloak-admin-access`, valueFiles는 `kkamji_local_values.yaml` 하나이며 기존 repo/main/project와 sync policy를 상속합니다. 이전 16개 Application은 전체 객체를 보존하여 management 17개, automation 9개, personal 1개입니다. IdP application 17개/DB 기본 16개/Operator 18개/IdP default 8개 렌더는 변경하지 않습니다. main 반영은 GitOps 배포 경계이며 이 문서는 반영 승인이 아닙니다.
 
-별도의 [모카 OAuth 비공개 사전검증](../03_hindsight.md#모카-전용-oauth-비공개-사전검증)은 automation의 기존 Hindsight Application에 `moka_private_values.yaml`만 추가합니다. 이 때문에 automation 10개 객체의 검증 해시만 바뀝니다. management, personal 및 Keycloak admin 경로는 그대로입니다.
+별도의 [모카 recall 연동](../03_hindsight.md#모카chatgpt-읽기-전용-recall-연동)은 automation의 기존 Hindsight Application에 `moka_private_values.yaml`만 추가합니다. 이 때문에 automation 10개 객체의 검증 해시만 바뀝니다. management, personal 및 Keycloak admin 경로는 그대로입니다.
 
 ## Exact private path
 
