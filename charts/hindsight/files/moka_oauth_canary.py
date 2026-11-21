@@ -45,6 +45,7 @@ CLIENTS = 'mcp-oauth-proxy-clients'
 GRANT_COLLECTIONS = frozenset({'mcp-upstream-tokens', 'mcp-jti-mappings', 'mcp-refresh-tokens', 'moka-owner-clients'})
 MAX_STORED_CLIENTS = 128
 MAX_OWNER_CLIENTS = 8
+PENDING_CLIENT_SECONDS = 3600
 
 
 def _tree(directory):
@@ -88,9 +89,12 @@ class DurableState:
         if len(self.stored_clients()) < MAX_STORED_CLIENTS:
             return True
         keep = {self._client_names.sanitize(i) + '.json' for i in await self.owner_clients()}
-        for path in self.stored_clients():
-            if path.name not in keep:
-                path.unlink(missing_ok=True)
+        cutoff = time.time() - PENDING_CLIENT_SECONDS
+        stale = sorted((p.stat().st_mtime, p) for p in self.stored_clients()
+                       if p.name not in keep and p.stat().st_mtime < cutoff)
+        excess = len(self.stored_clients()) - MAX_STORED_CLIENTS + 1
+        for _, path in stale[:max(0, excess)]:
+            path.unlink(missing_ok=True)
         return len(self.stored_clients()) < MAX_STORED_CLIENTS
 
 
@@ -140,6 +144,7 @@ class OwnerCanaryProvider(GoogleProvider):
         self.service = service
         self.state = None if service is None else DurableState(service)
         self.registration_times = []
+        self.registration_lock = asyncio.Lock()
         self.exchange_lock = asyncio.Lock()
         if service is None:
             durable = dict(
@@ -180,14 +185,15 @@ class OwnerCanaryProvider(GoogleProvider):
             raise RegistrationError('invalid_redirect_uri', 'Exact ChatGPT callback required')
         if client_info.token_endpoint_auth_method != 'none':
             raise RegistrationError('invalid_client_metadata', 'Public PKCE clients only')
-        now = time.monotonic()
-        self.registration_times = [value for value in self.registration_times if now - value < 900]
-        if len(self.registration_times) >= 12:
-            raise RegistrationError('invalid_client_metadata', 'Canary registration limit reached')
-        if self.state is not None and not await self.state.make_room():
-            raise RegistrationError('invalid_client_metadata', 'Client registration capacity reached')
-        self.registration_times.append(now)
-        await super().register_client(client_info)
+        async with self.registration_lock:
+            now = time.monotonic()
+            self.registration_times = [value for value in self.registration_times if now - value < 900]
+            if len(self.registration_times) >= 12:
+                raise RegistrationError('invalid_client_metadata', 'Canary registration limit reached')
+            if self.state is not None and not await self.state.make_room():
+                raise RegistrationError('invalid_client_metadata', 'Client registration capacity reached')
+            self.registration_times.append(now)
+            await super().register_client(client_info)
 
     async def authorize(self, client, params):
         if str(params.redirect_uri) != CALLBACK or [str(uri) for uri in (client.redirect_uris or [])] != [CALLBACK]:

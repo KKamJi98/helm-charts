@@ -1,6 +1,8 @@
+import asyncio
 import base64
 import hashlib
 import json
+import os
 import tempfile
 import time
 import unittest
@@ -250,13 +252,20 @@ class ServiceRuntimeTest(unittest.IsolatedAsyncioTestCase):
         token = (await self.grant('fixture-owner-client')).json()['access_token']
         state = self.runtime.provider.state
         owner_files = state.stored_clients()
-        for i in range(128):
-            (owner_files[0].parent / f'anonymous-{i}.json').write_text('{"created_at": "2026-11-21T00:00:00+00:00", "value": {"x": 1}, "version": 1}')
+        filler = '{"created_at": "2026-11-21T00:00:00+00:00", "value": {"x": 1}, "version": 1}'
+        anonymous = [owner_files[0].parent / f'anonymous-{i}.json' for i in range(128)]
+        for path in anonymous:
+            path.write_text(filler)
+        self.assertEqual((await self.register()).status_code, 400)  # recent clients are never evicted
+        old = time.time() - 7200
+        for path in anonymous:
+            os.utime(path, (old, old))
         res = await self.register()
         self.assertEqual(res.status_code, 201, res.text)
         names = {p.name for p in state.stored_clients()}
-        self.assertFalse(any(n.startswith('anonymous-') for n in names))
         self.assertIn(owner_files[0].name, names)
+        self.assertLessEqual(len(names), 129)
+        self.assertGreater(sum(n.startswith('anonymous-') for n in names), 120)
         self.assertIsNotNone(await self.runtime.provider.load_access_token(token))
         self.assertIsNotNone(await self.runtime.provider.get_client(self.client_id))
 
@@ -265,6 +274,10 @@ class ServiceRuntimeTest(unittest.IsolatedAsyncioTestCase):
             'redirect_uris': [CALLBACK], 'token_endpoint_auth_method': 'none',
             'grant_types': ['authorization_code', 'refresh_token'], 'response_types': ['code'],
             'scope': ' '.join(self.scopes)})
+
+    async def test_concurrent_registrations_respect_the_rate_limit(self):
+        results = await asyncio.gather(*(self.register() for _ in range(20)))
+        self.assertEqual(sum(r.status_code == 201 for r in results), 11)  # 1 used in setUp
 
     async def test_refresh_is_delegated_instead_of_refused(self):
         client = await self.runtime.provider.get_client(self.client_id)
