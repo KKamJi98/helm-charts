@@ -21,6 +21,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 CHART = ROOT / "charts/hindsight"
 HELM = os.environ.get("HELM", "helm")
+MOKA_ROUTE = "hindsight-moka-recall-oauth"
+MOKA_CLOSED_FILTER = "hindsight-moka-recall-closed"
 REPO = "intfloat/multilingual-e5-small"
 REVISION = "614241f622f53c4eeff9890bdc4f31cfecc418b3"
 API_IMAGE = (
@@ -408,7 +410,10 @@ class ChartTests(unittest.TestCase):
             self.assertIn(name, " ".join(guard["command"]))
 
     def test_gateway_preserves_control_plane_api_paths_and_protects_both_routes(self):
-        routes = [d for d in self.docs if d["kind"] == "HTTPRoute"]
+        routes = [
+            d for d in self.docs
+            if d["kind"] == "HTTPRoute" and d["metadata"]["name"] != MOKA_ROUTE
+        ]
         self.assertEqual(
             {r["metadata"]["name"] for r in routes}, {"hindsight-ui", "hindsight-api"}
         )
@@ -652,7 +657,7 @@ class ChartTests(unittest.TestCase):
                 },
             )
         for doc in self.docs:
-            if doc["kind"] != "HTTPRoute":
+            if doc["kind"] != "HTTPRoute" or doc["metadata"]["name"] == MOKA_ROUTE:
                 continue
             for rule in doc["spec"]["rules"]:
                 self.assertEqual(
@@ -721,6 +726,7 @@ class ChartTests(unittest.TestCase):
         self.assertFalse(
             {
                 "HTTPRoute",
+                "HTTPRouteFilter",
                 "Ingress",
                 "SecurityPolicy",
                 "BackendTrafficPolicy",
@@ -817,7 +823,10 @@ class ChartTests(unittest.TestCase):
                 self.assertIn("**.cluster.local", patterns)
 
     def test_authenticated_routes_allow_long_model_requests(self):
-        routes = [d for d in self.docs if d["kind"] == "HTTPRoute"]
+        routes = [
+            d for d in self.docs
+            if d["kind"] == "HTTPRoute" and d["metadata"]["name"] != MOKA_ROUTE
+        ]
         self.assertEqual(
             {r["metadata"]["name"] for r in routes}, {"hindsight-ui", "hindsight-api"}
         )
@@ -1251,6 +1260,127 @@ class PrepareModelTests(SyntheticFixtureTests):
         manifest.write_text('{"tokenizer.json": "first", "tokenizer.json": "second"}')
         with self.assertRaises(ValueError):
             self.module.load_manifest(manifest)
+
+
+class MokaRouteTests(unittest.TestCase):
+    closed_paths = {
+        "/moka-recall",
+        "/.well-known/oauth-authorization-server/moka-recall",
+        "/.well-known/oauth-protected-resource/moka-recall",
+    }
+    oauth_paths = {
+        "/.well-known/oauth-authorization-server/moka-recall",
+        "/.well-known/oauth-protected-resource/moka-recall/mcp",
+        "/moka-recall/authorize", "/moka-recall/token", "/moka-recall/register",
+        "/moka-recall/consent", "/moka-recall/google/callback",
+    }
+    other_moka_paths = {
+        "/moka-recall", "/moka-recall/mcp", "/moka-recall/token/",
+        "/moka-recall/unknown",
+    }
+    private_values = ("-f", str(CHART / "moka_private_values.yaml"))
+    attended_flags = (
+        "--set", "mokaRecallOAuth.publicEnabled=true",
+        "--set-string", "mokaRecallOAuth.deadlineUnix=1999999999",
+    )
+
+    @staticmethod
+    def index(result):
+        return {(d["kind"], d["metadata"]["name"]): d for d in objects(result)}
+
+    def assert_closed_rule(self, rule):
+        self.assertNotIn("backendRefs", rule)
+        self.assertEqual(
+            {m["path"]["value"] for m in rule["matches"]}, self.closed_paths
+        )
+        self.assertTrue(all(m["path"]["type"] == "PathPrefix" for m in rule["matches"]))
+        self.assertEqual(rule["filters"], [{
+            "type": "ExtensionRef", "extensionRef": {
+                "group": "gateway.envoyproxy.io",
+                "kind": "HTTPRouteFilter", "name": MOKA_CLOSED_FILTER,
+            },
+        }])
+
+    def selected_route(self, docs, target_path):
+        # Gateway API exact beats PathPrefix; longer segment prefix beats UI /.
+        # This is a render contract, not an admitted Gateway controller test.
+        matches = []
+        for (kind, name), doc in docs.items():
+            if kind != "HTTPRoute" or doc["spec"].get("hostnames") != ["hindsight.kkamji.net"]:
+                continue
+            for rule in doc["spec"]["rules"]:
+                for match in rule.get("matches", []):
+                    path = match.get("path") or {}
+                    val, typ = path.get("value"), path.get("type")
+                    if typ == "Exact" and target_path == val:
+                        matches.append((True, len(val), name, rule))
+                    if typ == "PathPrefix" and (
+                        val == "/" or target_path == val or target_path.startswith(val + "/")
+                    ):
+                        matches.append((False, len(val), name, rule))
+        self.assertTrue(matches, target_path)
+        ranked = sorted(matches, key=lambda m: m[:2], reverse=True)
+        if len(ranked) > 1:
+            self.assertNotEqual(ranked[0][:2], ranked[1][:2], target_path)
+        return ranked[0][2:]
+
+    def test_closed_moka_paths_do_not_fall_through_to_ui_or_canary(self):
+        for values, has_canary in (((), False), (self.private_values, True)):
+            with self.subTest(private_canary=has_canary):
+                docs = self.index(render(*values))
+                route = docs["HTTPRoute", MOKA_ROUTE]
+                rule, = route["spec"]["rules"]
+                self.assert_closed_rule(rule)
+                self.assertEqual(route["metadata"]["namespace"], "hindsight")
+                self.assertEqual(route["spec"]["hostnames"], ["hindsight.kkamji.net"])
+                self.assertEqual(route["spec"]["parentRefs"], [{
+                    "group": "gateway.networking.k8s.io", "kind": "Gateway",
+                    "name": "kkamji", "namespace": "envoy-gateway-system",
+                    "sectionName": "https",
+                }])
+                closed_filter = docs["HTTPRouteFilter", MOKA_CLOSED_FILTER]
+                self.assertEqual(closed_filter["metadata"]["namespace"], "hindsight")
+                self.assertEqual(closed_filter["spec"], {"directResponse": {
+                    "statusCode": 404, "header": {
+                        "set": [{"name": "Cache-Control", "value": "no-store"}],
+                    },
+                }})
+                self.assertEqual(("Deployment", MOKA_ROUTE) in docs, has_canary)
+                for path in self.oauth_paths | self.other_moka_paths:
+                    self.assertEqual(self.selected_route(docs, path), (MOKA_ROUTE, rule))
+                for path, name in {
+                    "/": "hindsight-ui", "/oauth2/callback": "hindsight-ui",
+                    "/moka-recall-other": "hindsight-ui",
+                    "/.well-known/oauth-authorization-server": "hindsight-ui",
+                    "/v1": "hindsight-api", "/mcp": "hindsight-api",
+                }.items():
+                    self.assertEqual(self.selected_route(docs, path)[0], name)
+
+    def test_attended_render_routes_only_exact_oauth_paths(self):
+        docs = self.index(render(*self.private_values, *self.attended_flags))
+        allowed, closed = docs["HTTPRoute", MOKA_ROUTE]["spec"]["rules"]
+        self.assert_closed_rule(closed)
+        self.assertEqual(
+            {m["path"]["value"] for m in allowed["matches"]}, self.oauth_paths
+        )
+        self.assertTrue(all(m["path"]["type"] == "Exact" for m in allowed["matches"]))
+        self.assertEqual(
+            [(b["name"], b["port"]) for b in allowed["backendRefs"]], [(MOKA_ROUTE, 8000)]
+        )
+        for path in self.oauth_paths:
+            self.assertEqual(self.selected_route(docs, path), (MOKA_ROUTE, allowed))
+        for path in self.other_moka_paths:
+            self.assertEqual(self.selected_route(docs, path), (MOKA_ROUTE, closed))
+
+    def test_attended_render_rejects_wrong_host_or_missing_canary(self):
+        for values, expected in (
+            (self.attended_flags, "requires the synthetic canary workload"),
+            (self.private_values + self.attended_flags
+             + ("--set", "exposure.hostname=wrong.invalid"), "requires the existing Hindsight"),
+        ):
+            result = render(*values)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(expected, result.stderr)
 
 
 class WorkflowTests(unittest.TestCase):
