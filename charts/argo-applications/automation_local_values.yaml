@@ -199,3 +199,46 @@ applications:
         valueFiles:
           - kkamji_local_values.yaml
           - staging_local_values.yaml
+
+  # ---------- security & SBOM stack (staged rollout, project: management) ----------
+  security-observability:
+    enabled: true
+    name: security-observability
+    project: management
+    destination:
+      namespace: security
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/security-observability
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  trivy-operator:
+    enabled: false
+    name: trivy-operator
+    project: management
+    destination:
+      namespace: security
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/trivy-operator
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  tetragon:
+    enabled: false
+    name: tetragon
+    project: management
+    destination:
+      namespace: security
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/tetragon
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml

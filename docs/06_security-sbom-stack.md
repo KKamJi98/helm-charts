@@ -1,6 +1,6 @@
 ---
 title: Homelab security and SBOM stack
-updated: 2026-11-22
+updated: 2026-11-22T07:35+09:00
 type: architecture
 status: current
 ---
@@ -43,12 +43,12 @@ Live Prometheus audit found zero `hubble_*` series because `kube-system/hubble` 
 
 ## Staged rollout and rollback
 
-`charts/argo-applications/security_local_values.yaml` stages all three Applications with `enabled: false`. Deploy only after explicit approval in four stages:
+`charts/argo-applications/automation_local_values.yaml` manages the staged rollout for `security-observability`, `trivy-operator`, and `tetragon` under `project: management` (`namespace: security`) without modifying SHA-pinned `charts/argocd` or OIDC-coupled `management_local_values.yaml`. `charts/argo-applications/security_local_values.yaml` retains the offline reference template.
 
-1. **Stage 1 (Observability + Loki 7d):** Merge Loki retention update and enable `security-observability` in Argo CD. Verify `hubble_drop_total` in Prometheus and 3 dashboards in Grafana folder `Security`.
-2. **Stage 2 (SBOM Automation):** Enable `trivy-operator`. Verify `SbomReport` / `VulnerabilityReport` CRs and `trivy_image_vulnerabilities` metrics while checking worker RAM.
-3. **Stage 3 (Runtime SIEM):** Enable `tetragon`. Verify exactly 2 DaemonSet pods (`k8s-w1`, `k8s-w2`; 0 on `k8s-m1`) and JSON logs in Loki (`{namespace="security", container="export-stdout"}`).
-4. **Stage 4 (Platform Hub):** Deploy `kkamji-platform` `/security` image pin, verify SSM parameter `/kkamji/platform/ingest-token`, then enable `posturePublisher.enabled: true`.
+1. **Stage 1 (Observability + Loki 7d):** Merge Loki retention update and enable `security-observability` (`enabled: true`). Verify `hubble_drop_total` in Prometheus and 3 dashboards in Grafana folder `Security`.
+2. **Stage 2 (SBOM Automation):** Enable `trivy-operator` (`enabled: true`). Verify `SbomReport` / `VulnerabilityReport` CRs and `trivy_image_vulnerabilities` metrics while checking worker RAM.
+3. **Stage 3 (Runtime SIEM):** Enable `tetragon` (`enabled: true`). Verify exactly 2 DaemonSet pods (`k8s-w1`, `k8s-w2`; 0 on `k8s-m1`) and JSON logs in Loki (`{namespace="security", container="export-stdout"}`).
+4. **Stage 4 (Platform Hub):** Deploy `kkamji-platform` `/security` image pin, verify `ClusterSecretStore/parameter-store` key `/kkamji/personal/kkamji-platform/app/ingest-token`, then enable `posturePublisher.enabled: true`.
 
 Rollback for each stage is setting `enabled: false` (or reverting the Git commit) via GitOps. Audit-only `TracingPolicy` performs no `SIGKILL` enforcement, and no existing PVCs or Secrets are removed on rollback.
 

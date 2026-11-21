@@ -1,6 +1,6 @@
 ---
 title: Private Keycloak admin HTTPS candidate
-updated: 2026-11-22T02:08:14+09:00
+updated: 2026-11-22T07:40+09:00
 type: runbook
 status: current
 ---
@@ -135,3 +135,5 @@ The prepared epoch7 open updates only the exact automation-root snapshot for the
 The prepared epoch7 close restores the exact automation-root snapshot for the temporary synthetic overlay. All Keycloak management/personal roots and security assertions remain unchanged.
 
 The 2026-11-22 hindsight-dot retirement disables `hindsight-dot-staging`, so the automation-root snapshot drops from 10 to 9 Application objects and only that count and digest change. Keycloak management/personal roots and security assertions remain unchanged.
+
+The 2026-11-22 Stage 1 security-observability activation adds `security-observability` (`trivy-operator` and `tetragon` remain `enabled: false`), bringing the automation-root snapshot from 9 to 10 Application objects while keeping the 9 existing automation Applications, Keycloak management/personal roots, and security assertions unchanged.

@@ -29,8 +29,8 @@ posturePublisher:
   # ExternalSecret reference for PLATFORM_INGEST_TOKEN (never store raw tokens in Git).
   externalSecret:
     enabled: true
-    secretStoreName: aws-ssm-parameter-store
+    secretStoreName: parameter-store
     secretStoreKind: ClusterSecretStore
-    ssmKey: /kkamji/platform/ingest-token
+    ssmKey: /kkamji/personal/kkamji-platform/app/ingest-token
     targetSecretName: security-posture-ingest-token
     targetSecretKey: PLATFORM_INGEST_TOKEN
