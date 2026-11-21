@@ -178,6 +178,7 @@ applications:
       helm:
         valueFiles:
         - kkamji_local_values.yaml
+        - moka_private_values.yaml
 
   hindsight-dot-staging:
     enabled: true

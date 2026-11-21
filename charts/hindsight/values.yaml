@@ -53,6 +53,12 @@ exposure:
     namespace: envoy-gateway-system
     sectionName: https
 
+mokaRecallOAuth:
+  canaryEnabled: false
+  publicEnabled: false
+  deadlineUnix: ""
+  image: ""
+
 server:
   fullnameOverride: hindsight
   nameOverride: hindsight

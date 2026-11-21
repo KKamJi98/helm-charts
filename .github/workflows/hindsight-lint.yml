@@ -5,6 +5,7 @@ on:
       - "charts/hindsight/**"
       - "tests/test_hindsight_chart.py"
       - "tests/test_hindsight_image.py"
+      - "tests/test_moka_oauth_*.py"
       - "images/hindsight-security/**"
       - ".github/workflows/hindsight-lint.yml"
   push:
@@ -13,6 +14,7 @@ on:
       - "charts/hindsight/**"
       - "tests/test_hindsight_chart.py"
       - "tests/test_hindsight_image.py"
+      - "tests/test_moka_oauth_*.py"
       - "images/hindsight-security/**"
       - ".github/workflows/hindsight-lint.yml"
   workflow_dispatch:
@@ -48,3 +50,9 @@ jobs:
         run: >-
           uv run --no-project --python 3.12 python -m unittest discover
           -s tests -p test_hindsight_image.py -v
+      - name: Moka synthetic OAuth and listener contracts
+        env:
+          PYTHONPATH: charts/hindsight/files
+        run: >-
+          uv run --no-project --python 3.14 --with fastmcp==4.2.0 python -B -m unittest discover
+          -s tests -p 'test_moka_oauth_*.py' -v

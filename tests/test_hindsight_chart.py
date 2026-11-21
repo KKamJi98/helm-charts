@@ -1265,6 +1265,7 @@ class WorkflowTests(unittest.TestCase):
             "charts/hindsight/**",
             "tests/test_hindsight_chart.py",
             "tests/test_hindsight_image.py",
+            "tests/test_moka_oauth_*.py",
             "images/hindsight-security/**",
             ".github/workflows/hindsight-lint.yml",
         }
