@@ -299,10 +299,8 @@ spec:
             httpGet: {port: tunnel-health, path: /healthz}
             initialDelaySeconds: 5
             periodSeconds: 10
-          readinessProbe:
-            httpGet: {port: tunnel-health, path: /readyz}
-            initialDelaySeconds: 5
-            periodSeconds: 10
+          # No readinessProbe: Pod readiness gates the public OAuth Service, and
+          # tunnel-client /readyz depends on that OAuth metadata and on OpenAI.
           resources:
             requests: {cpu: 20m, memory: 32Mi}
             limits: {cpu: 250m, memory: 128Mi}

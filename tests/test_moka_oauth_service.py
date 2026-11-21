@@ -241,6 +241,31 @@ class ServiceRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.identity = original | {"email": "changed@example.invalid"}
         self.assertIsNone(await self.runtime.provider.load_access_token(token))
 
+    async def test_unauthenticated_oauth_state_never_reaches_disk_and_clients_are_capped(self):
+        self.assertEqual((await self.grant()).status_code, 200)
+        names = [p.name for p in Path(self.tmp.name).rglob('*')]
+        for ephemeral in ('transaction', 'authorization-codes', 'csrf'):
+            self.assertFalse(any(ephemeral in n for n in names), (ephemeral, names))
+        self.assertTrue(any('upstream' in n for n in names), names)
+        token = (await self.grant('fixture-owner-client')).json()['access_token']
+        state = self.runtime.provider.state
+        owner_files = state.stored_clients()
+        for i in range(128):
+            (owner_files[0].parent / f'anonymous-{i}.json').write_text('{"created_at": "2026-11-21T00:00:00+00:00", "value": {"x": 1}, "version": 1}')
+        res = await self.register()
+        self.assertEqual(res.status_code, 201, res.text)
+        names = {p.name for p in state.stored_clients()}
+        self.assertFalse(any(n.startswith('anonymous-') for n in names))
+        self.assertIn(owner_files[0].name, names)
+        self.assertIsNotNone(await self.runtime.provider.load_access_token(token))
+        self.assertIsNotNone(await self.runtime.provider.get_client(self.client_id))
+
+    async def register(self):
+        return await self.public.post('/moka-recall/register', json={
+            'redirect_uris': [CALLBACK], 'token_endpoint_auth_method': 'none',
+            'grant_types': ['authorization_code', 'refresh_token'], 'response_types': ['code'],
+            'scope': ' '.join(self.scopes)})
+
     async def test_refresh_is_delegated_instead_of_refused(self):
         client = await self.runtime.provider.get_client(self.client_id)
         bogus = type(

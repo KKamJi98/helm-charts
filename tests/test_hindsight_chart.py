@@ -1475,6 +1475,8 @@ class MokaServiceTests(unittest.TestCase):
         self.assertEqual([m["name"] for m in tunnel["volumeMounts"]], ["tunnel-tmp"])
         self.assertEqual(tunnel["image"], self.tunnel_image)
         self.assertTrue(tunnel["securityContext"]["readOnlyRootFilesystem"])
+        self.assertNotIn("readinessProbe", tunnel)
+        self.assertEqual(tunnel["livenessProbe"]["httpGet"]["path"], "/healthz")
         self.assertEqual(pod["hostAliases"], [{"ip": "10.0.1.100", "hostnames": ["hindsight.kkamji.net"]}])
         grants = next(v for v in pod["volumes"] if v["name"] == "grants")
         self.assertEqual(grants["persistentVolumeClaim"]["claimName"], MOKA_ROUTE + "-grants")

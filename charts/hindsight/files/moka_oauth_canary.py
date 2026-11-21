@@ -20,9 +20,11 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.server.auth.providers.google import GoogleProvider
 import httpx2
-from key_value.aio.stores.filetree import FileTreeStore
+from key_value.aio.stores.filetree import (
+    FileTreeStore, FileTreeV1CollectionSanitizationStrategy, FileTreeV1KeySanitizationStrategy)
 from key_value.aio.stores.memory import MemoryStore
 from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
+from key_value.aio.wrappers.routing import RoutingWrapper
 from mcp.server.auth.provider import AuthorizeError, RegistrationError, TokenError
 from mcp.types import ToolAnnotations
 from pydantic import Field
@@ -37,6 +39,59 @@ RECALL_URL = 'http://hindsight-api.hindsight.svc.cluster.local:8888/ext/moka-rec
 RECALL_BANK = 'personal_shared'
 MAX_QUERY = 1000
 MAX_RESULTS = 50
+# Only state created after the owner check (plus DCR clients, bounded below) is
+# durable. Unauthenticated, short-lived OAuth state stays in a capped memory store.
+CLIENTS = 'mcp-oauth-proxy-clients'
+GRANT_COLLECTIONS = frozenset({'mcp-upstream-tokens', 'mcp-jti-mappings', 'mcp-refresh-tokens', 'moka-owner-clients'})
+MAX_STORED_CLIENTS = 128
+MAX_OWNER_CLIENTS = 8
+
+
+def _tree(directory):
+    directory.mkdir(mode=0o700, exist_ok=True)
+    return FileTreeStore(data_directory=directory,
+                         key_sanitization_strategy=FileTreeV1KeySanitizationStrategy(directory),
+                         collection_sanitization_strategy=FileTreeV1CollectionSanitizationStrategy(directory))
+
+
+class DurableState:
+    """Encrypted disk for DCR clients and owner grants; capped memory for the rest."""
+
+    def __init__(self, service):
+        fernet = Fernet(service.storage_key)
+        self.clients_dir = service.state_dir / 'clients'
+        self.clients_tree = _tree(self.clients_dir)
+        self.grants_tree = _tree(service.state_dir / 'grants')
+        self._client_names = FileTreeV1KeySanitizationStrategy(self.clients_dir)
+        self._client_files = self.clients_dir / FileTreeV1CollectionSanitizationStrategy(self.clients_dir).sanitize(CLIENTS)
+        clients = FernetEncryptionWrapper(self.clients_tree, fernet=fernet)
+        grants = FernetEncryptionWrapper(self.grants_tree, fernet=fernet)
+        routes = {CLIENTS: clients, **{name: grants for name in GRANT_COLLECTIONS}}
+        self.store = RoutingWrapper(routing_function=routes.get,
+                                    default_store=MemoryStore(max_entries_per_collection=128))
+
+    async def owner_clients(self):
+        entry = await self.store.get(key='owner', collection='moka-owner-clients')
+        return list(entry['ids']) if entry else []
+
+    async def remember_owner_client(self, client_id):
+        ids = [i for i in await self.owner_clients() if i != client_id] + [client_id]
+        await self.store.put(key='owner', collection='moka-owner-clients', value={'ids': ids[-MAX_OWNER_CLIENTS:]})
+
+    def stored_clients(self):
+        return list(self._client_files.glob('*.json')) if self._client_files.is_dir() else []
+
+    async def make_room(self):
+        """Cull expired grants; at the client cap, drop clients that never passed the owner check."""
+        await self.clients_tree.cull()
+        await self.grants_tree.cull()
+        if len(self.stored_clients()) < MAX_STORED_CLIENTS:
+            return True
+        keep = {self._client_names.sanitize(i) + '.json' for i in await self.owner_clients()}
+        for path in self.stored_clients():
+            if path.name not in keep:
+                path.unlink(missing_ok=True)
+        return len(self.stored_clients()) < MAX_STORED_CLIENTS
 
 
 @dataclass(frozen=True)
@@ -83,6 +138,7 @@ class OwnerCanaryProvider(GoogleProvider):
     def __init__(self, config, *, google=None, service=None):
         self.owner = config
         self.service = service
+        self.state = None if service is None else DurableState(service)
         self.registration_times = []
         self.exchange_lock = asyncio.Lock()
         if service is None:
@@ -96,8 +152,7 @@ class OwnerCanaryProvider(GoogleProvider):
             durable = dict(
                 extra_authorize_params={'access_type': 'offline', 'prompt': 'consent select_account'},
                 fastmcp_access_token_expiry_seconds=3600,
-                client_storage=FernetEncryptionWrapper(
-                    FileTreeStore(data_directory=service.state_dir), fernet=Fernet(service.storage_key)),
+                client_storage=self.state.store,
                 jwt_signing_key=service.jwt_signing_key,
             )
         super().__init__(
@@ -129,6 +184,8 @@ class OwnerCanaryProvider(GoogleProvider):
         self.registration_times = [value for value in self.registration_times if now - value < 900]
         if len(self.registration_times) >= 12:
             raise RegistrationError('invalid_client_metadata', 'Canary registration limit reached')
+        if self.state is not None and not await self.state.make_room():
+            raise RegistrationError('invalid_client_metadata', 'Client registration capacity reached')
         self.registration_times.append(now)
         await super().register_client(client_info)
 
@@ -154,7 +211,10 @@ class OwnerCanaryProvider(GoogleProvider):
             if self.service is None:
                 tokens = {k: v for k, v in code.idp_tokens.items() if k not in {'refresh_token', 'refresh_expires_in'}}
                 await self._code_store.put(key=authorization_code.code, value=code.model_copy(update={'idp_tokens': tokens}), ttl=max(1, int(code.expires_at - time.time())))
-            return await super().exchange_authorization_code(client, authorization_code)
+            grant = await super().exchange_authorization_code(client, authorization_code)
+            if self.state is not None:
+                await self.state.remember_owner_client(client.client_id)
+            return grant
 
     async def exchange_refresh_token(self, client, refresh_token, scopes):
         if self.service is None:
