@@ -1,6 +1,6 @@
 ---
 title: Docs index
-updated: 2026-11-17T01:39:57+09:00
+updated: 2026-11-22
 type: architecture
 status: current
 ---
@@ -17,7 +17,7 @@ status: current
 - [Argo CD upgrades](argocd-upgrades.md) - 버전 핀, Helm 4/확장 호환성, 검증 및 롤백 경로.
 - [Official AI gateway](01_ai-gateway.md) - 공식 LiteLLM 이미지, 내부 접근, 새 OAuth와 수동 GitOps 운영.
 - [Memory API adoption status](02_memory-api-status.md) - Mem0 운영 보류 근거와 공식 경로 재개 조건.
-- [Hindsight dot candidate](05_hindsight-dot.md) - Disabled dedicated OAuth/MCP staging, secret trust boundary, Cilium acceptance and rollback.
+- [Hindsight dot candidate](05_hindsight-dot.md) - Retired 2026-11-22; historical dedicated OAuth/MCP staging, replaced by the Moka path on existing Hindsight.
 - [Private Hindsight](03_hindsight.md) - 개인 UI/API/MCP 설계, 전용 인증과 단일 writer, 배포 후 인수 및 복구 절차.
 
 - [Keycloak OIDC preparation and phased deployment](05_oidc-idp-preparation.md) - 전용 DB 단계, 별도 앱 활성화, MFA/복구와 기존 인증 보존.

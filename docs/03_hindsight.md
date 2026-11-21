@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-21T15:19:44+09:00
+updated: 2026-11-22
 type: runbook
 status: current
 ---
@@ -188,6 +188,8 @@ ESO 오류는 Store/ExternalSecret 상태와 property 참조부터, 401/403은 G
 - Rollback: revert the timeout change in Git, then verify Argo reconciliation and readiness. Removing the env restores the inherited 120s default. Existing operation IDs and PVCs must be preserved. Longer timeouts can reduce deadline failures but do not prove recovery or fix upstream outages.
 
 ## Dedicated dot candidate
+
+Retired 2026-11-22: the `hindsight-dot-staging` Application is disabled and ChatGPT access uses the existing Hindsight through the Moka recall OAuth path. See the retirement note in [the dot runbook](05_hindsight-dot.md). The paragraphs below are historical.
 
 The isolated [dot gateway candidate](05_hindsight-dot.md) is disabled and has no Argo Application. Its chart contract tests do not establish live network enforcement. It adds no native route, credential, or memory change by default. The separate proxy/gateway design keeps the existing schema-wide native credential out of the proxy; gateway code and network controls constrain use, not the credential's intrinsic authority. Native mode, OAuth owner login, real dot tool availability and network acceptance remain release gates. Existing clients and the 600-second extraction configuration remain unchanged.
 
