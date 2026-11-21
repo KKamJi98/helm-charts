@@ -1,6 +1,6 @@
 ---
 title: Staged Keycloak consumer SSO
-updated: 2026-11-22T03:56:24+09:00
+updated: 2026-11-22T04:06:34+09:00
 type: architecture
 status: current
 ---
@@ -45,6 +45,10 @@ login, the routes and every Keycloak object are unchanged. Because the API
 StatefulSet differs by that one value, the Hindsight entry of the render oracle
 (`tests/fixtures/keycloak-consumers/main9a.json`) was re-baselined in the same
 change; the other three charts keep the hashes captured at the recorded base.
+The retain reasoning effort value (`runtime.retainReasoningEffort`,
+[runbook](../03_hindsight.md#retain-추출-reasoning-effort-2026-11-22)) adds one
+more environment variable to the same container and re-baselines the same
+entry again; nothing else in the oracle moves.
 
 Grafana's parent-accepted native retained PVC, one replica, Recreate with
 `rollingUpdate: null`, fixed existingClaim/local-path/RWO/10Gi, disabled chown and

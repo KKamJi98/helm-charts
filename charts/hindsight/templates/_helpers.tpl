@@ -26,6 +26,9 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- if or (empty .Values.runtime.model) (empty .Values.runtime.reasoningEffort) }}
 {{- fail "runtime.model and runtime.reasoningEffort must come from the canonical model policy" }}
 {{- end }}
+{{- if not (regexMatch "^(low|medium|high|xhigh)?$" (toString .Values.runtime.retainReasoningEffort)) }}
+{{- fail "runtime.retainReasoningEffort must be low, medium, high, xhigh or empty" }}
+{{- end }}
 {{- if not (regexMatch "^[1-8]$" (toString .Values.runtime.llmMaxConcurrent)) }}
 {{- fail "runtime.llmMaxConcurrent must be an integer from 1 to 8" }}
 {{- end }}

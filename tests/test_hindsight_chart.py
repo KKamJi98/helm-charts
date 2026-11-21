@@ -102,16 +102,44 @@ class ChartTests(unittest.TestCase):
         self.assertEqual(self.env["HINDSIGHT_API_LLM_MAX_CONCURRENT"], "4")
         self.assertEqual(self.env["HINDSIGHT_API_WORKERS"], "1")
         self.assertEqual(self.api["spec"]["replicas"], 1)
-        # One model lane for every operation: no per-operation model, effort or cap.
+        # One model for every operation and one shared cap. Retain alone has its own
+        # timeout and reasoning effort.
         for name in self.env:
             for operation in ("RETAIN", "REFLECT", "CONSOLIDATION", "MENTAL_MODEL_REFRESH"):
                 if name.startswith(f"HINDSIGHT_API_{operation}_LLM_"):
-                    self.assertEqual(name, "HINDSIGHT_API_RETAIN_LLM_TIMEOUT")
+                    self.assertIn(
+                        name,
+                        {"HINDSIGHT_API_RETAIN_LLM_TIMEOUT", "HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT"},
+                    )
         for bad in ("0", "-1", "1.5", "many", "9"):
             with self.subTest(value=bad):
                 failed = render("--set", f"runtime.llmMaxConcurrent={bad}")
                 self.assertNotEqual(failed.returncode, 0)
                 self.assertIn("runtime.llmMaxConcurrent", failed.stderr)
+
+    def test_only_retain_extraction_runs_at_medium_effort(self):
+        self.assertEqual(self.env["HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT"], "medium")
+        # Every other operation keeps the generated model lane.
+        self.assertEqual(self.env["HINDSIGHT_API_LLM_REASONING_EFFORT"], "xhigh")
+        inherited = objects(render("--set", "runtime.retainReasoningEffort="))
+        api = next(d for d in inherited if d["kind"] == "StatefulSet" and d["metadata"]["name"] == "hindsight-api")
+        names = [e["name"] for e in api["spec"]["template"]["spec"]["containers"][0]["env"]]
+        self.assertNotIn("HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT", names)
+        self.assertIn("HINDSIGHT_API_LLM_REASONING_EFFORT", names)
+        for allowed in ("low", "high", "xhigh"):
+            with self.subTest(value=allowed):
+                api = next(
+                    d
+                    for d in objects(render("--set-string", f"runtime.retainReasoningEffort={allowed}"))
+                    if d["kind"] == "StatefulSet" and d["metadata"]["name"] == "hindsight-api"
+                )
+                env = {e["name"]: e.get("value") for e in api["spec"]["template"]["spec"]["containers"][0]["env"]}
+                self.assertEqual(env["HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT"], allowed)
+        for bad in ("none", "minimal", "Medium", "max", "medium "):
+            with self.subTest(value=bad):
+                failed = render("--set-string", f"runtime.retainReasoningEffort={bad}")
+                self.assertNotEqual(failed.returncode, 0)
+                self.assertIn("runtime.retainReasoningEffort", failed.stderr)
 
     def test_bootstrap_configmaps_resolve_every_mounted_script_and_manifest(self):
         for owner in (self.api, self.job):
