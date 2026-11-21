@@ -34,6 +34,18 @@ from moka_oauth_boundary import HEADERS, OAuthBoundary, PREFIX, RESOURCE_METADAT
 
 ORIGIN = 'https://hindsight.kkamji.net'
 CALLBACK = 'https://chatgpt.com/connector_platform_oauth_redirect'
+# ChatGPT uses the stable callback when the AS supports RFC 9207 issuer
+# identification, otherwise a per-connector callback ID URI. Allow exactly these.
+CALLBACK_ID = re.compile(r'https://chatgpt\.com/connector/oauth/[A-Za-z0-9_-]{1,128}')
+
+
+def allowed_callback(uri):
+    return uri == CALLBACK or CALLBACK_ID.fullmatch(uri) is not None
+
+
+def registered_callbacks(client):
+    uris = [str(uri) for uri in (client.redirect_uris or [])]
+    return uris if uris and len(uris) <= 4 and all(allowed_callback(u) for u in uris) else []
 GOOGLE_SCOPES = ['openid', 'https://www.googleapis.com/auth/userinfo.email']
 RECALL_URL = 'http://hindsight-api.hindsight.svc.cluster.local:8888/ext/moka-recall/recall'
 RECALL_BANK = 'personal_shared'
@@ -163,7 +175,7 @@ class OwnerCanaryProvider(GoogleProvider):
         super().__init__(
             client_id=config.client_id, client_secret=config.client_secret,
             base_url=ORIGIN + PREFIX, redirect_path='/google/callback',
-            allowed_client_redirect_uris=[CALLBACK], enable_cimd=False,
+            allowed_client_redirect_uris=[CALLBACK, 'https://chatgpt.com/connector/oauth/*'], enable_cimd=False,
             required_scopes=GOOGLE_SCOPES, valid_scopes=GOOGLE_SCOPES,
             http_client=google, timeout_seconds=5, forward_resource=False,
             **durable,
@@ -181,7 +193,7 @@ class OwnerCanaryProvider(GoogleProvider):
                 and set(GOOGLE_SCOPES) <= set(identity.scopes))
 
     async def register_client(self, client_info):
-        if [str(uri) for uri in (client_info.redirect_uris or [])] != [CALLBACK]:
+        if not registered_callbacks(client_info):
             raise RegistrationError('invalid_redirect_uri', 'Exact ChatGPT callback required')
         if client_info.token_endpoint_auth_method != 'none':
             raise RegistrationError('invalid_client_metadata', 'Public PKCE clients only')
@@ -196,14 +208,15 @@ class OwnerCanaryProvider(GoogleProvider):
             await super().register_client(client_info)
 
     async def authorize(self, client, params):
-        if str(params.redirect_uri) != CALLBACK or [str(uri) for uri in (client.redirect_uris or [])] != [CALLBACK]:
+        if str(params.redirect_uri) not in registered_callbacks(client):
             raise AuthorizeError('invalid_request', 'Exact ChatGPT callback required')
         return await super().authorize(client, params)
 
     async def exchange_authorization_code(self, client, authorization_code):
         async with self.exchange_lock:
             code = await self._code_store.get(key=authorization_code.code)
-            if (code is None or code.client_id != client.client_id or code.redirect_uri != CALLBACK
+            if (code is None or code.client_id != client.client_id
+                    or str(code.redirect_uri) not in registered_callbacks(client)
                     or code.expires_at <= time.time()):
                 raise TokenError('invalid_grant', 'Invalid canary authorization')
             raw = code.idp_tokens.get('access_token')

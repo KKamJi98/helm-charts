@@ -1,6 +1,6 @@
 ---
 title: Staged Keycloak consumer SSO
-updated: 2026-11-22T02:29:35+09:00
+updated: 2026-11-22T02:35:12+09:00
 type: architecture
 status: current
 ---
@@ -32,7 +32,8 @@ The [Moka recall connection](../03_hindsight.md#모카chatgpt-읽기-전용-reca
 is separate from this Keycloak migration. Its Hindsight Application overlay adds
 the Moka OAuth companion resources, exact-path public OAuth routes, a
 recall-only API extension and a Secure MCP Tunnel sidecar that serves OAuth
-discovery for the public hindsight.kkamji.net origin only. It does not change the Hindsight UI login, the native
+discovery for the public hindsight.kkamji.net origin only. Client registration
+accepts only ChatGPT's documented OAuth callback URIs. It does not change the Hindsight UI login, the native
 API/MCP key checks, or any Keycloak realm, client, policy, or credential. The
 original Hindsight local values still render the native baseline without the
 opt-in Moka overlay.
