@@ -1,6 +1,6 @@
 ---
 title: Private Keycloak admin HTTPS candidate
-updated: 2026-11-20T04:22:47+00:00
+updated: 2026-11-21
 type: runbook
 status: current
 ---
@@ -16,6 +16,8 @@ status: current
 두 차트의 `keycloakAdminPrivate.enabled` 기본값은 `false`이고 각 `kkamji_local_values.yaml`에서만 명시적으로 `true`입니다. private block은 boolean flag 하나만 지원하며 host, backend, selector, logging, Service type과 arbitrary patch를 values로 override할 수 없습니다. template guard는 schema validation을 건너뛰어도 잘못된 flag/추가 필드를 거부합니다. 활성 상태에서 namespace/release도 고정합니다. 기존 플랫폼의 public values 인터페이스를 전역적으로 잠그지는 않습니다.
 
 management root는 `keycloak-admin-access` Application 하나를 추가합니다. destination은 `envoy-gateway-system`, release는 `keycloak-admin-access`, valueFiles는 `kkamji_local_values.yaml` 하나이며 기존 repo/main/project와 sync policy를 상속합니다. 이전 16개 Application은 전체 객체를 보존하여 management 17개, automation 10개, personal 1개입니다. IdP application 17개/DB 기본 16개/Operator 18개/IdP default 8개 렌더는 변경하지 않습니다. main 반영은 GitOps 배포 경계이며 이 문서는 반영 승인이 아닙니다.
+
+별도의 [모카 OAuth 비공개 사전검증](../03_hindsight.md#모카-전용-oauth-비공개-사전검증)은 automation의 기존 Hindsight Application에 `moka_private_values.yaml`만 추가합니다. 이 때문에 automation 10개 객체의 검증 해시만 바뀝니다. management, personal 및 Keycloak admin 경로는 그대로입니다.
 
 ## Exact private path
 
