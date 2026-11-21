@@ -288,6 +288,10 @@ spec:
                 secretKeyRef: {name: {{ $name }}-tunnel, key: control_plane_api_key}
             - {name: MCP_SERVER_URL, value: "http://127.0.0.1:8001/mcp"}
             - {name: MCP_OAUTH_TRUSTED_ORIGINS, value: "https://hindsight.kkamji.net"}
+            # ChatGPT fetches OAuth discovery through the tunnel's Harpoon channel:
+            # register the loopback PRM source and the public OAuth origin only.
+            - {name: HARPOON_ALLOW_PLAINTEXT_HTTP, value: "true"}
+            - {name: HARPOON_OAUTH_FORWARD_ORIGINS, value: "https://hindsight.kkamji.net"}
             - {name: MCP_STARTUP_WAIT_TIMEOUT, value: 60s}
             - {name: HEALTH_LISTEN_ADDR, value: ":8080"}
             - {name: LOG_FORMAT, value: json}
