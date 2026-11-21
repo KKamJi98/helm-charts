@@ -6,6 +6,8 @@ runtime:
   reasoningEffort: ""
   # Retain extraction only; recall/reflect inherit their existing timeout.
   retainLlmTimeoutSeconds: 600
+  # LLM calls in flight at once, all operations together (1-8). 1 queued bursts behind one call.
+  llmMaxConcurrent: 4
   nodeSelector:
     kubernetes.io/hostname: k8s-w2
   resources:

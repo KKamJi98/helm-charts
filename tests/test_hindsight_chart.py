@@ -96,6 +96,21 @@ class ChartTests(unittest.TestCase):
         for name in ("HINDSIGHT_API_LLM_TIMEOUT", "HINDSIGHT_API_RECALL_LLM_TIMEOUT", "HINDSIGHT_API_REFLECT_LLM_TIMEOUT"):
             self.assertNotIn(name, self.env)
 
+    def test_llm_calls_run_four_at_a_time_on_one_worker_and_one_model_lane(self):
+        self.assertEqual(self.env["HINDSIGHT_API_LLM_MAX_CONCURRENT"], "4")
+        self.assertEqual(self.env["HINDSIGHT_API_WORKERS"], "1")
+        self.assertEqual(self.api["spec"]["replicas"], 1)
+        # One model lane for every operation: no per-operation model, effort or cap.
+        for name in self.env:
+            for operation in ("RETAIN", "REFLECT", "CONSOLIDATION", "MENTAL_MODEL_REFRESH"):
+                if name.startswith(f"HINDSIGHT_API_{operation}_LLM_"):
+                    self.assertEqual(name, "HINDSIGHT_API_RETAIN_LLM_TIMEOUT")
+        for bad in ("0", "-1", "1.5", "many", "9"):
+            with self.subTest(value=bad):
+                failed = render("--set", f"runtime.llmMaxConcurrent={bad}")
+                self.assertNotEqual(failed.returncode, 0)
+                self.assertIn("runtime.llmMaxConcurrent", failed.stderr)
+
     def test_bootstrap_configmaps_resolve_every_mounted_script_and_manifest(self):
         for owner in (self.api, self.job):
             pod = owner["spec"]["template"]["spec"]

@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-21T15:19:44+09:00
+updated: 2026-11-21T17:24:04+09:00
 type: runbook
 status: current
 ---
@@ -186,6 +186,15 @@ ESO 오류는 Store/ExternalSecret 상태와 property 참조부터, 401/403은 G
 - `runtime.retainLlmTimeoutSeconds: 600` sets `HINDSIGHT_API_RETAIN_LLM_TIMEOUT` for extraction requests only. Existing model/xhigh, recall/reflect timeouts, HTTP route 600s, authentication and storage are unchanged. Async retain acceptance is not extraction completion.
 - A GitOps rollout restarts the single API/embedded PostgreSQL pod and briefly interrupts service. The worker drains for 30s within the existing 45s pod grace period, then returns unfinished claimed work to pending. Verify operation states after restart; do not blindly replay transcripts or retry completed children.
 - Rollback: revert the timeout change in Git, then verify Argo reconciliation and readiness. Removing the env restores the inherited 120s default. Existing operation IDs and PVCs must be preserved. Longer timeouts can reduce deadline failures but do not prove recovery or fix upstream outages.
+
+## LLM 동시 호출 (2026-11-21)
+
+- `runtime.llmMaxConcurrent: 4`는 `HINDSIGHT_API_LLM_MAX_CONCURRENT`를 설정합니다. 모든 operation이 함께 쓰는 동시 LLM 호출 상한이며 chart는 1-8의 정수만 받습니다. Hindsight 1.1.0의 `engine/llm_wrapper.py`에서 이 값은 프로세스 전역 semaphore 하나의 크기이고, operation별 semaphore는 `HINDSIGHT_API_<OPERATION>_LLM_MAX_CONCURRENT`를 설정할 때만 추가로 생깁니다(이 chart는 설정하지 않습니다). model/xhigh, operation별 override 없음, worker 1개, replica 1개, 추출 timeout 600초는 그대로입니다.
+- 이전 값은 `1`이었습니다. worker는 작업을 여러 개 동시에 잡지만(1.1.0 기본 10 slot) LLM 호출은 하나씩만 나가서 나머지가 줄을 섰습니다. 2026-11-20~21의 24.8시간 동안 기록된 LLM 호출 337건을 완료 순서로 다시 계산한 값입니다: 호출 자체는 p50 68초, p90 93초였고, 대기는 p50 33초, p90 494초, 최대 1,110초였습니다. 60초 넘게 기다린 호출이 158건이었고 전체 사용률은 24%였습니다. 지연의 원인은 용량 부족이 아니라 직렬화였습니다.
+- 이 값은 호출 총량을 줄이지 않습니다. ChatGPT 구독 한도는 그대로 적용됩니다. 적용 뒤 `ChatGPTRequestError`나 429가 늘면 값을 낮춥니다.
+- 배포와 재시작 영향은 위 "Retain extraction timeout" 절과 같습니다. GitOps rollout이 단일 API/embedded PostgreSQL Pod를 재시작하고, 끝나지 않은 작업은 pending으로 돌아갑니다. 재시작 뒤 operation 상태를 확인하며 transcript를 다시 보내거나 완료된 child를 retry하지 않습니다.
+- 확인: bank의 `GET /operations?status=failed`가 늘지 않는지 봅니다. `GET /llm-requests`의 `duration_ms`는 대기 시간을 포함합니다(상한 1일 때 기록상 최대 13건이 겹쳤고 p90은 565초였습니다). 이 p90이 호출 자체의 시간(약 93초)에 가까워졌는지 봅니다. 추출 4건이 함께 끝나면 embedding과 index 쓰기가 CPU 2 limit 안에서 recall과 겹치므로, Pod 재시작 횟수와 클라이언트 `check.py`의 recall 실패(`unavailable`)도 함께 봅니다.
+- Rollback: 이 변경을 Git에서 되돌리고 Argo 재조정과 readiness를 확인합니다. `runtime.llmMaxConcurrent: 1`만 지정해도 이전 동작이 됩니다. operation ID와 PVC는 보존합니다.
 
 ## Dedicated dot candidate
 

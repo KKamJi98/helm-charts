@@ -1,6 +1,6 @@
 ---
 title: Staged Keycloak consumer SSO
-updated: 2026-11-21T15:19:44+09:00
+updated: 2026-11-21T17:08:35+09:00
 type: architecture
 status: current
 ---
@@ -34,6 +34,14 @@ five private companion resources. It preserves the 28 native Hindsight objects,
 does not change the Hindsight UI login, and opens no public route or Keycloak
 realm, client, policy, or credential. The original Hindsight local values still
 render the native baseline without the opt-in Moka overlay.
+
+The Hindsight LLM concurrency value (`runtime.llmMaxConcurrent`,
+[runbook](../03_hindsight.md#llm-동시-호출-2026-11-21)) changes one environment
+variable of the API container. The count of 28 native Hindsight objects, the UI
+login, the routes and every Keycloak object are unchanged. Because the API
+StatefulSet differs by that one value, the Hindsight entry of the render oracle
+(`tests/fixtures/keycloak-consumers/main9a.json`) was re-baselined in the same
+change; the other three charts keep the hashes captured at the recorded base.
 
 Grafana's parent-accepted native retained PVC, one replica, Recreate with
 `rollingUpdate: null`, fixed existingClaim/local-path/RWO/10Gi, disabled chown and
