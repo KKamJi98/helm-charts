@@ -1278,7 +1278,12 @@ class MokaRouteTests(unittest.TestCase):
         "/moka-recall", "/moka-recall/mcp", "/moka-recall/token/",
         "/moka-recall/unknown",
     }
-    private_values = ("-f", str(CHART / "moka_private_values.yaml"))
+    # Synthetic canary modes, reproduced explicitly: the deployed values file
+    # (moka_private_values.yaml) now selects service mode (MokaServiceTests).
+    private_values = (
+        "--set", "mokaRecallOAuth.canaryEnabled=true",
+        "--set", "mokaRecallOAuth.image=ghcr.io/kkamji98/hindsight-dot@sha256:" + "b" * 64,
+    )
     attended_flags = (
         "--set", "mokaRecallOAuth.publicEnabled=true",
         "--set-string", "mokaRecallOAuth.deadlineUnix=1999999999",
@@ -1382,6 +1387,137 @@ class MokaRouteTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn(expected, result.stderr)
 
+
+
+class MokaServiceTests(unittest.TestCase):
+    tunnel_image = "ghcr.io/openai/tunnel-client@sha256:" + "a" * 64
+    service_flags = (
+        *MokaRouteTests.private_values,
+        "--set", "mokaRecallOAuth.publicEnabled=true",
+        "--set", "mokaRecallOAuth.service.enabled=true",
+        "--set", "mokaRecallOAuth.service.tunnelImage=" + tunnel_image,
+        "--set", "mokaRecallOAuth.service.tunnelId=tunnel_" + "0" * 32,
+        "--set", "mokaRecallOAuth.service.gatewayAddress=10.0.1.100",
+    )
+
+    def test_deployed_values_file_selects_pinned_service_mode(self):
+        values = yaml.safe_load((CHART / "moka_private_values.yaml").read_text())["mokaRecallOAuth"]
+        self.assertEqual((values["canaryEnabled"], values["publicEnabled"], values["service"]["enabled"]),
+                         (True, True, True))
+        self.assertNotIn("deadlineUnix", values)
+        docs = self.index(render("-f", str(CHART / "moka_private_values.yaml")))
+        pod = docs["Deployment", MOKA_ROUTE]["spec"]["template"]["spec"]
+        self.assertEqual({e["name"]: e.get("value") for e in pod["containers"][0]["env"]}["MOKA_CANARY_MODE"],
+                         "service")
+        self.assertEqual({e["name"]: e.get("value") for e in pod["containers"][1]["env"]}["CONTROL_PLANE_TUNNEL_ID"],
+                         values["service"]["tunnelId"])
+        allowed = docs["HTTPRoute", MOKA_ROUTE]["spec"]["rules"][0]
+        self.assertEqual({m["path"]["value"] for m in allowed["matches"]}, MokaRouteTests.oauth_paths)
+
+    @staticmethod
+    def index(result):
+        return {(d["kind"], d["metadata"]["name"]): d for d in objects(result)}
+
+    def test_service_requires_public_route_pins_and_no_deadline(self):
+        cases = (
+            (("--set", "mokaRecallOAuth.publicEnabled=false"), "requires the public OAuth route"),
+            (("--set-string", "mokaRecallOAuth.deadlineUnix=1999999999"), "requires the public OAuth route"),
+            (("--set", "mokaRecallOAuth.service.tunnelImage=ghcr.io/openai/tunnel-client:v0.0.21"), "pinned tunnel-client"),
+            (("--set", "mokaRecallOAuth.service.tunnelId=hindsight"), "one OpenAI tunnel ID"),
+            (("--set", "mokaRecallOAuth.service.gatewayAddress=121.130.214.237"), "private Gateway address"),
+            (("--set", "mokaRecallOAuth.canaryEnabled=false", "--set", "mokaRecallOAuth.publicEnabled=false"),
+             "requires the Moka OAuth workload"),
+        )
+        for extra, expected in cases:
+            with self.subTest(expected=expected, extra=extra):
+                result = render(*self.service_flags, *extra)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(expected, result.stderr)
+
+    def test_api_gets_only_the_recall_extension_and_dedicated_key(self):
+        default = self.index(render())
+        api0 = default["StatefulSet", "hindsight-api"]["spec"]["template"]["spec"]["containers"][0]
+        self.assertFalse(any(e["name"].startswith("HINDSIGHT_API_HTTP_") for e in api0["env"]))
+        docs = self.index(render(*self.service_flags))
+        api = docs["StatefulSet", "hindsight-api"]["spec"]["template"]["spec"]
+        env = {e["name"]: e for e in api["containers"][0]["env"]}
+        self.assertEqual(env["HINDSIGHT_API_HTTP_EXTENSION"]["value"],
+                         "hindsight_moka_recall_ext:MokaRecallHttpExtension")
+        self.assertEqual(env["HINDSIGHT_API_HTTP_MOKA_RECALL_KEY"]["valueFrom"]["secretKeyRef"],
+                         {"name": "hindsight-moka-recall-oauth-api-key", "key": "recall_api_key"})
+        self.assertEqual(env["HINDSIGHT_API_TENANT_EXTENSION"]["value"],
+                         "hindsight_api.extensions.builtin.tenant:ApiKeyTenantExtension")
+        self.assertEqual(env["PYTHONPATH"]["value"], "/opt/hindsight-ext")
+        ext = docs["ConfigMap", "hindsight-moka-recall-ext"]
+        self.assertEqual(ext["data"]["hindsight_moka_recall_ext.py"].strip(),
+                         (CHART / "files/hindsight_moka_recall_ext.py").read_text().strip())
+        key_es = docs["ExternalSecret", "hindsight-moka-recall-oauth-api-key"]["spec"]
+        self.assertEqual([(d["secretKey"], d["remoteRef"]["property"]) for d in key_es["data"]],
+                         [("recall_api_key", "recall_api_key")])
+        self.assertEqual(key_es["target"]["creationPolicy"], "Orphan")
+        tunnel_es = docs["ExternalSecret", "hindsight-moka-recall-oauth-tunnel"]["spec"]["data"]
+        self.assertEqual(tunnel_es, [{"secretKey": "control_plane_api_key", "remoteRef": {
+            "key": "/kkamji/automation/hindsight/recall-tunnel/openai-api-key"}}])
+
+    def test_moka_pod_never_receives_native_keys_and_tunnel_only_its_own(self):
+        docs = self.index(render(*self.service_flags))
+        pod = docs["Deployment", MOKA_ROUTE]["spec"]["template"]["spec"]
+        refs = json.dumps(pod)
+        for native in ("hindsight-api-auth", "hindsight-control-plane-auth", "hindsight-gateway"):
+            self.assertNotIn(native, refs)
+        oauth, tunnel = pod["containers"]
+        self.assertEqual([c["name"] for c in pod["containers"]], ["oauth-canary", "tunnel-client"])
+        self.assertEqual({e["name"]: e.get("value") for e in oauth["env"]}["MOKA_CANARY_MODE"], "service")
+        tenv = {e["name"]: e for e in tunnel["env"]}
+        self.assertEqual(tenv["MCP_SERVER_URL"]["value"], "http://127.0.0.1:8001/mcp")
+        self.assertEqual(tenv["MCP_OAUTH_TRUSTED_ORIGINS"]["value"], "https://hindsight.kkamji.net")
+        self.assertEqual(tenv["CONTROL_PLANE_API_KEY"]["valueFrom"]["secretKeyRef"]["name"], MOKA_ROUTE + "-tunnel")
+        self.assertEqual([m["name"] for m in tunnel["volumeMounts"]], ["tunnel-tmp"])
+        self.assertEqual(tunnel["image"], self.tunnel_image)
+        self.assertTrue(tunnel["securityContext"]["readOnlyRootFilesystem"])
+        self.assertNotIn("readinessProbe", tunnel)
+        self.assertEqual(tunnel["livenessProbe"]["httpGet"]["path"], "/healthz")
+        self.assertEqual(pod["hostAliases"], [{"ip": "10.0.1.100", "hostnames": ["hindsight.kkamji.net"]}])
+        grants = next(v for v in pod["volumes"] if v["name"] == "grants")
+        self.assertEqual(grants["persistentVolumeClaim"]["claimName"], MOKA_ROUTE + "-grants")
+        es = docs["ExternalSecret", MOKA_ROUTE]["spec"]["data"]
+        self.assertEqual(
+            {d["secretKey"] for d in es},
+            {"client_id", "client_secret", "owner_sub", "recall_api_key", "jwt_signing_key", "storage_encryption_key"},
+        )
+
+    def test_network_allows_only_the_needed_paths(self):
+        docs = self.index(render(*self.service_flags))
+        api_in = docs["CiliumNetworkPolicy", "hindsight-api"]["spec"]["ingress"]
+        moka_in = [r for r in api_in if any(
+            e["matchLabels"].get("app.kubernetes.io/name") == MOKA_ROUTE for e in r.get("fromEndpoints", []))]
+        self.assertEqual(len(moka_in), 1)
+        self.assertEqual(moka_in[0]["toPorts"], [{"ports": [{"port": "8888", "protocol": "TCP"}]}])
+        default_api_in = self.index(render())["CiliumNetworkPolicy", "hindsight-api"]["spec"]["ingress"]
+        self.assertFalse(any(MOKA_ROUTE in json.dumps(r) for r in default_api_in))
+        moka = docs["CiliumNetworkPolicy", MOKA_ROUTE]["spec"]
+        self.assertNotIn("egressDeny", moka)
+        fqdns = {f["matchName"] for r in moka["egress"] for f in r.get("toFQDNs", [])}
+        self.assertEqual(fqdns, {"oauth2.googleapis.com", "www.googleapis.com", "api.openai.com"})
+        ports = sorted(p["port"] for r in moka["egress"] if "toEndpoints" in r for tp in r["toPorts"] for p in tp["ports"])
+        self.assertEqual(ports, ["10443", "53", "53", "8888"])
+        self.assertFalse(any("toEntities" in r or "toCIDR" in r or "toCIDRSet" in r for r in moka["egress"]))
+
+    def test_public_route_still_never_exposes_mcp_or_the_extension(self):
+        docs = self.index(render(*self.service_flags))
+        route = docs["HTTPRoute", MOKA_ROUTE]["spec"]["rules"]
+        exact = {m["path"]["value"] for m in route[0]["matches"]}
+        self.assertEqual(exact, MokaRouteTests.oauth_paths)
+        for path in ("/ext/moka-recall/recall", "/ext"):
+            self.assertEqual(MokaRouteTests.selected_route(self, docs, path)[0], "hindsight-ui")
+        for doc in docs.values():
+            if doc["kind"] == "HTTPRoute":
+                for rule in doc["spec"]["rules"]:
+                    for m in rule.get("matches", []):
+                        value = m.get("path", {}).get("value", "")
+                        self.assertFalse(value.startswith("/ext"), value)
+                        if rule.get("backendRefs"):
+                            self.assertNotEqual(value, "/moka-recall/mcp")
 
 class WorkflowTests(unittest.TestCase):
     def test_ci_is_path_scoped_readonly_and_runs_offline_unittest_with_uv(self):

@@ -1,15 +1,33 @@
-"""Owner-bound OAuth canary. No Hindsight client or real data handler."""
+"""Owner-bound OAuth for Moka.
+
+Without a ServiceConfig this is the synthetic canary: memory-only state, short
+tokens, no refresh and a tool that never reads Hindsight. With a ServiceConfig
+it keeps encrypted grants on disk, allows Google-backed refresh and exposes one
+read-only recall tool backed by the Hindsight recall-only extension.
+"""
 
 import asyncio
+import base64
 from dataclasses import dataclass, field
+from pathlib import Path
 import re
 import secrets
 import time
+from typing import Annotated
 
+from cryptography.fernet import Fernet
 from fastmcp import FastMCP
+from fastmcp.exceptions import ToolError
 from fastmcp.server.auth.providers.google import GoogleProvider
+import httpx2
+from key_value.aio.stores.filetree import (
+    FileTreeStore, FileTreeV1CollectionSanitizationStrategy, FileTreeV1KeySanitizationStrategy)
 from key_value.aio.stores.memory import MemoryStore
+from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
+from key_value.aio.wrappers.routing import RoutingWrapper
 from mcp.server.auth.provider import AuthorizeError, RegistrationError, TokenError
+from mcp.types import ToolAnnotations
+from pydantic import Field
 from starlette.responses import Response
 
 from moka_oauth_boundary import HEADERS, OAuthBoundary, PREFIX, RESOURCE_METADATA
@@ -17,6 +35,67 @@ from moka_oauth_boundary import HEADERS, OAuthBoundary, PREFIX, RESOURCE_METADAT
 ORIGIN = 'https://hindsight.kkamji.net'
 CALLBACK = 'https://chatgpt.com/connector_platform_oauth_redirect'
 GOOGLE_SCOPES = ['openid', 'https://www.googleapis.com/auth/userinfo.email']
+RECALL_URL = 'http://hindsight-api.hindsight.svc.cluster.local:8888/ext/moka-recall/recall'
+RECALL_BANK = 'personal_shared'
+MAX_QUERY = 1000
+MAX_RESULTS = 50
+# Only state created after the owner check (plus DCR clients, bounded below) is
+# durable. Unauthenticated, short-lived OAuth state stays in a capped memory store.
+CLIENTS = 'mcp-oauth-proxy-clients'
+GRANT_COLLECTIONS = frozenset({'mcp-upstream-tokens', 'mcp-jti-mappings', 'mcp-refresh-tokens', 'moka-owner-clients'})
+MAX_STORED_CLIENTS = 128
+MAX_OWNER_CLIENTS = 8
+PENDING_CLIENT_SECONDS = 3600
+
+
+def _tree(directory):
+    directory.mkdir(mode=0o700, exist_ok=True)
+    return FileTreeStore(data_directory=directory,
+                         key_sanitization_strategy=FileTreeV1KeySanitizationStrategy(directory),
+                         collection_sanitization_strategy=FileTreeV1CollectionSanitizationStrategy(directory))
+
+
+class DurableState:
+    """Encrypted disk for DCR clients and owner grants; capped memory for the rest."""
+
+    def __init__(self, service):
+        fernet = Fernet(service.storage_key)
+        self.clients_dir = service.state_dir / 'clients'
+        self.clients_tree = _tree(self.clients_dir)
+        self.grants_tree = _tree(service.state_dir / 'grants')
+        self._client_names = FileTreeV1KeySanitizationStrategy(self.clients_dir)
+        self._client_files = self.clients_dir / FileTreeV1CollectionSanitizationStrategy(self.clients_dir).sanitize(CLIENTS)
+        clients = FernetEncryptionWrapper(self.clients_tree, fernet=fernet)
+        grants = FernetEncryptionWrapper(self.grants_tree, fernet=fernet)
+        routes = {CLIENTS: clients, **{name: grants for name in GRANT_COLLECTIONS}}
+        self.store = RoutingWrapper(routing_function=routes.get,
+                                    default_store=MemoryStore(max_entries_per_collection=128))
+
+    async def owner_clients(self):
+        entry = await self.store.get(key='owner', collection='moka-owner-clients')
+        return list(entry['ids']) if entry else []
+
+    async def remember_owner_client(self, client_id):
+        ids = [i for i in await self.owner_clients() if i != client_id] + [client_id]
+        await self.store.put(key='owner', collection='moka-owner-clients', value={'ids': ids[-MAX_OWNER_CLIENTS:]})
+
+    def stored_clients(self):
+        return list(self._client_files.glob('*.json')) if self._client_files.is_dir() else []
+
+    async def make_room(self):
+        """Cull expired grants; at the client cap, drop clients that never passed the owner check."""
+        await self.clients_tree.cull()
+        await self.grants_tree.cull()
+        if len(self.stored_clients()) < MAX_STORED_CLIENTS:
+            return True
+        keep = {self._client_names.sanitize(i) + '.json' for i in await self.owner_clients()}
+        cutoff = time.time() - PENDING_CLIENT_SECONDS
+        stale = sorted((p.stat().st_mtime, p) for p in self.stored_clients()
+                       if p.name not in keep and p.stat().st_mtime < cutoff)
+        excess = len(self.stored_clients()) - MAX_STORED_CLIENTS + 1
+        for _, path in stale[:max(0, excess)]:
+            path.unlink(missing_ok=True)
+        return len(self.stored_clients()) < MAX_STORED_CLIENTS
 
 
 @dataclass(frozen=True)
@@ -35,21 +114,59 @@ class CanaryConfig:
             raise ValueError('Expected one Google owner email address')
 
 
+@dataclass(frozen=True)
+class ServiceConfig:
+    recall_key: str = field(repr=False)
+    jwt_signing_key: bytes = field(repr=False)
+    storage_key: str = field(repr=False)
+    state_dir: Path
+
+    def __post_init__(self):
+        if len(self.recall_key) < 32 or self.recall_key != self.recall_key.strip():
+            raise ValueError('Dedicated recall key required')
+        if len(self.jwt_signing_key) < 32:
+            raise ValueError('Persistent 32-byte JWT signing key required')
+        Fernet(self.storage_key)
+        if not self.state_dir.is_absolute():
+            raise ValueError('Absolute grant state directory required')
+
+    @classmethod
+    def from_secret_files(cls, root, state_dir):
+        read = lambda name: (root / name).read_text().strip()
+        return cls(recall_key=read('recall_api_key'),
+                   jwt_signing_key=base64.b64decode(read('jwt_signing_key'), validate=True),
+                   storage_key=read('storage_encryption_key'), state_dir=Path(state_dir))
+
+
 class OwnerCanaryProvider(GoogleProvider):
-    def __init__(self, config, *, google=None):
+    def __init__(self, config, *, google=None, service=None):
         self.owner = config
+        self.service = service
+        self.state = None if service is None else DurableState(service)
         self.registration_times = []
+        self.registration_lock = asyncio.Lock()
         self.exchange_lock = asyncio.Lock()
+        if service is None:
+            durable = dict(
+                extra_authorize_params={'access_type': 'online', 'prompt': 'select_account'},
+                fastmcp_access_token_expiry_seconds=120,
+                client_storage=MemoryStore(max_entries_per_collection=128),
+                jwt_signing_key=secrets.token_bytes(32),
+            )
+        else:
+            durable = dict(
+                extra_authorize_params={'access_type': 'offline', 'prompt': 'consent select_account'},
+                fastmcp_access_token_expiry_seconds=3600,
+                client_storage=self.state.store,
+                jwt_signing_key=service.jwt_signing_key,
+            )
         super().__init__(
             client_id=config.client_id, client_secret=config.client_secret,
             base_url=ORIGIN + PREFIX, redirect_path='/google/callback',
             allowed_client_redirect_uris=[CALLBACK], enable_cimd=False,
             required_scopes=GOOGLE_SCOPES, valid_scopes=GOOGLE_SCOPES,
             http_client=google, timeout_seconds=5, forward_resource=False,
-            extra_authorize_params={'access_type': 'online', 'prompt': 'select_account'},
-            fastmcp_access_token_expiry_seconds=120,
-            client_storage=MemoryStore(max_entries_per_collection=128),
-            jwt_signing_key=secrets.token_bytes(32),
+            **durable,
         )
 
     def is_owner(self, identity):
@@ -68,12 +185,15 @@ class OwnerCanaryProvider(GoogleProvider):
             raise RegistrationError('invalid_redirect_uri', 'Exact ChatGPT callback required')
         if client_info.token_endpoint_auth_method != 'none':
             raise RegistrationError('invalid_client_metadata', 'Public PKCE clients only')
-        now = time.monotonic()
-        self.registration_times = [value for value in self.registration_times if now - value < 900]
-        if len(self.registration_times) >= 12:
-            raise RegistrationError('invalid_client_metadata', 'Canary registration limit reached')
-        self.registration_times.append(now)
-        await super().register_client(client_info)
+        async with self.registration_lock:
+            now = time.monotonic()
+            self.registration_times = [value for value in self.registration_times if now - value < 900]
+            if len(self.registration_times) >= 12:
+                raise RegistrationError('invalid_client_metadata', 'Canary registration limit reached')
+            if self.state is not None and not await self.state.make_room():
+                raise RegistrationError('invalid_client_metadata', 'Client registration capacity reached')
+            self.registration_times.append(now)
+            await super().register_client(client_info)
 
     async def authorize(self, client, params):
         if str(params.redirect_uri) != CALLBACK or [str(uri) for uri in (client.redirect_uris or [])] != [CALLBACK]:
@@ -94,29 +214,74 @@ class OwnerCanaryProvider(GoogleProvider):
             if not self.is_owner(identity):
                 await self._code_store.delete(key=authorization_code.code)
                 raise TokenError('invalid_grant', 'Invalid canary authorization')
-            tokens = {k: v for k, v in code.idp_tokens.items() if k not in {'refresh_token', 'refresh_expires_in'}}
-            await self._code_store.put(key=authorization_code.code, value=code.model_copy(update={'idp_tokens': tokens}), ttl=max(1, int(code.expires_at - time.time())))
-            return await super().exchange_authorization_code(client, authorization_code)
+            if self.service is None:
+                tokens = {k: v for k, v in code.idp_tokens.items() if k not in {'refresh_token', 'refresh_expires_in'}}
+                await self._code_store.put(key=authorization_code.code, value=code.model_copy(update={'idp_tokens': tokens}), ttl=max(1, int(code.expires_at - time.time())))
+            grant = await super().exchange_authorization_code(client, authorization_code)
+            if self.state is not None:
+                await self.state.remember_owner_client(client.client_id)
+            return grant
 
     async def exchange_refresh_token(self, client, refresh_token, scopes):
-        raise TokenError('invalid_grant', 'Canary does not grant refresh tokens')
+        if self.service is None:
+            raise TokenError('invalid_grant', 'Canary does not grant refresh tokens')
+        return await super().exchange_refresh_token(client, refresh_token, scopes)
 
     async def load_access_token(self, token):
         identity = await super().load_access_token(token)
         return identity if self.is_owner(identity) else None
 
 
+class HindsightRecall:
+    """Calls only the recall-only extension; the bank is fixed server-side."""
+
+    def __init__(self, key, *, client=None):
+        self._headers = {'Authorization': 'Bearer ' + key}
+        self._client = client
+
+    async def __call__(self, query):
+        client = self._client or httpx2.AsyncClient(trust_env=False, follow_redirects=False)
+        try:
+            res = await client.post(RECALL_URL, json={'query': query}, headers=self._headers, timeout=60)
+        except httpx2.HTTPError:
+            raise ToolError('Hindsight recall is unavailable') from None
+        finally:
+            if self._client is None:
+                await client.aclose()
+        if res.status_code != 200:
+            raise ToolError('Hindsight recall failed')
+        data = res.json()
+        if not isinstance(data, dict) or data.get('bank') != RECALL_BANK or not isinstance(data.get('results'), list):
+            raise ToolError('Unexpected Hindsight recall response')
+        fields = ('text', 'type', 'mentioned_at', 'occurred_start', 'occurred_end')
+        return {'bank': RECALL_BANK, 'results': [
+            {k: item.get(k) for k in fields} for item in data['results'][:MAX_RESULTS] if isinstance(item, dict)
+        ]}
+
+
 class MokaCanary:
-    tool_names = ('connection_check',)
+    def __init__(self, config, *, google=None, service=None, hindsight=None):
+        self.provider = OwnerCanaryProvider(config, google=google, service=service)
+        if service is None:
+            self.tool_names = ('connection_check',)
+            mcp = FastMCP('Hindsight Moka OAuth check', auth=self.provider)
 
-    def __init__(self, config, *, google=None):
-        self.provider = OwnerCanaryProvider(config, google=google)
-        mcp = FastMCP('Hindsight Moka OAuth check', auth=self.provider)
+            @mcp.tool
+            def connection_check() -> dict[str, bool]:
+                """Confirm the owner OAuth connection without reading Hindsight."""
+                return {'owner_authenticated': True, 'synthetic_only': True}
+        else:
+            self.tool_names = ('recall',)
+            backend = HindsightRecall(service.recall_key, client=hindsight)
+            mcp = FastMCP('Hindsight Recall', auth=self.provider, instructions=(
+                "Read-only search over the owner's shared Hindsight memories (bank personal_shared). "
+                'It cannot store, edit or delete memories, or read any other bank.'))
 
-        @mcp.tool
-        def connection_check() -> dict[str, bool]:
-            """Confirm the owner OAuth connection without reading Hindsight."""
-            return {'owner_authenticated': True, 'synthetic_only': True}
+            @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                                                  idempotentHint=True, openWorldHint=False))
+            async def recall(query: Annotated[str, Field(min_length=1, max_length=MAX_QUERY)]) -> dict:
+                """Search the owner's shared Hindsight memories (personal_shared) and return matching facts."""
+                return await backend(query)
 
         self.app = mcp.http_app(stateless_http=True, json_response=True)
         self.public = OAuthBoundary(self.app)

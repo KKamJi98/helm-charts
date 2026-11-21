@@ -1,13 +1,13 @@
 ---
 title: Hindsight dot isolated connection candidate
-updated: 2026-11-21T16:32:37+00:00
+updated: 2026-11-22T02:08:14+09:00
 type: runbook
 status: superseded
 ---
 
 # Hindsight dot connection candidate
 
-> Retired 2026-11-22 (user request). The `hindsight-dot-staging` Argo Application is disabled in `charts/argo-applications/automation_local_values.yaml`. ChatGPT access now targets the existing `hindsight` Application through the [Moka recall OAuth path](03_hindsight.md#모카-전용-oauth-비공개-사전검증), not a separate instance. The chart source and the `ghcr.io/kkamji98/hindsight-dot` image package stay because the Moka canary pins an image from that package. The Application finalizer removes managed workloads, Services, Cilium policies and ExternalSecrets. Observed on 2026-11-22: the ESO target Secrets were deleted with their ExternalSecrets. The `hindsight-dot` namespace, Redis PVC `data-state-0` and SSM `/kkamji/automation/hindsight/dot` remain until a separate data-removal decision; re-enabling the Application recreates the Secrets from SSM. The rest of this page is historical.
+> Retired 2026-11-22 (user request). The `hindsight-dot-staging` Argo Application is disabled in `charts/argo-applications/automation_local_values.yaml`. ChatGPT access now targets the existing `hindsight` Application through the [Moka recall OAuth path](03_hindsight.md#모카chatgpt-읽기-전용-recall-연동), not a separate instance. The chart source and the `ghcr.io/kkamji98/hindsight-dot` image package stay because the Moka canary pins an image from that package. The Application finalizer removes managed workloads, Services, Cilium policies and ExternalSecrets. Observed on 2026-11-22: the ESO target Secrets were deleted with their ExternalSecrets. The `hindsight-dot` namespace, Redis PVC `data-state-0` and SSM `/kkamji/automation/hindsight/dot` remain until a separate data-removal decision; re-enabling the Application recreates the Secrets from SSM. The rest of this page is historical.
 
 Private synthetic staging is deployed after PR68/69. The PR70 public diagnostic window failed at ChatGPT app creation after OAuth discovery, before Google exchange. PR71 removed the dedicated public route and control state is disabled at epoch2. This is not a verified dot connection. No native key or real memory was used. The inactive diagnostic overlay is a candidate, not the currently applied configuration.
 

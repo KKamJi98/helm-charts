@@ -25,6 +25,10 @@ spec:
       app.kubernetes.io/component: api
   template:
     metadata:
+      {{- if .Values.mokaRecallOAuth.service.enabled }}
+      annotations:
+        checksum/moka-recall-ext: {{ .Files.Get "files/hindsight_moka_recall_ext.py" | sha256sum }}
+      {{- end }}
       labels:
         app.kubernetes.io/name: {{ $name | quote }}
         app.kubernetes.io/instance: {{ .Release.Name | quote }}
@@ -110,6 +114,18 @@ spec:
               value: "true"
             - name: HINDSIGHT_API_ENABLE_DOCUMENT_EXPORT_API
               value: "true"
+            {{- if .Values.mokaRecallOAuth.service.enabled }}
+            # Recall-only Moka endpoint under /ext; the tenant key check is unchanged.
+            - name: HINDSIGHT_API_HTTP_EXTENSION
+              value: hindsight_moka_recall_ext:MokaRecallHttpExtension
+            - name: HINDSIGHT_API_HTTP_MOKA_RECALL_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hindsight-moka-recall-oauth-api-key
+                  key: recall_api_key
+            - name: PYTHONPATH
+              value: /opt/hindsight-ext
+            {{- end }}
             - name: HINDSIGHT_API_LLM_PROVIDER
               value: chatgpt
             - name: HINDSIGHT_API_LLM_MODEL
@@ -220,6 +236,11 @@ spec:
               mountPath: /tmp
             - name: cache
               mountPath: /home/hindsight/.cache
+            {{- if .Values.mokaRecallOAuth.service.enabled }}
+            - name: moka-recall-ext
+              mountPath: /opt/hindsight-ext
+              readOnly: true
+            {{- end }}
       volumes:
         - name: data
           persistentVolumeClaim:
@@ -246,6 +267,12 @@ spec:
         - name: cache
           emptyDir:
             sizeLimit: 512Mi
+        {{- if .Values.mokaRecallOAuth.service.enabled }}
+        - name: moka-recall-ext
+          configMap:
+            name: {{ $name }}-moka-recall-ext
+            defaultMode: 0444
+        {{- end }}
 ---
 apiVersion: v1
 kind: Service

@@ -1,4 +1,9 @@
-"""Single-process runner with listener isolation and an absolute canary deadline."""
+"""Single-process runner with listener isolation.
+
+private-metadata and attended-window are the synthetic canary modes. service is
+the durable owner connection: public OAuth on 8000, MCP only on IPv4 loopback
+8001 for the tunnel-client sidecar.
+"""
 
 import logging
 import os
@@ -10,17 +15,21 @@ import uvicorn
 from starlette.responses import Response
 
 from moka_oauth_boundary import AS_METADATA, HEADERS, PREFIX, RESOURCE_METADATA
-from moka_oauth_canary import CanaryConfig, MokaCanary
+from moka_oauth_canary import CanaryConfig, MokaCanary, ServiceConfig
 
 PUBLIC_PORT = 8000
 PRIVATE_PORT = 8001
+STATE_DIR = '/var/lib/moka-oauth/grants'
 
 
 class Window:
-    def __init__(self, canary, deadline, *, wall=time.time, monotonic=time.monotonic):
+    def __init__(self, canary, deadline, *, wall=time.time, monotonic=time.monotonic, service=False):
         remaining = None if deadline is None else deadline - wall()
+        if service and deadline is not None:
+            raise ValueError('Service mode has no canary deadline')
         if remaining is not None and not 0 < remaining <= 600:
             raise ValueError('Canary deadline must be within ten minutes')
+        self.service = service
         self.canary = canary
         self.wall = wall
         self.monotonic = monotonic
@@ -36,7 +45,12 @@ class Window:
             raise ValueError('Unsupported ASGI scope')
         address, port = scope.get('server') or (None, None)
         path = scope['path']
-        if self.deadline is None:
+        if self.service:
+            if port == PUBLIC_PORT:
+                return await self.canary.public(scope, receive, send)
+            if port == PRIVATE_PORT and address == '127.0.0.1':
+                return await self.canary.private(scope, receive, send)
+        elif self.deadline is None:
             if scope['method'] in {'GET', 'HEAD'}:
                 if port == PUBLIC_PORT and path in {AS_METADATA + PREFIX, RESOURCE_METADATA}:
                     return await self.canary.public(scope, receive, send)
@@ -55,10 +69,14 @@ def main():
     config = CanaryConfig(**{k: (root / k).read_text().strip() for k in ('client_id', 'client_secret', 'owner_sub')})
     mode = os.environ['MOKA_CANARY_MODE']
     value = os.environ['MOKA_CANARY_DEADLINE_UNIX']
-    if mode not in {'private-metadata', 'attended-window'} or bool(value) != (mode == 'attended-window'):
+    if mode not in {'private-metadata', 'attended-window', 'service'} or bool(value) != (mode == 'attended-window'):
         raise ValueError('Canary mode and deadline disagree')
     deadline = int(value) if value else None
-    app = Window(MokaCanary(config), deadline)
+    service = None
+    if mode == 'service':
+        Path(STATE_DIR).mkdir(mode=0o700, exist_ok=True)
+        service = ServiceConfig.from_secret_files(root, STATE_DIR)
+    app = Window(MokaCanary(config, service=service), deadline, service=service is not None)
     for name in ('fastmcp', 'mcp', 'httpx', 'httpx2', 'httpcore', 'authlib'):
         logging.getLogger(name).setLevel(logging.CRITICAL)
     server = uvicorn.Server(uvicorn.Config(app, access_log=False, proxy_headers=False,
@@ -72,4 +90,4 @@ if __name__ == '__main__':
     try:
         main()
     except (OSError, ValueError, KeyError):
-        raise SystemExit('Canary refused to start: invalid secret, listener or deadline') from None
+        raise SystemExit('Moka OAuth refused to start: invalid secret, listener, mode or deadline') from None

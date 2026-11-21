@@ -36,6 +36,16 @@ spec:
         - ports:
             - port: "8888"
               protocol: TCP
+    {{- if $root.Values.mokaRecallOAuth.service.enabled }}
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: {{ $root.Release.Namespace }}
+            app.kubernetes.io/name: hindsight-moka-recall-oauth
+      toPorts:
+        - ports:
+            - port: "8888"
+              protocol: TCP
+    {{- end }}
     {{- end }}
   {{- else }}
   ingress: []
