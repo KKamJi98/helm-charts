@@ -60,6 +60,13 @@ mokaRecallOAuth:
   publicEnabled: false
   deadlineUnix: ""
   image: ""
+  # Durable owner connection: grants on a PVC, recall-only Hindsight extension,
+  # MCP reachable only through the OpenAI Secure MCP Tunnel sidecar.
+  service:
+    enabled: false
+    tunnelImage: ""
+    tunnelId: ""
+    gatewayAddress: ""
 
 server:
   fullnameOverride: hindsight

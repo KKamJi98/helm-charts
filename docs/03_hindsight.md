@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-21T17:24:04+09:00
+updated: 2026-11-22T03:56:24+09:00
 type: runbook
 status: current
 ---
@@ -9,21 +9,39 @@ status: current
 
 ## 상태와 범위
 
-### 모카 전용 OAuth 비공개 사전검증
+### 모카(ChatGPT) 읽기 전용 recall 연동
 
-모카는 별도 Hindsight 인스턴스 없이 기존 `personal_shared`의 recall만 사용합니다. OpenAI Secure MCP Tunnel은 MCP 데이터 경로를 사설로 유지합니다. 브라우저가 접근할 OAuth endpoint만 기존 `hindsight.kkamji.net`에서 제공합니다. 기존 `/v1`, `/mcp`, UI OAuth 및 비공개 Keycloak은 변경하지 않습니다.
+모카는 별도 Hindsight 인스턴스 없이 기존 `personal_shared`의 recall만 사용합니다. MCP 데이터 경로는 OpenAI Secure MCP Tunnel로 사설을 유지하고, 브라우저가 접근할 OAuth endpoint만 기존 `hindsight.kkamji.net`에서 제공합니다. 기존 `/v1`, `/mcp`, UI OAuth, 비공개 Keycloak과 다른 클라이언트(Claude Code, Codex, Hermes)의 키는 변경하지 않습니다.
 
-`mokaRecallOAuth.publicEnabled`는 기본 `false`입니다. 활성화 후보는 RFC 8414/9728 discovery 2개와 `/moka-recall` 아래 authorize, token, register, consent, Google callback 5개를 exact path로만 지정합니다. 공개 Service는 OAuth 전용 ASGI 경계로 전달해야 합니다. 공개 Service에 `/moka-recall/mcp`나 네이티브 API handler를 연결하지 않습니다. Google Web application의 전용 callback은 `https://hindsight.kkamji.net/moka-recall/google/callback`입니다. Google의 callback과 ChatGPT 클라이언트의 callback은 서로 다른 등록 대상입니다.
+| 구성 | 내용 |
+|---|---|
+| 값 파일 | `moka_private_values.yaml`은 기존 Application에만 붙는 파일이며 현재 `service` 모드를 선택합니다. 파일 이름은 Application 참조를 유지하려고 바꾸지 않았습니다. |
+| Hindsight 측 권한 | Hindsight 1.1.0 내장 인증(`ApiKeyTenantExtension`)은 schema 전체 키 하나만 지원합니다. bank 범위 읽기 전용 키가 없어서, HTTP 확장 [hindsight_moka_recall_ext.py](../charts/hindsight/files/hindsight_moka_recall_ext.py)가 `POST /ext/moka-recall/recall` 하나만 추가합니다. 이 endpoint는 전용 키만 받고, bank `personal_shared`와 recall 동작을 코드에 고정하며, 본문은 `query`(1000자 이하) 하나만 허용합니다. tenant 확장과 네이티브 키 검사는 그대로이므로 전용 키는 `/v1`, `/mcp`에서 401입니다. 네이티브 키는 모카 Pod에 전달하지 않습니다. |
+| 공개 route | RFC 8414/9728 discovery 2개와 `/moka-recall` 아래 authorize, token, register, consent, Google callback 5개만 Exact로 공개합니다. `/moka-recall/mcp`와 그 밖의 `/moka-recall` 경로는 404 filter입니다. `/ext`는 API route가 아니라 Google 인증 UI catch-all로 갑니다. |
+| OAuth 런타임 | FastMCP 4.2.0 GoogleProvider. 소유자 `sub`, audience, verified email을 토큰 교환과 매 토큰 사용 때 확인합니다. DCR client와 소유자 확인 뒤 생기는 grant(upstream token, JTI, refresh)만 PVC `hindsight-moka-recall-oauth-grants`(64Mi, `k8s-w2`)에 Fernet 암호화로 저장하고, JWT 서명 키를 고정해 재시작 뒤에도 유지합니다. 무인증 transaction, CSRF, code는 collection당 128개 상한의 메모리에만 둡니다. 등록 때마다 만료 항목을 정리하고, 저장 client가 128개에 도달하면, 소유자 확인을 통과한 적 없고 1시간보다 오래된 client만 오래된 순서로 필요한 만큼 지웁니다. 지울 대상이 없으면 등록을 거절합니다. 소유자 client는 최근 8개까지 암호화 목록으로 보호합니다. 등록 제한(15분당 12회)과 정리는 하나의 lock 안에서 수행합니다. Google `access_type=offline`으로 받은 refresh token으로 FastMCP가 upstream 토큰을 갱신합니다. |
+| ChatGPT callback | DCR은 고정 `https://chatgpt.com/connector_platform_oauth_redirect`와 공식 callback ID 형식 `https://chatgpt.com/connector/oauth/<id>`만, 최대 4개까지 허용합니다. authorize와 code 교환의 redirect는 그 client가 등록한 URI여야 합니다. 고정 URI만 허용했을 때 실제 등록이 `invalid_redirect_uri`(400)로 실패했습니다. |
+| MCP 도구 | `recall` 하나(readOnlyHint). Pod IPv4 loopback `8001`에서만 응답하고 공개 `8000`에서는 404입니다. |
+| 터널 | sidecar `ghcr.io/openai/tunnel-client` v0.0.21 digest 고정, tunnel `tunnel_6b00256f55b08191a59f890cd6dbe01d`. `MCP_SERVER_URL=http://127.0.0.1:8001/mcp`, `MCP_OAUTH_TRUSTED_ORIGINS=https://hindsight.kkamji.net`. ChatGPT는 OAuth discovery를 터널의 Harpoon 채널로 요청하므로 `HARPOON_ALLOW_PLAINTEXT_HTTP=true`(loopback PRM 출처 등록용)와 `HARPOON_OAUTH_FORWARD_ORIGINS=https://hindsight.kkamji.net`을 둡니다. 임의 `HARPOON_TARGETS`는 두지 않으므로 discovery로 자동 등록된 대상만 전달됩니다. 이 설정이 없을 때 실제 커넥터 생성은 "OAuth 설정을 찾지 못했습니다"와 `unsupported channel "harpoon"`으로 실패했습니다. tunnel-client의 OAuth discovery는 기동 시 한 번 수행되므로, route가 바뀐 직후에는 Pod를 한 번 재생성해야 할 수 있습니다. OAuth metadata 조회를 위해 `hostAliases`로 `hindsight.kkamji.net`을 Gateway LB `10.0.1.100`에 고정합니다. tunnel-client는 liveness만 두고 readiness probe는 두지 않습니다. Pod readiness가 공개 OAuth Service를 결정하므로 OpenAI 장애가 OAuth endpoint를 내리지 않게 하려는 것입니다. |
+| 자격증명 | SSM(AWS 서울, SecureString): `/kkamji/automation/hindsight/recall-tunnel/google-oauth`(client), `/kkamji/automation/hindsight/dot`의 `owner_sub`, `/kkamji/automation/hindsight/recall-tunnel/runtime`(`recall_api_key`, `jwt_signing_key`, `storage_encryption_key`, 2026-11-22 v1 생성), `/kkamji/automation/hindsight/recall-tunnel/openai-api-key`(tunnel 전용 런타임 키, JSON 아닌 원문). API는 `recall_api_key`만, tunnel container는 런타임 키만 받습니다. 모두 Orphan/Retain입니다. |
+| Cilium | API ingress에 모카 Pod -> `8888`만 추가합니다. 모카 egress는 Google OAuth 2개, `api.openai.com`, Hindsight API `8888`, Gateway Envoy `10443`(Service 변환 뒤 적용)과 DNS로 제한합니다. |
 
-FastMCP 4.2.0의 실제 ASGI 경로로 metadata, DCR, PKCE, 정확한 resource, 동의, Google redirect를 합성 값으로 검증했습니다. 합성 Google tokeninfo 응답으로 승인된 `sub`의 토큰 교환 및 사설 `connection_check` 호출도 시험했습니다. 이 결과는 실제 Google 로그인이나 기억 접근 성공을 뜻하지 않습니다.
+검증 경계:
 
-전용 Google Web application의 OAuth 자격증명은 기존 AWS 서울 SSM의 새 SecureString에서 제공합니다. ESO는 `client_id`, `client_secret`과 검증해 둔 `owner_sub` property만 가져옵니다. 기존 광역 Hindsight 키는 주입하지 않습니다. 합성 canary는 최대 10분의 고정 종료 시각, 메모리 전용 등록과 세션, 120초 access token과 refresh 비활성화를 적용합니다. MCP listener는 Pod의 IPv4 loopback에만 있고 `connection_check`만 제공합니다. 종료 시각 이후 두 포트는 새 요청을 거절합니다. 라우트 자체 정리는 별도입니다.
+- 확장은 배포 이미지 `hindsight-security:1.1.0-20261029` 안에서 실제 `create_app`, 로더 설정 키, `MemoryEngine.recall_async` signature로 18개 검사를 통과했습니다. CI는 stub 기반 [test_moka_oauth_recall_ext.py](../tests/test_moka_oauth_recall_ext.py)로 같은 계약을 검사합니다.
+- 서비스 모드는 [test_moka_oauth_service.py](../tests/test_moka_oauth_service.py)에서 grant 암호화 저장과 재시작 유지, 소유자 이외 거절, 고정 URL/bank의 recall 도구, 공개 port의 MCP 404를 검사합니다. 로컬 `tunnel-client`는 non-root/read-only로 기동해 사설 MCP 401과 PRM을 인식했습니다.
+- 2026-11-22 live 인수(main `c277ca6`, `kkamji-lab`):
+  - Argo `hindsight`는 Synced/Healthy입니다. ESO target 3개가 Ready이고, grant PVC가 Bound입니다. `hindsight-api-0`은 1회 재시작한 뒤 Ready입니다.
+  - Hindsight API 직접 시험(port-forward): 전용 키로 `/ext/moka-recall/recall`을 호출하면 200이고, `personal_shared` 결과 38건을 공개 필드만으로 반환했습니다. 키가 없으면 401입니다. `bank_id` 필드를 넣으면 400이고, 다른 ext 경로는 404입니다. 같은 키로 `/v1` bank 목록, recall, retain, 다른 bank recall, native `/mcp`를 호출하면 모두 401입니다.
+  - 외부 경계: `/ext/...`는 Google 로그인(302)으로 갑니다. `/moka-recall/mcp`와 `/moka-recall/unknown`은 404이고, discovery 2개는 200입니다. 기존 `/v1`, `/mcp`는 키 없이 401이며 이전과 같습니다.
+  - tunnel-client: 터널 `Hindsight Recall` metadata를 조회했고, harpoon OAuth 대상 7개를 등록했으며, poller가 동작합니다.
+  - ChatGPT 커넥터 `Hindsight Recall`(Tunnel, OAuth DCR)을 만들었고, 소유자 Google 계정으로 OAuth를 마쳤습니다. 노출된 도구는 읽기 전용 `recall` 하나입니다. 새 대화의 recall 요청은 API 로그에서 `personal` bank recall(budget 300, max_tokens 4096)로 확인했습니다. 쓰기 요청과 `kkamji_private` 요청에 대해 ChatGPT는 도구가 할 수 없다고 답했고, 서버에는 쓰기 경로가 없습니다.
+  - 배포 중 고친 것:
+    - route 전환 직후 discovery가 404였습니다. Pod를 1회 재생성해 해결했습니다.
+    - Harpoon 채널 미허용으로 "OAuth 설정을 찾지 못했습니다"가 났습니다. [PR109](https://github.com/KKamJi98/helm-charts/pull/109)로 고쳤습니다.
+    - ChatGPT callback ID URI 거절로 DCR이 400이었습니다. [PR110](https://github.com/KKamJi98/helm-charts/pull/110)으로 고쳤습니다.
+  - 남은 범위: 다른 Google 계정의 거절은 테스트로만 검증했고, live로는 시험하지 않았습니다. refresh token에 의한 1시간 이후 유지도 아직 관찰하지 않았습니다.
 
-`moka_private_values.yaml`은 기존 Application에만 적용하는 값 파일입니다. 모델 정책 생성물은 변경하지 않습니다. 비공개 모드는 OAuth 메타데이터만 응답하고, 등록, 로그인, 토큰 발급, MCP 호출은 거절합니다. Cilium은 kubelet 상태 검사에 필요한 노드 포트만 허용하고 새 외부 연결은 금지합니다. 공개 HTTPRoute를 생성하지 않습니다. 롤백은 Hindsight Application에서 이 값 파일 참조를 되돌리는 GitOps 변경이며, 기존 네이티브 서비스와 SSM 키는 보존합니다.
-
-전용 이미지의 빌드 입력은 `images/hindsight-moka-oauth/`에 있습니다. 기존 공개 GHCR 패키지의 `moka-oauth-*` 태그를 사용하되 배포는 검증한 OCI digest로 고정합니다. 이 패키지 선택은 별도 Hindsight 설치를 뜻하지 않습니다.
-
-공개 활성화 전에 새 ESO target과 실제 네트워크 경계를 확인하고, 소유자가 참여하는 합성 OAuth 시험에서 ChatGPT를 통과한 실제 실행까지 확인합니다. 지속적 grant 저장, 읽기 전용 백엔드, 다른 계정/bank/쓰기 거절은 상시 운영 연결의 별도 인수 조건입니다.
+롤백: `moka_private_values.yaml`에서 `service.enabled`와 `publicEnabled`를 `false`로 되돌리면 비공개 metadata 모드로 돌아가고 API 확장 env/ConfigMap이 빠집니다(API Pod 1회 재시작). grant PVC와 SSM 값은 보존되므로 다시 켜면 기존 연결을 재사용합니다. 이전 합성 canary(10분 attended window, 메모리 전용, `connection_check`)는 `service.enabled=false`에서 그대로 동작합니다. 전용 이미지의 빌드 입력은 `images/hindsight-moka-oauth/`이며 배포는 검증한 OCI digest로 고정합니다.
 
 2026-10-27에 승인된 `kkamji-lab` 배포, 도메인, 전용 UI/API/MCP 인증과 합성 인수를 완료했습니다. 구독 retain/recall, OAuth 갱신의 PVC 저장, seed 삭제 후 Pod 재생성과 추가 구독 호출을 실제 확인했습니다. 실제 대화 자동 수집, 프로젝트 hook, 전역 Hermes/Claude Code 통합은 켜지 않았습니다. 아래 잔여 High 취약점과 관리자/키 신뢰 경계는 기능 인수 성공과 별개로 유지됩니다.
 
@@ -197,6 +215,8 @@ ESO 오류는 Store/ExternalSecret 상태와 property 참조부터, 401/403은 G
 - Rollback: 이 변경을 Git에서 되돌리고 Argo 재조정과 readiness를 확인합니다. `runtime.llmMaxConcurrent: 1`만 지정해도 이전 동작이 됩니다. operation ID와 PVC는 보존합니다.
 
 ## Dedicated dot candidate
+
+Retired 2026-11-22: the `hindsight-dot-staging` Application is disabled and ChatGPT access uses the existing Hindsight through the Moka recall OAuth path. See the retirement note in [the dot runbook](05_hindsight-dot.md). The paragraphs below are historical.
 
 The isolated [dot gateway candidate](05_hindsight-dot.md) is disabled and has no Argo Application. Its chart contract tests do not establish live network enforcement. It adds no native route, credential, or memory change by default. The separate proxy/gateway design keeps the existing schema-wide native credential out of the proxy; gateway code and network controls constrain use, not the credential's intrinsic authority. Native mode, OAuth owner login, real dot tool availability and network acceptance remain release gates. Existing clients and the 600-second extraction configuration remain unchanged.
 

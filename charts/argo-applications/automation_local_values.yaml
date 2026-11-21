@@ -181,7 +181,12 @@ applications:
         - moka_private_values.yaml
 
   hindsight-dot-staging:
-    enabled: true
+    # Retired 2026-11-22 (user request): ChatGPT 연동은 별도 인스턴스 대신 기존
+    # hindsight Application의 Moka recall OAuth 경로를 쓴다. chart 소스와
+    # ghcr.io/kkamji98/hindsight-dot 이미지(Moka가 재사용)는 유지한다.
+    # Application 삭제 시 finalizer가 관리 리소스를 정리한다. namespace,
+    # Redis PVC data-state-0, SSM /kkamji/automation/hindsight/dot 은 남는다(ESO 대상 Secret은 함께 삭제됨).
+    enabled: false
     name: hindsight-dot-staging
     project: automation
     destination:
