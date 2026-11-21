@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-22T02:29:14+09:00
+updated: 2026-11-22T02:35:12+09:00
 type: runbook
 status: current
 ---
@@ -19,6 +19,7 @@ status: current
 | Hindsight 측 권한 | Hindsight 1.1.0 내장 인증(`ApiKeyTenantExtension`)은 schema 전체 키 하나만 지원합니다. bank 범위 읽기 전용 키가 없어서, HTTP 확장 [hindsight_moka_recall_ext.py](../charts/hindsight/files/hindsight_moka_recall_ext.py)가 `POST /ext/moka-recall/recall` 하나만 추가합니다. 이 endpoint는 전용 키만 받고, bank `personal_shared`와 recall 동작을 코드에 고정하며, 본문은 `query`(1000자 이하) 하나만 허용합니다. tenant 확장과 네이티브 키 검사는 그대로이므로 전용 키는 `/v1`, `/mcp`에서 401입니다. 네이티브 키는 모카 Pod에 전달하지 않습니다. |
 | 공개 route | RFC 8414/9728 discovery 2개와 `/moka-recall` 아래 authorize, token, register, consent, Google callback 5개만 Exact로 공개합니다. `/moka-recall/mcp`와 그 밖의 `/moka-recall` 경로는 404 filter입니다. `/ext`는 API route가 아니라 Google 인증 UI catch-all로 갑니다. |
 | OAuth 런타임 | FastMCP 4.2.0 GoogleProvider. 소유자 `sub`, audience, verified email을 토큰 교환과 매 토큰 사용 때 확인합니다. DCR client와 소유자 확인 뒤 생기는 grant(upstream token, JTI, refresh)만 PVC `hindsight-moka-recall-oauth-grants`(64Mi, `k8s-w2`)에 Fernet 암호화로 저장하고, JWT 서명 키를 고정해 재시작 뒤에도 유지합니다. 무인증 transaction, CSRF, code는 collection당 128개 상한의 메모리에만 둡니다. 등록 때마다 만료 항목을 정리하고, 저장 client가 128개에 도달하면, 소유자 확인을 통과한 적 없고 1시간보다 오래된 client만 오래된 순서로 필요한 만큼 지웁니다. 지울 대상이 없으면 등록을 거절합니다. 소유자 client는 최근 8개까지 암호화 목록으로 보호합니다. 등록 제한(15분당 12회)과 정리는 하나의 lock 안에서 수행합니다. Google `access_type=offline`으로 받은 refresh token으로 FastMCP가 upstream 토큰을 갱신합니다. |
+| ChatGPT callback | DCR은 고정 `https://chatgpt.com/connector_platform_oauth_redirect`와 공식 callback ID 형식 `https://chatgpt.com/connector/oauth/<id>`만, 최대 4개까지 허용합니다. authorize와 code 교환의 redirect는 그 client가 등록한 URI여야 합니다. 고정 URI만 허용했을 때 실제 등록이 `invalid_redirect_uri`(400)로 실패했습니다. |
 | MCP 도구 | `recall` 하나(readOnlyHint). Pod IPv4 loopback `8001`에서만 응답하고 공개 `8000`에서는 404입니다. |
 | 터널 | sidecar `ghcr.io/openai/tunnel-client` v0.0.21 digest 고정, tunnel `tunnel_6b00256f55b08191a59f890cd6dbe01d`. `MCP_SERVER_URL=http://127.0.0.1:8001/mcp`, `MCP_OAUTH_TRUSTED_ORIGINS=https://hindsight.kkamji.net`. ChatGPT는 OAuth discovery를 터널의 Harpoon 채널로 요청하므로 `HARPOON_ALLOW_PLAINTEXT_HTTP=true`(loopback PRM 출처 등록용)와 `HARPOON_OAUTH_FORWARD_ORIGINS=https://hindsight.kkamji.net`을 둡니다. 임의 `HARPOON_TARGETS`는 두지 않으므로 discovery로 자동 등록된 대상만 전달됩니다. 이 설정이 없을 때 실제 커넥터 생성은 "OAuth 설정을 찾지 못했습니다"와 `unsupported channel "harpoon"`으로 실패했습니다. tunnel-client의 OAuth discovery는 기동 시 한 번 수행되므로, route가 바뀐 직후에는 Pod를 한 번 재생성해야 할 수 있습니다. OAuth metadata 조회를 위해 `hostAliases`로 `hindsight.kkamji.net`을 Gateway LB `10.0.1.100`에 고정합니다. tunnel-client는 liveness만 두고 readiness probe는 두지 않습니다. Pod readiness가 공개 OAuth Service를 결정하므로 OpenAI 장애가 OAuth endpoint를 내리지 않게 하려는 것입니다. |
 | 자격증명 | SSM(AWS 서울, SecureString): `/kkamji/automation/hindsight/recall-tunnel/google-oauth`(client), `/kkamji/automation/hindsight/dot`의 `owner_sub`, `/kkamji/automation/hindsight/recall-tunnel/runtime`(`recall_api_key`, `jwt_signing_key`, `storage_encryption_key`, 2026-11-22 v1 생성), `/kkamji/automation/hindsight/recall-tunnel/openai-api-key`(tunnel 전용 런타임 키, JSON 아닌 원문). API는 `recall_api_key`만, tunnel container는 런타임 키만 받습니다. 모두 Orphan/Retain입니다. |

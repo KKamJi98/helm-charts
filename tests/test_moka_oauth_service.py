@@ -279,6 +279,40 @@ class ServiceRuntimeTest(unittest.IsolatedAsyncioTestCase):
         results = await asyncio.gather(*(self.register() for _ in range(20)))
         self.assertEqual(sum(r.status_code == 201 for r in results), 11)  # 1 used in setUp
 
+    async def test_only_chatgpt_stable_or_callback_id_redirects_register(self):
+        cid = 'https://chatgpt.com/connector/oauth/AbC_123-xyz'
+        accepted = ([CALLBACK], [cid], [CALLBACK, cid])
+        rejected = (['https://evil.example/connector/oauth/abc'], ['https://chatgpt.com/connector/oauth/../x'],
+                    ['http://chatgpt.com/connector/oauth/abc'], ['https://chatgpt.com/connector/oauth/abc?x=1'],
+                    ['https://chatgpt.com/connector/oauth/abc/extra'], [CALLBACK, 'https://evil.example/cb'],
+                    [f'https://chatgpt.com/connector/oauth/a{i}' for i in range(5)], [])
+        for uris in accepted + rejected:
+            with self.subTest(uris=uris):
+                res = await self.public.post('/moka-recall/register', json={
+                    'redirect_uris': uris, 'token_endpoint_auth_method': 'none',
+                    'grant_types': ['authorization_code', 'refresh_token'], 'response_types': ['code'],
+                    'scope': ' '.join(self.scopes)})
+                self.assertEqual(res.status_code, 201 if uris in accepted else 400, res.text)
+
+    async def test_callback_id_client_completes_owner_grant(self):
+        cid = 'https://chatgpt.com/connector/oauth/AbC_123-xyz'
+        app = await self.public.post('/moka-recall/register', json={
+            'redirect_uris': [cid], 'token_endpoint_auth_method': 'none',
+            'grant_types': ['authorization_code', 'refresh_token'], 'response_types': ['code'],
+            'scope': ' '.join(self.scopes)})
+        client_id = app.json()['client_id']
+        now = time.time()
+        await self.runtime.provider._code_store.put(key='fixture-cid', value=ClientCode(
+            code='fixture-cid', client_id=client_id, redirect_uri=cid, code_challenge=CHALLENGE,
+            code_challenge_method='S256', scopes=self.scopes, created_at=now, expires_at=now + 60,
+            idp_tokens={'access_token': 'fixture-google-access', 'expires_in': 3000,
+                        'scope': ' '.join(self.scopes), 'refresh_token': 'fixture-google-refresh'}))
+        res = await self.public.post(self.endpoint, data={
+            'grant_type': 'authorization_code', 'code': 'fixture-cid', 'redirect_uri': cid,
+            'client_id': client_id, 'code_verifier': VERIFIER})
+        self.assertEqual(res.status_code, 200, res.text)
+        self.assertIsNotNone(await self.runtime.provider.load_access_token(res.json()['access_token']))
+
     async def test_refresh_is_delegated_instead_of_refused(self):
         client = await self.runtime.provider.get_client(self.client_id)
         bogus = type(
