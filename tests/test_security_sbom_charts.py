@@ -116,6 +116,8 @@ class SecuritySbomChartsTests(unittest.TestCase):
         )
         self.assertIn("kind: CronJob", enabled)
         self.assertIn("kind: ExternalSecret", enabled)
+        self.assertIn("name: parameter-store", enabled)
+        self.assertIn("/kkamji/personal/kkamji-platform/app/ingest-token", enabled)
         self.assertIn(
             "https://platform.kkamji.net/api/ingest/security-posture", enabled
         )

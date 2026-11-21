@@ -32,8 +32,8 @@ posturePublisher:
   image: python:3.12-alpine
   externalSecret:
     enabled: true
-    secretStoreName: aws-ssm-parameter-store
+    secretStoreName: parameter-store
     secretStoreKind: ClusterSecretStore
-    ssmKey: /kkamji/platform/ingest-token
+    ssmKey: /kkamji/personal/kkamji-platform/app/ingest-token
     targetSecretName: security-posture-ingest-token
     targetSecretKey: PLATFORM_INGEST_TOKEN
