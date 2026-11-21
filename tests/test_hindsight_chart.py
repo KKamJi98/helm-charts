@@ -592,6 +592,8 @@ class ChartTests(unittest.TestCase):
                     "mac_hermes",
                     "wsl_codex",
                     "mac_codex",
+                    "wsl_agy",
+                    "mac_agy",
                 )
             },
         }
