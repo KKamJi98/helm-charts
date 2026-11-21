@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-22T06:20:00+09:00
+updated: 2026-11-22T06:50:00+09:00
 type: runbook
 status: current
 ---
@@ -128,7 +128,7 @@ This design is pinned to [Envoy Gateway v1.8.1 filter ordering](https://github.c
 
 ## Secret과 OAuth 소유권
 
-Edge credentials use a separate SecureString JSON at `auth.edgeSsmKey=/kkamji/automation/hindsight/edge-auth`. `hindsight-google-oidc` maps `client-secret` from `oidc_client_secret`; `hindsight-gateway-client-keys` maps exactly `wsl_claude`, `wsl_hermes`, `mac_claude`, `mac_hermes`, `wsl_codex`, `mac_codex` to identically named properties. Each client key must be independent and high entropy. The new ExternalSecrets render only with exposure enabled, use the existing `parameter-store`, explicit property mappings, Opaque targets and Orphan/Retain. SSM version 1 metadata, both ESO readers' Ready state, exact target/source equality without value output, and owner Google login were verified. No credential value belongs in the chart.
+Edge credentials use a separate SecureString JSON at `auth.edgeSsmKey=/kkamji/automation/hindsight/edge-auth`. `hindsight-google-oidc` maps `client-secret` from `oidc_client_secret`; `hindsight-gateway-client-keys` maps exactly `wsl_claude`, `wsl_hermes`, `mac_claude`, `mac_hermes`, `wsl_codex`, `mac_codex`, `wsl_agy`, `mac_agy` to identically named properties. Each client key must be independent and high entropy. The new ExternalSecrets render only with exposure enabled, use the existing `parameter-store`, explicit property mappings, Opaque targets and Orphan/Retain. SSM version 1 metadata, both ESO readers' Ready state, exact target/source equality without value output, and owner Google login were verified. No credential value belongs in the chart.
 
 The original `auth.ssmKey` and all four existing ExternalSecrets stay unchanged for native consumers and rollback. The old Gateway UI/API Secrets are not referenced by the candidate SecurityPolicies. Rollback is a reviewed Git reversal, not an automatic BasicAuth fallback on OIDC failure, and must not reset native keys or the refreshed ChatGPT PVC.
 

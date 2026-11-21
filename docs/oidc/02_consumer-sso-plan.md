@@ -1,6 +1,6 @@
 ---
 title: Staged Keycloak consumer SSO
-updated: 2026-11-22T06:20:00+09:00
+updated: 2026-11-22T06:50:00+09:00
 type: architecture
 status: current
 ---
@@ -53,6 +53,10 @@ The Hindsight model value (`runtime.model` in the local values,
 [runbook](../03_hindsight.md#llm-model-gpt-62-sol-2026-11-22)) changes the value of
 one existing environment variable of that container, so the same entry is
 re-baselined once more; the object count and every other chart are unchanged.
+Adding `wsl_agy` and `mac_agy` to the `hindsight-gateway-client-keys`
+ExternalSecret updates only that one ExternalSecret object in the Hindsight
+render, so the same entry is re-baselined again; the object count, UI login,
+routes and every other chart remain unchanged.
 
 Grafana's parent-accepted native retained PVC, one replica, Recreate with
 `rollingUpdate: null`, fixed existingClaim/local-path/RWO/10Gi, disabled chown and

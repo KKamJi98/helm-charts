@@ -14,8 +14,8 @@
     },
     "hindsight": {
       "count": 30,
-      "objectsSha256": "85689956fb8e09bbd4dafeabf4e0f032b45456b99c15fd23307c73fea394f763",
-      "rebaselined": "2026-11-22: API container env only: HINDSIGHT_API_LLM_MAX_CONCURRENT 1 -> 4, then HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT=medium added, then HINDSIGHT_API_LLM_MODEL gpt-6.1-sol -> gpt-6.2-sol; no other object changed"
+      "objectsSha256": "0367b84e5d8819dd0bfc880423b2c39d0f0f50adc41235c80b682289fbb64465",
+      "rebaselined": "2026-11-22: API container env (concurrent 1->4, retain reasoning effort medium, model gpt-6.2-sol) and hindsight-gateway-client-keys ExternalSecret (+wsl_agy, +mac_agy); no other object changed"
     },
     "kube-prometheus-stack": {
       "count": 131,
