@@ -1,0 +1,10 @@
+apiVersion: v2
+name: trivy-operator-bundle
+description: Aqua Trivy Operator umbrella chart for kkamji-lab CycloneDX SBOM and vulnerability scanning
+type: application
+version: 0.1.0
+appVersion: "0.36.1"
+dependencies:
+  - name: trivy-operator
+    version: 0.38.1
+    repository: https://aquasecurity.github.io/helm-charts/

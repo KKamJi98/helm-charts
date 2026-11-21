@@ -1,0 +1,225 @@
+{{- if .Values.posturePublisher.enabled }}
+{{- if .Values.posturePublisher.externalSecret.enabled }}
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: {{ .Release.Name }}-posture-ingest-token
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/part-of: homelab-security
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: {{ .Values.posturePublisher.externalSecret.secretStoreName }}
+    kind: {{ .Values.posturePublisher.externalSecret.secretStoreKind }}
+  target:
+    name: {{ .Values.posturePublisher.externalSecret.targetSecretName }}
+    creationPolicy: Owner
+  data:
+    - secretKey: {{ .Values.posturePublisher.externalSecret.targetSecretKey }}
+      remoteRef:
+        key: {{ .Values.posturePublisher.externalSecret.ssmKey }}
+---
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-posture-publisher-script
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/part-of: homelab-security
+data:
+  publish_posture.py: |-
+    import datetime
+    import json
+    import os
+    import sys
+    import urllib.parse
+    import urllib.request
+
+    PROM_URL = os.environ["PROMETHEUS_URL"].rstrip("/")
+    AM_URL = os.environ["ALERTMANAGER_URL"].rstrip("/")
+    PLATFORM_URL = os.environ["PLATFORM_API_URL"]
+    CLUSTER_ID = os.environ["CLUSTER_ID"]
+    TOKEN = os.environ["PLATFORM_INGEST_TOKEN"].strip()
+
+    def prom_scalar(query: str):
+        url = f"{PROM_URL}/api/v1/query?query={urllib.parse.quote(query, safe='')}"
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        if data.get("status") != "success":
+            return None
+        res = data.get("data", {}).get("result", [])
+        if not res:
+            return None
+        return float(res[0]["value"][1])
+
+    def prom_int(query: str, default: int = 0) -> int:
+        val = prom_scalar(query)
+        return max(0, int(round(val))) if val is not None else default
+
+    def fetch_alerts():
+        url = f"{AM_URL}/api/v2/alerts?active=true&silenced=false&inhibited=false"
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            items = json.loads(resp.read().decode("utf-8"))
+        sec = []
+        crit = 0
+        warn = 0
+        for item in items:
+            labels = item.get("labels", {})
+            cat = labels.get("category", "")
+            if cat not in ("sbom", "traffic", "siem", "edge"):
+                continue
+            sev = labels.get("severity", "warning")
+            if sev == "critical":
+                crit += 1
+            else:
+                warn += 1
+            if len(sec) < 50:
+                sec.append({
+                    "alertName": str(labels.get("alertname", "UnknownAlert"))[:128],
+                    "severity": "critical" if sev == "critical" else "warning",
+                    "category": cat,
+                    "namespace": str(labels.get("namespace", ""))[:64] or None,
+                    "summary": str(item.get("annotations", {}).get("summary", ""))[:256] or labels.get("alertname", "Alert"),
+                    "startsAt": item.get("startsAt") or datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                })
+        return crit, warn, sec
+
+    def main():
+        now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        trivy_up = prom_scalar('max(up{job=~".*trivy-operator.*"})')
+        tetragon_ready = prom_int('count(up{job=~".*tetragon.*"} == 1)', 0)
+        worker_nodes = prom_int('count(kube_node_role{role="control-plane"} == 0) or (count(kube_node_info) - 1)', 2)
+        tracked = prom_int('count(count by (namespace, resource_name) (trivy_image_vulnerabilities))', 0)
+        sbom_reports = prom_int('sum(trivy_image_sbom_components) > 0 and count(trivy_image_sbom_components) or count(count by (namespace, resource_name) (trivy_image_vulnerabilities))', 0)
+
+        sbom_status = "ok" if (trivy_up == 1.0 and tracked > 0) else ("degraded" if trivy_up == 1.0 else "unavailable")
+        runtime_status = "ok" if tetragon_ready >= worker_nodes and worker_nodes > 0 else ("degraded" if tetragon_ready > 0 else "unavailable")
+
+        crit_alerts, warn_alerts, active_alerts = fetch_alerts()
+
+        payload = {
+            "schemaVersion": 1,
+            "clusterId": CLUSTER_ID,
+            "observedAt": now,
+            "sbom": {
+                "status": sbom_status,
+                "lastScanAt": now if sbom_status != "unavailable" else None,
+                "trackedWorkloads": tracked,
+                "sbomReports": sbom_reports,
+                "vulnerabilities": {
+                    "critical": prom_int('sum(trivy_image_vulnerabilities{severity="Critical"})', 0),
+                    "high": prom_int('sum(trivy_image_vulnerabilities{severity="High"})', 0),
+                    "medium": prom_int('sum(trivy_image_vulnerabilities{severity="Medium"})', 0),
+                    "low": prom_int('sum(trivy_image_vulnerabilities{severity="Low"})', 0),
+                    "unknown": prom_int('sum(trivy_image_vulnerabilities{severity="Unknown"})', 0),
+                },
+                "exposedSecrets": prom_int('sum(trivy_image_exposedsecrets)', 0),
+                "configAuditCritical": prom_int('sum(trivy_resource_configaudits{severity="Critical"})', 0),
+                "configAuditHigh": prom_int('sum(trivy_resource_configaudits{severity="High"})', 0),
+            },
+            "runtime": {
+                "status": runtime_status,
+                "tetragonNodesReady": tetragon_ready,
+                "tetragonNodesExpected": max(1, worker_nodes),
+                "siemEvents1h": prom_int('sum(increase(tetragon_events_total[1h]))', 0),
+                "enforcementEvents24h": prom_int('sum(increase(tetragon_policy_events_total{enforcement_action="SIGKILL"}[24h]))', 0),
+                "hubbleDrops1h": prom_int('sum(increase(hubble_drop_total[1h]))', 0),
+                "dnsNxdomain1h": prom_int('sum(increase(hubble_dns_responses_total{rcode="Non-Existent Domain"}[1h]))', 0),
+                "edge4xx1h": prom_int('sum(increase(envoy_http_downstream_rq_xx{envoy_response_code_class="4"}[1h]))', 0),
+                "edge5xx1h": prom_int('sum(increase(envoy_http_downstream_rq_xx{envoy_response_code_class="5"}[1h]))', 0),
+            },
+            "alerts": {
+                "firingCritical": crit_alerts,
+                "firingWarning": warn_alerts,
+                "active": active_alerts,
+            },
+        }
+        body = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            PLATFORM_URL,
+            data=body,
+            method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {TOKEN}",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            if resp.status >= 300:
+                print(f"ingest failed with status {resp.status}", file=sys.stderr)
+                sys.exit(1)
+        print('{"accepted": true}')
+
+    if __name__ == "__main__":
+        main()
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-posture-publisher
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/part-of: homelab-security
+spec:
+  schedule: {{ .Values.posturePublisher.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 60
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: security-posture-publisher
+            app.kubernetes.io/part-of: homelab-security
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: publisher
+              image: {{ .Values.posturePublisher.image | quote }}
+              command: ["python3", "/app/publish_posture.py"]
+              env:
+                - name: CLUSTER_ID
+                  value: {{ .Values.posturePublisher.clusterId | quote }}
+                - name: PLATFORM_API_URL
+                  value: {{ .Values.posturePublisher.platformApiUrl | quote }}
+                - name: PROMETHEUS_URL
+                  value: {{ .Values.posturePublisher.prometheusUrl | quote }}
+                - name: ALERTMANAGER_URL
+                  value: {{ .Values.posturePublisher.alertmanagerUrl | quote }}
+                - name: PLATFORM_INGEST_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.posturePublisher.externalSecret.targetSecretName }}
+                      key: {{ .Values.posturePublisher.externalSecret.targetSecretKey }}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 20m
+                  memory: 32Mi
+                limits:
+                  memory: 64Mi
+              volumeMounts:
+                - name: script
+                  mountPath: /app
+                  readOnly: true
+          volumes:
+            - name: script
+              configMap:
+                name: {{ .Release.Name }}-posture-publisher-script
+{{- end }}

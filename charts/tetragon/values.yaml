@@ -1,0 +1,5 @@
+# Base defaults; cluster-specific settings live in kkamji_local_values.yaml.
+tetragon: {}
+
+auditTracingPolicy:
+  enabled: true

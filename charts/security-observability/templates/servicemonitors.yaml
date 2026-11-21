@@ -1,0 +1,51 @@
+{{- if .Values.serviceMonitors.hubble.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-hubble-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    release: {{ .Values.prometheusReleaseLabel | quote }}
+    app.kubernetes.io/part-of: homelab-security
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.serviceMonitors.hubble.namespace }}
+  selector:
+    matchLabels:
+      k8s-app: hubble
+  endpoints:
+    - port: hubble-metrics
+      path: /metrics
+      interval: {{ .Values.serviceMonitors.hubble.interval }}
+      honorLabels: true
+      relabelings:
+        - action: replace
+          replacement: ${1}
+          sourceLabels:
+            - __meta_kubernetes_pod_node_name
+          targetLabel: node
+{{- end }}
+{{- if .Values.serviceMonitors.loki.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-loki-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    release: {{ .Values.prometheusReleaseLabel | quote }}
+    app.kubernetes.io/part-of: homelab-security
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.serviceMonitors.loki.namespace }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: loki
+      app.kubernetes.io/instance: loki
+  endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: {{ .Values.serviceMonitors.loki.interval }}
+{{- end }}

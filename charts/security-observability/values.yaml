@@ -1,0 +1,36 @@
+prometheusReleaseLabel: kube-prometheus-stack
+grafanaDashboardFolder: Security
+
+serviceMonitors:
+  hubble:
+    enabled: true
+    namespace: kube-system
+    interval: 30s
+  loki:
+    enabled: true
+    namespace: monitoring
+    interval: 60s
+
+prometheusRules:
+  enabled: true
+
+grafanaDashboards:
+  enabled: true
+
+posturePublisher:
+  # Gated off by default until Ethan approves kkamji-platform /security ingest rollout.
+  enabled: false
+  schedule: "*/5 * * * *"
+  clusterId: kkamji-lab
+  platformApiUrl: https://platform.kkamji.net/api/ingest/security-posture
+  prometheusUrl: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+  alertmanagerUrl: http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093
+  image: python:3.12-alpine
+  # ExternalSecret reference for PLATFORM_INGEST_TOKEN (never store raw tokens in Git).
+  externalSecret:
+    enabled: true
+    secretStoreName: aws-ssm-parameter-store
+    secretStoreKind: ClusterSecretStore
+    ssmKey: /kkamji/platform/ingest-token
+    targetSecretName: security-posture-ingest-token
+    targetSecretKey: PLATFORM_INGEST_TOKEN

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: security-observability
+description: Homelab security ServiceMonitors, PrometheusRules, Grafana dashboards, and optional posture publisher
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

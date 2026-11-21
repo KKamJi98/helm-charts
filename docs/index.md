@@ -19,6 +19,7 @@ status: current
 - [Memory API adoption status](02_memory-api-status.md) - Mem0 운영 보류 근거와 공식 경로 재개 조건.
 - [Hindsight dot candidate](05_hindsight-dot.md) - Retired 2026-11-22; historical dedicated OAuth/MCP staging, replaced by the Moka path on existing Hindsight.
 - [Private Hindsight](03_hindsight.md) - 개인 UI/API/MCP 설계, 전용 인증과 단일 writer, 배포 후 인수 및 복구 절차.
+- [Homelab security and SBOM stack](06_security-sbom-stack.md) - Trivy Operator CycloneDX SBOM, 워커 전용 Cilium Tetragon SIEM, 보안 관측 규칙/대시보드와 단계별 롤아웃.
 
 - [Keycloak OIDC preparation and phased deployment](05_oidc-idp-preparation.md) - 전용 DB 단계, 별도 앱 활성화, MFA/복구와 기존 인증 보존.
 - [Platform OIDC client contract](oidc/01_platform-client-contract.md) - 고정 issuer/owner, PKCE/state/nonce와 세션 폐기.

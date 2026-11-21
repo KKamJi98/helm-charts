@@ -1,0 +1,60 @@
+# Staged Argo CD Applications for Homelab Security & SBOM Stack.
+# All applications default to enabled: false until Ethan reviews the architecture decision
+# and approves staged rollout (Stage 1: security-observability, Stage 2: trivy-operator,
+# Stage 3: tetragon). Keeping this file separate from management_local_values.yaml avoids
+# colliding with OIDC/Keycloak activation tests until rollout approval.
+destinationNamespace: argocd
+destinationServer: https://kubernetes.default.svc
+project: management
+
+syncPolicy:
+  automated:
+    prune: true
+    selfHeal: true
+  syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true
+    - ServerSideApply=true
+
+applications:
+  security-observability:
+    enabled: false
+    name: security-observability
+    project: management
+    destination:
+      namespace: security
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/security-observability
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  trivy-operator:
+    enabled: false
+    name: trivy-operator
+    project: management
+    destination:
+      namespace: security
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/trivy-operator
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  tetragon:
+    enabled: false
+    name: tetragon
+    project: management
+    destination:
+      namespace: security
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/tetragon
+      helm:
+        valueFiles:
+          - kkamji_local_values.yaml

@@ -1,0 +1,39 @@
+# Homelab security observability profile for kkamji-lab.
+# Zero steady-state RAM overhead: Prometheus/Grafana discover CRs and ConfigMaps across namespaces.
+prometheusReleaseLabel: kube-prometheus-stack
+grafanaDashboardFolder: Security
+
+serviceMonitors:
+  # Fixes 2026-11-22 live audit finding: kube-system/hubble ServiceMonitor lacked
+  # release=kube-prometheus-stack label, leaving hubble_* series at 0 in Prometheus.
+  hubble:
+    enabled: true
+    namespace: kube-system
+    interval: 30s
+  loki:
+    enabled: true
+    namespace: monitoring
+    interval: 60s
+
+prometheusRules:
+  enabled: true
+
+grafanaDashboards:
+  enabled: true
+
+# Keep gated off until kkamji-platform /security backend is deployed and SSM key verified.
+posturePublisher:
+  enabled: false
+  schedule: "*/5 * * * *"
+  clusterId: kkamji-lab
+  platformApiUrl: https://platform.kkamji.net/api/ingest/security-posture
+  prometheusUrl: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+  alertmanagerUrl: http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093
+  image: python:3.12-alpine
+  externalSecret:
+    enabled: true
+    secretStoreName: aws-ssm-parameter-store
+    secretStoreKind: ClusterSecretStore
+    ssmKey: /kkamji/platform/ingest-token
+    targetSecretName: security-posture-ingest-token
+    targetSecretKey: PLATFORM_INGEST_TOKEN

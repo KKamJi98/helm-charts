@@ -92,5 +92,13 @@
     "examples/keycloak-preparation/consumer-contract/**",
     "tests/test_keycloak_seven_clients.py",
     ".github/workflows/keycloak-consumer-lint.yml"
+  ],
+  "docs/06_security-sbom-stack.md": [
+    "charts/trivy-operator/**",
+    "charts/tetragon/**",
+    "charts/security-observability/**",
+    "charts/loki/kkamji_local_values.yaml",
+    "charts/argo-applications/security_local_values.yaml",
+    "tests/test_security_sbom_charts.py"
   ]
 }

@@ -1,0 +1,61 @@
+# Cilium Tetragon homelab profile for kkamji-lab.
+# CRITICAL (2026-11-22 live audit): k8s-m1 control-plane sits at 94% RAM (2884/3047MiB).
+# Upstream default sets tolerations: [{operator: Exists}] which would schedule on k8s-m1.
+# Explicitly override tolerations: [] so Tetragon runs on workers (k8s-w1, k8s-w2) only,
+# matching the existing Grafana Alloy DaemonSet placement.
+tetragon:
+  tolerations: []
+
+  tetragon:
+    enabled: true
+    processCacheSize: 32768
+    exportRateLimit: 120
+    exportAllowList: |-
+      {"event_set":["PROCESS_EXEC","PROCESS_KPROBE","PROCESS_LSM"]}
+    exportDenyList: |-
+      {"health_check":true}
+      {"namespace":["","cilium","kube-system","monitoring"]}
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 384Mi
+    prometheus:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+        extraLabels:
+          release: kube-prometheus-stack
+        scrapeInterval: 60s
+
+  # Emit JSON events to stdout so the existing Alloy DaemonSet ships them to Loki automatically.
+  export:
+    mode: "stdout"
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 96Mi
+
+  tetragonOperator:
+    enabled: true
+    replicas: 1
+    tolerations: []
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+    prometheus:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+        extraLabels:
+          release: kube-prometheus-stack
+
+# Start with audit-only TracingPolicy (no Sigkill action) to prevent accidental workload disruption.
+auditTracingPolicy:
+  enabled: true

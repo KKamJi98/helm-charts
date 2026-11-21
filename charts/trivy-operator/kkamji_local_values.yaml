@@ -1,0 +1,57 @@
+# Trivy Operator homelab profile for kkamji-lab (Hyper-V workers: 15.6GiB RAM each).
+# Provides continuous Kubernetes-native CycloneDX SbomReport, VulnerabilityReport,
+# ExposedSecretReport, ConfigAuditReport, and RbacAssessmentReport with Prometheus metrics.
+# Control-plane k8s-m1 (94% RAM on 2026-11-22) is excluded by default (empty tolerations).
+trivy-operator:
+  # Exclude ephemeral ARC CI runner namespaces to avoid churn and RAM spikes.
+  excludeNamespaces: "ci-pr,ci-full"
+
+  operator:
+    sbomGenerationEnabled: true
+    vulnerabilityScannerEnabled: true
+    exposedSecretScannerEnabled: true
+    configAuditScannerEnabled: true
+    rbacAssessmentScannerEnabled: true
+    infraAssessmentScannerEnabled: false
+    clusterComplianceEnabled: false
+
+    # Serialize scan jobs to 1 concurrent pod to protect worker RAM headroom and CI quota.
+    scanJobsConcurrentLimit: 1
+    scanJobsRetryDelay: 60s
+    vulnerabilityScannerScanOnlyCurrentRevisions: true
+    configAuditScannerScanOnlyCurrentRevisions: true
+
+    # Export severity summary metrics to Prometheus without high-cardinality per-CVE labels.
+    metricsFindingsEnabled: true
+    metricsVulnIdEnabled: false
+    metricsExposedSecretInfo: true
+    metricsConfigAuditInfo: false
+    metricsRbacAssessmentInfo: false
+    metricsInfraAssessmentInfo: false
+    metricsImageInfo: false
+    metricsClusterComplianceInfo: false
+
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: kube-prometheus-stack
+
+  trivy:
+    mode: Standalone
+    slow: true
+    severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 150Mi
+    limits:
+      memory: 512Mi
+
+  tolerations: []

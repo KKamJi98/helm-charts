@@ -1,0 +1,32 @@
+{{- if .Values.auditTracingPolicy.enabled }}
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: homelab-sensitive-file-read-audit
+  labels:
+    app.kubernetes.io/part-of: homelab-security
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  # Audit-only kprobe policy (no Sigkill/Override action): logs reads of high-value
+  # host credential files from containerized processes to Tetragon stdout -> Alloy -> Loki.
+  kprobes:
+    - call: "security_file_open"
+      syscall: false
+      args:
+        - index: 0
+          type: "file"
+      selectors:
+        - matchNamespaces:
+            - namespace: Mnt
+              operator: NotIn
+              values:
+                - "host_ns"
+          matchArgs:
+            - index: 0
+              operator: "Prefix"
+              values:
+                - "/etc/shadow"
+                - "/etc/gshadow"
+                - "/etc/sudoers"
+                - "/root/.ssh"
+{{- end }}

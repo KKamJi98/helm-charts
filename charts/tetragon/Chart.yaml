@@ -1,0 +1,10 @@
+apiVersion: v2
+name: tetragon-bundle
+description: Cilium Tetragon eBPF runtime security umbrella chart for kkamji-lab workers
+type: application
+version: 0.1.0
+appVersion: "1.7.1"
+dependencies:
+  - name: tetragon
+    version: 1.7.1
+    repository: https://helm.cilium.io/

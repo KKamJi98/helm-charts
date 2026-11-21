@@ -1,0 +1,129 @@
+{{- if .Values.prometheusRules.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}-security-rules
+  namespace: {{ .Release.Namespace }}
+  labels:
+    release: {{ .Values.prometheusReleaseLabel | quote }}
+    app.kubernetes.io/part-of: homelab-security
+spec:
+  groups:
+    - name: homelab.security.sbom
+      rules:
+        - alert: TrivyCriticalVulnerabilityDetected
+          expr: sum(trivy_image_vulnerabilities{severity="Critical"}) > 0
+          for: 15m
+          labels:
+            severity: warning
+            category: sbom
+          annotations:
+            summary: "Critical CVEs detected in kkamji-lab workloads"
+            description: "{{ printf `{{ $value | printf \"%.0f\" }}` }} Critical vulnerabilities are currently reported by Trivy Operator across cluster images."
+            dashboard_url: "https://grafana.kkamji.net/d/homelab-security-sbom"
+
+        - alert: TrivyExposedSecretDetected
+          expr: sum(trivy_image_exposedsecrets) > 0
+          for: 5m
+          labels:
+            severity: critical
+            category: sbom
+          annotations:
+            summary: "Exposed secret detected in container image"
+            description: "Trivy Operator detected {{ printf `{{ $value | printf \"%.0f\" }}` }} exposed secret finding(s) in running cluster images."
+            dashboard_url: "https://grafana.kkamji.net/d/homelab-security-sbom"
+
+        - alert: TrivyOperatorScrapeDown
+          expr: up{job=~".*trivy-operator.*"} == 0
+          for: 10m
+          labels:
+            severity: warning
+            category: sbom
+          annotations:
+            summary: "Trivy Operator metrics target is down"
+            description: "Prometheus cannot scrape Trivy Operator ({{ printf `{{ $labels.instance }}` }}) for 10 minutes; SBOM and CVE posture may be stale."
+            dashboard_url: "https://grafana.kkamji.net/d/homelab-security-sbom"
+
+    - name: homelab.security.traffic
+      rules:
+        - alert: HubbleHighDropRate
+          expr: sum by (reason) (rate(hubble_drop_total[5m])) > 10
+          for: 5m
+          labels:
+            severity: warning
+            category: traffic
+          annotations:
+            summary: "Elevated Cilium Hubble packet drop rate ({{ printf `{{ $labels.reason }}` }})"
+            description: "Hubble recorded {{ printf `{{ $value | printf \"%.1f\" }}` }} drops/sec for reason {{ printf `{{ $labels.reason }}` }} over 5m."
+            dashboard_url: "https://grafana.kkamji.net/d/homelab-security-traffic"
+
+        - alert: HubbleDnsNxdomainSpike
+          expr: sum(rate(hubble_dns_responses_total{rcode="Non-Existent Domain"}[5m])) > 5
+          for: 5m
+          labels:
+            severity: warning
+            category: traffic
+          annotations:
+            summary: "Elevated DNS NXDOMAIN spike detected via Hubble"
+            description: "Cluster DNS NXDOMAIN response rate reached {{ printf `{{ $value | printf \"%.1f\" }}` }}/sec over 5m (possible scan, misconfig, or DGA beacon)."
+            dashboard_url: "https://grafana.kkamji.net/d/homelab-security-traffic"
+
+        - alert: HubbleMetricsMissing
+          expr: absent(hubble_flows_processed_total)
+          for: 15m
+          labels:
+            severity: warning
+            category: traffic
+          annotations:
+            summary: "Cilium Hubble metrics missing from Prometheus"
+            description: "No hubble_flows_processed_total series found for 15 minutes; check ServiceMonitor and hubble-metrics service."
+            dashboard_url: "https://grafana.kkamji.net/d/homelab-security-traffic"
+
+    - name: homelab.security.siem
+      rules:
+        - alert: TetragonEnforcementSigkill
+          expr: sum(increase(tetragon_policy_events_total{enforcement_action="SIGKILL"}[5m])) > 0
+          for: 1m
+          labels:
+            severity: critical
+            category: siem
+          annotations:
+            summary: "Tetragon eBPF policy triggered SIGKILL"
+            description: "Tetragon enforced SIGKILL {{ printf `{{ $value | printf \"%.0f\" }}` }} time(s) in the last 5m. Inspect Loki runtime SIEM logs immediately."
+            dashboard_url: "https://grafana.kkamji.net/d/homelab-security-siem"
+
+        - alert: TetragonHighEventErrorRate
+          expr: sum(rate(tetragon_errors_total[5m])) > 1
+          for: 10m
+          labels:
+            severity: warning
+            category: siem
+          annotations:
+            summary: "Tetragon event processing error rate elevated"
+            description: "Tetragon reported {{ printf `{{ $value | printf \"%.2f\" }}` }} errors/sec over 5m; check worker ring-buffer pressure."
+            dashboard_url: "https://grafana.kkamji.net/d/homelab-security-siem"
+
+    - name: homelab.security.edge
+      rules:
+        - alert: EnvoyEdge4xxSpike
+          expr: sum(rate(envoy_http_downstream_rq_xx{envoy_response_code_class="4"}[5m])) > 5
+          for: 5m
+          labels:
+            severity: warning
+            category: edge
+          annotations:
+            summary: "Envoy Gateway HTTP 4xx burst detected"
+            description: "Edge Envoy Gateway is serving {{ printf `{{ $value | printf \"%.1f\" }}` }} HTTP 4xx req/s over 5m (possible brute-force or path scan)."
+            dashboard_url: "https://grafana.kkamji.net/d/homelab-security-traffic"
+
+        - alert: EnvoyEdge5xxSpike
+          expr: sum(rate(envoy_http_downstream_rq_xx{envoy_response_code_class="5"}[5m])) > 2
+          for: 5m
+          labels:
+            severity: warning
+            category: edge
+          annotations:
+            summary: "Envoy Gateway HTTP 5xx burst detected"
+            description: "Edge Envoy Gateway is serving {{ printf `{{ $value | printf \"%.1f\" }}` }} HTTP 5xx req/s over 5m."
+            dashboard_url: "https://grafana.kkamji.net/d/homelab-security-traffic"
+{{- end }}
