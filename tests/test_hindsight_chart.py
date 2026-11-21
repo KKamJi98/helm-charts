@@ -1471,6 +1471,9 @@ class MokaServiceTests(unittest.TestCase):
         tenv = {e["name"]: e for e in tunnel["env"]}
         self.assertEqual(tenv["MCP_SERVER_URL"]["value"], "http://127.0.0.1:8001/mcp")
         self.assertEqual(tenv["MCP_OAUTH_TRUSTED_ORIGINS"]["value"], "https://hindsight.kkamji.net")
+        self.assertEqual(tenv["HARPOON_OAUTH_FORWARD_ORIGINS"]["value"], "https://hindsight.kkamji.net")
+        self.assertEqual(tenv["HARPOON_ALLOW_PLAINTEXT_HTTP"]["value"], "true")
+        self.assertNotIn("HARPOON_TARGETS", tenv)
         self.assertEqual(tenv["CONTROL_PLANE_API_KEY"]["valueFrom"]["secretKeyRef"]["name"], MOKA_ROUTE + "-tunnel")
         self.assertEqual([m["name"] for m in tunnel["volumeMounts"]], ["tunnel-tmp"])
         self.assertEqual(tunnel["image"], self.tunnel_image)
