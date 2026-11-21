@@ -13,8 +13,8 @@
       "objectsSha256": "a8c89496cfa152669d16a4fa4ec2ef0ee3d9cbffb8632197dc3e6ab7e785c87a"
     },
     "hindsight": {
-      "count": 28,
-      "objectsSha256": "2cf1b2289b39fe094423dfbbd4158ef3c584093bf88f5b11eafcf8b5d45be49e"
+      "count": 30,
+      "objectsSha256": "c1b1da2e89306604754b2826842eb39c47e91125e0aeedb546d96b9fa45caf2a"
     },
     "kube-prometheus-stack": {
       "count": 131,
