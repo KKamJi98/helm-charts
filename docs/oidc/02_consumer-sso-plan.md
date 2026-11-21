@@ -1,6 +1,6 @@
 ---
 title: Staged Keycloak consumer SSO
-updated: 2026-11-22T04:06:34+09:00
+updated: 2026-11-22T06:20:00+09:00
 type: architecture
 status: current
 ---
@@ -49,6 +49,10 @@ The retain reasoning effort value (`runtime.retainReasoningEffort`,
 [runbook](../03_hindsight.md#retain-추출-reasoning-effort-2026-11-22)) adds one
 more environment variable to the same container and re-baselines the same
 entry again; nothing else in the oracle moves.
+The Hindsight model value (`runtime.model` in the local values,
+[runbook](../03_hindsight.md#llm-model-gpt-62-sol-2026-11-22)) changes the value of
+one existing environment variable of that container, so the same entry is
+re-baselined once more; the object count and every other chart are unchanged.
 
 Grafana's parent-accepted native retained PVC, one replica, Recreate with
 `rollingUpdate: null`, fixed existingClaim/local-path/RWO/10Gi, disabled chown and

@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-22T04:12:20+09:00
+updated: 2026-11-22T06:20:00+09:00
 type: runbook
 status: current
 ---
@@ -58,7 +58,7 @@ status: current
 | vendor | [hindsight-1.1.0.tgz](../charts/hindsight/charts/hindsight-1.1.0.tgz), SHA256 `5199851d7c998c14517d43d70d15f5c87756388acc8128621fd3504c77c275bd`. Chart.lock의 dependency digest와 archive checksum은 서로 다른 값입니다. |
 | writer | API StatefulSet 1 replica, OrderedReady. upstream API Deployment/독립 worker/PostgreSQL은 비활성입니다. surge, 강제 Pod 삭제나 병렬 OAuth writer를 허용하지 않습니다. |
 | PVC | `hindsight-data` 8Gi(DB), `hindsight-chatgpt` 1Gi(auth), `hindsight-models` 2Gi(model). `local-path`, 선택 노드 `k8s-w2`입니다. |
-| LLM | canonical `kkamji-settings/agents/hermes/model-lane.sh`에서 생성한 [local values](../charts/hindsight/kkamji_local_values.yaml)를 따릅니다. 현재 생성값은 `gpt-6.1-sol` / `xhigh`이며 별도 tuning/fallback을 추가하지 않습니다. 예외는 사실 추출의 effort 하나입니다([Retain 추출 reasoning effort](#retain-추출-reasoning-effort-2026-11-22)). |
+| LLM | [local values](../charts/hindsight/kkamji_local_values.yaml)를 따릅니다. 현재 값은 `gpt-6.2-sol` / `xhigh`입니다. effort는 canonical `kkamji-settings/agents/hermes/model-lane.sh`의 생성값이고, 별도 tuning/fallback을 추가하지 않습니다. 예외는 둘입니다. model은 Hermes lane과 따로 정합니다([LLM model](#llm-model-gpt-62-sol-2026-11-22)). 사실 추출의 effort는 `medium`입니다([Retain 추출 reasoning effort](#retain-추출-reasoning-effort-2026-11-22)). |
 | embedding | `intfloat/multilingual-e5-small`, revision `614241f622f53c4eeff9890bdc4f31cfecc418b3`, ONNX CPU, 384차원, 최대 512 token, mean pooling + L2 정규화, `query: ` / `passage: ` prefix입니다. |
 | recall | RRF를 baseline으로 사용합니다. 별도 neural reranker나 외부 embedding API를 암묵적으로 추가하지 않습니다. |
 
@@ -216,12 +216,21 @@ ESO 오류는 Store/ExternalSecret 상태와 property 참조부터, 401/403은 G
 
 ## Retain 추출 reasoning effort (2026-11-22)
 
-- `runtime.retainReasoningEffort: "medium"`은 `HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT`를 설정합니다. 사실 추출(retain) 호출에만 적용됩니다. 첨부 파일 추출(VLM slot)도 retain 설정을 함께 쓰므로 같은 값이 됩니다. model은 그대로 `gpt-6.1-sol`이고, reflect와 consolidation은 생성값 `xhigh`를 그대로 씁니다. recall은 이 구성(RRF)에서 LLM을 호출하지 않습니다. chart는 `low`, `medium`, `high`, `xhigh`와 빈 문자열만 받으며, 빈 문자열이면 env를 만들지 않아 생성값을 상속합니다. 값은 생성 파일 `kkamji_local_values.yaml`이 아니라 chart 기본값에 둡니다.
-- 이 값은 위 "별도 tuning을 추가하지 않습니다" 원칙의 유일한 예외이며 2026-11-22에 소유자가 승인했습니다.
+- `runtime.retainReasoningEffort: "medium"`은 `HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT`를 설정합니다. 사실 추출(retain) 호출에만 적용됩니다. 첨부 파일 추출(VLM slot)도 retain 설정을 함께 쓰므로 같은 값이 됩니다. model은 다른 operation과 같고, reflect와 consolidation은 생성값 `xhigh`를 그대로 씁니다. recall은 이 구성(RRF)에서 LLM을 호출하지 않습니다. chart는 `low`, `medium`, `high`, `xhigh`와 빈 문자열만 받으며, 빈 문자열이면 env를 만들지 않아 생성값을 상속합니다. 값은 생성 파일 `kkamji_local_values.yaml`이 아니라 chart 기본값에 둡니다.
+- 이 값은 위 "별도 tuning을 추가하지 않습니다" 원칙의 예외이며 2026-11-22에 소유자가 승인했습니다.
 - 이유: 2026-11-21 08:08 UTC에 ChatGPT 구독의 Subscription Sharing 사용 한도에 처음 도달했고, 11-22 04:00 KST까지 약 11시간 동안 추출이 한 건도 성공하지 못했습니다(pending retain 85건, failed 0건). 한도 직전 13.3시간(11-20 18:45 ~ 11-21 08:03 UTC)의 성공한 추출 186건은 input 641,334 / output 168,627 / reasoning 332,859 token이었습니다. reasoning이 생성 token의 66%, 전체 token의 29%였습니다.
 - 확인하지 못한 것: 한도가 걸린 상태에서 바꿨으므로 `medium`의 추출 품질과 실제 token 절감은 측정하지 못했습니다. 절감 상한은 추출 token의 29%(reasoning 전부)입니다. ChatGPT plan 경로가 이 model에 `medium`을 받는지도 직접 호출로 확인하지 못했습니다. 근거는 같은 계정의 Codex model 목록(2026-11-21 19:10 UTC 조회)이 `gpt-6.1-sol`의 지원 단계로 `low`, `medium`, `high`, `xhigh`를 나열한다는 것 하나입니다. Hindsight는 이 문자열을 검증하지 않고 그대로 보냅니다. 한도 error에는 reset 시각이 없고(Hindsight는 30분 뒤로 미루기만 합니다) 한도 계산식도 공개돼 있지 않습니다.
 - 한도가 풀린 뒤 확인: 먼저 첫 추출 호출을 봅니다. `GET /llm-requests?operation=retain&status=error`에 한도 error가 아닌 400류 error가 생기거나 `GET /operations?status=failed`가 늘면 effort 값이 거절된 것이므로 즉시 Rollback합니다(pending 85건이 4건씩 함께 실패할 수 있습니다). 그다음 `GET /llm-requests?operation=retain`에서 성공 호출의 `thoughts_tokens / output_tokens` 비율(이전 약 2.0)과 `duration_ms`가 줄었는지 봅니다. bank `GET /stats`의 `total_nodes / total_documents`(이전 5,085 / 1,147 = 문서당 4.4개)가 크게 떨어지지 않는지, 새 사실 몇 개의 내용이 원문과 맞는지 봅니다. 품질이 떨어지면 `high`로 올립니다.
 - Rollback: `runtime.retainReasoningEffort: ""`로 두거나 이 변경을 Git에서 되돌립니다. 배포와 재시작 영향은 위 "Retain extraction timeout" 절과 같습니다.
+
+## LLM model: gpt-6.2-sol (2026-11-22)
+
+- `runtime.model`은 `gpt-6.2-sol`입니다. 모든 operation(retain, reflect, consolidation)이 이 model을 씁니다. provider(`chatgpt`), effort(`xhigh`, 추출만 `medium`), 동시 호출(4)은 그대로입니다.
+- Hermes lane과 분리: `model-lane.sh`의 `SYNC_MODEL`은 `gpt-6.1-sol` 그대로이고 Hermes는 바꾸지 않았습니다. 2026-11-22에 소유자가 Hindsight만 올리기로 정했습니다. 그래서 [local values](../charts/hindsight/kkamji_local_values.yaml)의 `model`은 더 이상 생성값이 아니며, lane을 다시 생성해도 이 값은 덮어쓰지 않습니다. `reasoningEffort`는 계속 생성값을 따릅니다.
+- 근거: 같은 계정의 Codex model 목록(2026-11-21 20:58 UTC 조회)이 `gpt-6.2-sol`을 1순위로 나열하고, 지원 effort에 `medium`과 `xhigh`가 있습니다.
+- 확인하지 못한 것: 변경 시점에 ChatGPT 구독 한도가 걸려 있어 `chatgpt` provider 경로(`api.openai.com/v1/responses`, Sign in with ChatGPT)가 이 model을 받는지 직접 호출로 확인하지 못했습니다. Hindsight는 model 이름을 검증하지 않고 그대로 보냅니다. 추출 품질, token 사용량, 한도 소모 속도도 측정하지 못했습니다. effort `medium`과 같은 날 바꿨으므로 한도 해제 뒤의 품질 변화는 둘 중 어느 쪽 때문인지 구분되지 않습니다.
+- 한도가 풀린 뒤 확인: 순서는 [Retain 추출 reasoning effort](#retain-추출-reasoning-effort-2026-11-22)의 "한도가 풀린 뒤 확인"과 같습니다. 한도 error가 아닌 error가 `GET /llm-requests?operation=retain&status=error`에 생기거나 `GET /operations?status=failed`가 늘면 먼저 이 model 변경을 Rollback합니다. 실패로 끝난 operation은 원문이 서버에 남아 있으므로 Rollback 뒤 `POST /operations/{operation_id}/retry`로 다시 돌립니다.
+- Rollback: local values의 `runtime.model`을 `gpt-6.1-sol`로 되돌리거나 이 변경을 Git에서 되돌립니다. 배포와 재시작 영향은 위 "Retain extraction timeout" 절과 같습니다.
 
 ## Dedicated dot candidate
 
