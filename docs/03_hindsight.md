@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-22T04:06:34+09:00
+updated: 2026-11-22T04:12:20+09:00
 type: runbook
 status: current
 ---
@@ -207,7 +207,7 @@ ESO 오류는 Store/ExternalSecret 상태와 property 참조부터, 401/403은 G
 
 ## LLM 동시 호출 (2026-11-21)
 
-- `runtime.llmMaxConcurrent: 4`는 `HINDSIGHT_API_LLM_MAX_CONCURRENT`를 설정합니다. 모든 operation이 함께 쓰는 동시 LLM 호출 상한이며 chart는 1-8의 정수만 받습니다. Hindsight 1.1.0의 `engine/llm_wrapper.py`에서 이 값은 프로세스 전역 semaphore 하나의 크기이고, operation별 semaphore는 `HINDSIGHT_API_<OPERATION>_LLM_MAX_CONCURRENT`를 설정할 때만 추가로 생깁니다(이 chart는 설정하지 않습니다). model/xhigh, operation별 override 없음, worker 1개, replica 1개, 추출 timeout 600초는 그대로입니다.
+- `runtime.llmMaxConcurrent: 4`는 `HINDSIGHT_API_LLM_MAX_CONCURRENT`를 설정합니다. 모든 operation이 함께 쓰는 동시 LLM 호출 상한이며 chart는 1-8의 정수만 받습니다. Hindsight 1.1.0의 `engine/llm_wrapper.py`에서 이 값은 프로세스 전역 semaphore 하나의 크기이고, operation별 semaphore는 `HINDSIGHT_API_<OPERATION>_LLM_MAX_CONCURRENT`를 설정할 때만 추가로 생깁니다(이 chart는 설정하지 않습니다). model, operation별 동시 호출 상한 없음, worker 1개, replica 1개, 추출 timeout 600초는 그대로입니다. 추출의 reasoning effort만 2026-11-22부터 따로 둡니다(아래 절).
 - 이전 값은 `1`이었습니다. worker는 작업을 여러 개 동시에 잡지만(1.1.0 기본 10 slot) LLM 호출은 하나씩만 나가서 나머지가 줄을 섰습니다. 2026-11-20~21의 24.8시간 동안 기록된 LLM 호출 337건을 완료 순서로 다시 계산한 값입니다: 호출 자체는 p50 68초, p90 93초였고, 대기는 p50 33초, p90 494초, 최대 1,110초였습니다. 60초 넘게 기다린 호출이 158건이었고 전체 사용률은 24%였습니다. 지연의 원인은 용량 부족이 아니라 직렬화였습니다.
 - 이 값은 호출 총량을 줄이지 않습니다. ChatGPT 구독 한도는 그대로 적용됩니다. 적용 뒤 `ChatGPTRequestError`나 429가 늘면 값을 낮춥니다.
 - 배포와 재시작 영향은 위 "Retain extraction timeout" 절과 같습니다. GitOps rollout이 단일 API/embedded PostgreSQL Pod를 재시작하고, 끝나지 않은 작업은 pending으로 돌아갑니다. 재시작 뒤 operation 상태를 확인하며 transcript를 다시 보내거나 완료된 child를 retry하지 않습니다.
@@ -216,11 +216,11 @@ ESO 오류는 Store/ExternalSecret 상태와 property 참조부터, 401/403은 G
 
 ## Retain 추출 reasoning effort (2026-11-22)
 
-- `runtime.retainReasoningEffort: "medium"`은 `HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT`를 설정합니다. 사실 추출(retain) 호출에만 적용됩니다. model은 그대로 `gpt-6.1-sol`이고, recall/reflect/consolidation은 생성값 `xhigh`를 그대로 씁니다. chart는 `low`, `medium`, `high`, `xhigh`와 빈 문자열만 받으며, 빈 문자열이면 env를 만들지 않아 생성값을 상속합니다. 값은 생성 파일 `kkamji_local_values.yaml`이 아니라 chart 기본값에 둡니다.
+- `runtime.retainReasoningEffort: "medium"`은 `HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT`를 설정합니다. 사실 추출(retain) 호출에만 적용됩니다. 첨부 파일 추출(VLM slot)도 retain 설정을 함께 쓰므로 같은 값이 됩니다. model은 그대로 `gpt-6.1-sol`이고, reflect와 consolidation은 생성값 `xhigh`를 그대로 씁니다. recall은 이 구성(RRF)에서 LLM을 호출하지 않습니다. chart는 `low`, `medium`, `high`, `xhigh`와 빈 문자열만 받으며, 빈 문자열이면 env를 만들지 않아 생성값을 상속합니다. 값은 생성 파일 `kkamji_local_values.yaml`이 아니라 chart 기본값에 둡니다.
 - 이 값은 위 "별도 tuning을 추가하지 않습니다" 원칙의 유일한 예외이며 2026-11-22에 소유자가 승인했습니다.
 - 이유: 2026-11-21 08:08 UTC에 ChatGPT 구독의 Subscription Sharing 사용 한도에 처음 도달했고, 11-22 04:00 KST까지 약 11시간 동안 추출이 한 건도 성공하지 못했습니다(pending retain 85건, failed 0건). 한도 직전 13.3시간(11-20 18:45 ~ 11-21 08:03 UTC)의 성공한 추출 186건은 input 641,334 / output 168,627 / reasoning 332,859 token이었습니다. reasoning이 생성 token의 66%, 전체 token의 29%였습니다.
-- 확인하지 못한 것: 한도가 걸린 상태에서 바꿨으므로 `medium`의 추출 품질과 실제 token 절감은 측정하지 못했습니다. 한도 error에는 reset 시각이 없고(Hindsight는 30분 뒤로 미루기만 합니다) 한도 계산식도 공개돼 있지 않습니다.
-- 한도가 풀린 뒤 확인: `GET /llm-requests?operation=retain`에서 성공 호출의 `thoughts_tokens / output_tokens` 비율(이전 약 2.0)과 `duration_ms`가 줄었는지 봅니다. bank `GET /stats`의 `total_nodes / total_documents`(이전 5,085 / 1,147 = 문서당 4.4개)가 크게 떨어지지 않는지, 새 사실 몇 개의 내용이 원문과 맞는지 봅니다. 품질이 떨어지면 `high`로 올립니다.
+- 확인하지 못한 것: 한도가 걸린 상태에서 바꿨으므로 `medium`의 추출 품질과 실제 token 절감은 측정하지 못했습니다. 절감 상한은 추출 token의 29%(reasoning 전부)입니다. ChatGPT plan 경로가 이 model에 `medium`을 받는지도 직접 호출로 확인하지 못했습니다. 근거는 같은 계정의 Codex model 목록(2026-11-21 19:10 UTC 조회)이 `gpt-6.1-sol`의 지원 단계로 `low`, `medium`, `high`, `xhigh`를 나열한다는 것 하나입니다. Hindsight는 이 문자열을 검증하지 않고 그대로 보냅니다. 한도 error에는 reset 시각이 없고(Hindsight는 30분 뒤로 미루기만 합니다) 한도 계산식도 공개돼 있지 않습니다.
+- 한도가 풀린 뒤 확인: 먼저 첫 추출 호출을 봅니다. `GET /llm-requests?operation=retain&status=error`에 한도 error가 아닌 400류 error가 생기거나 `GET /operations?status=failed`가 늘면 effort 값이 거절된 것이므로 즉시 Rollback합니다(pending 85건이 4건씩 함께 실패할 수 있습니다). 그다음 `GET /llm-requests?operation=retain`에서 성공 호출의 `thoughts_tokens / output_tokens` 비율(이전 약 2.0)과 `duration_ms`가 줄었는지 봅니다. bank `GET /stats`의 `total_nodes / total_documents`(이전 5,085 / 1,147 = 문서당 4.4개)가 크게 떨어지지 않는지, 새 사실 몇 개의 내용이 원문과 맞는지 봅니다. 품질이 떨어지면 `high`로 올립니다.
 - Rollback: `runtime.retainReasoningEffort: ""`로 두거나 이 변경을 Git에서 되돌립니다. 배포와 재시작 영향은 위 "Retain extraction timeout" 절과 같습니다.
 
 ## Dedicated dot candidate

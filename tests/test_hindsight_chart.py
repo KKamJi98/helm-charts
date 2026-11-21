@@ -126,6 +126,15 @@ class ChartTests(unittest.TestCase):
         names = [e["name"] for e in api["spec"]["template"]["spec"]["containers"][0]["env"]]
         self.assertNotIn("HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT", names)
         self.assertIn("HINDSIGHT_API_LLM_REASONING_EFFORT", names)
+        for allowed in ("low", "high", "xhigh"):
+            with self.subTest(value=allowed):
+                api = next(
+                    d
+                    for d in objects(render("--set-string", f"runtime.retainReasoningEffort={allowed}"))
+                    if d["kind"] == "StatefulSet" and d["metadata"]["name"] == "hindsight-api"
+                )
+                env = {e["name"]: e.get("value") for e in api["spec"]["template"]["spec"]["containers"][0]["env"]}
+                self.assertEqual(env["HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT"], allowed)
         for bad in ("none", "minimal", "Medium", "max", "medium "):
             with self.subTest(value=bad):
                 failed = render("--set-string", f"runtime.retainReasoningEffort={bad}")
