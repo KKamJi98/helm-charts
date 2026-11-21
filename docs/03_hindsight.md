@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-22T03:56:24+09:00
+updated: 2026-11-22T04:06:34+09:00
 type: runbook
 status: current
 ---
@@ -58,7 +58,7 @@ status: current
 | vendor | [hindsight-1.1.0.tgz](../charts/hindsight/charts/hindsight-1.1.0.tgz), SHA256 `5199851d7c998c14517d43d70d15f5c87756388acc8128621fd3504c77c275bd`. Chart.lock의 dependency digest와 archive checksum은 서로 다른 값입니다. |
 | writer | API StatefulSet 1 replica, OrderedReady. upstream API Deployment/독립 worker/PostgreSQL은 비활성입니다. surge, 강제 Pod 삭제나 병렬 OAuth writer를 허용하지 않습니다. |
 | PVC | `hindsight-data` 8Gi(DB), `hindsight-chatgpt` 1Gi(auth), `hindsight-models` 2Gi(model). `local-path`, 선택 노드 `k8s-w2`입니다. |
-| LLM | canonical `kkamji-settings/agents/hermes/model-lane.sh`에서 생성한 [local values](../charts/hindsight/kkamji_local_values.yaml)를 따릅니다. 현재 생성값은 `gpt-6.1-sol` / `xhigh`이며 별도 tuning/fallback을 추가하지 않습니다. |
+| LLM | canonical `kkamji-settings/agents/hermes/model-lane.sh`에서 생성한 [local values](../charts/hindsight/kkamji_local_values.yaml)를 따릅니다. 현재 생성값은 `gpt-6.1-sol` / `xhigh`이며 별도 tuning/fallback을 추가하지 않습니다. 예외는 사실 추출의 effort 하나입니다([Retain 추출 reasoning effort](#retain-추출-reasoning-effort-2026-11-22)). |
 | embedding | `intfloat/multilingual-e5-small`, revision `614241f622f53c4eeff9890bdc4f31cfecc418b3`, ONNX CPU, 384차원, 최대 512 token, mean pooling + L2 정규화, `query: ` / `passage: ` prefix입니다. |
 | recall | RRF를 baseline으로 사용합니다. 별도 neural reranker나 외부 embedding API를 암묵적으로 추가하지 않습니다. |
 
@@ -213,6 +213,15 @@ ESO 오류는 Store/ExternalSecret 상태와 property 참조부터, 401/403은 G
 - 배포와 재시작 영향은 위 "Retain extraction timeout" 절과 같습니다. GitOps rollout이 단일 API/embedded PostgreSQL Pod를 재시작하고, 끝나지 않은 작업은 pending으로 돌아갑니다. 재시작 뒤 operation 상태를 확인하며 transcript를 다시 보내거나 완료된 child를 retry하지 않습니다.
 - 확인: bank의 `GET /operations?status=failed`가 늘지 않는지 봅니다. `GET /llm-requests`의 `duration_ms`는 대기 시간을 포함합니다(상한 1일 때 기록상 최대 13건이 겹쳤고 p90은 565초였습니다). 이 p90이 호출 자체의 시간(약 93초)에 가까워졌는지 봅니다. 추출 4건이 함께 끝나면 embedding과 index 쓰기가 CPU 2 limit 안에서 recall과 겹치므로, Pod 재시작 횟수와 클라이언트 `check.py`의 recall 실패(`unavailable`)도 함께 봅니다.
 - Rollback: 이 변경을 Git에서 되돌리고 Argo 재조정과 readiness를 확인합니다. `runtime.llmMaxConcurrent: 1`만 지정해도 이전 동작이 됩니다. operation ID와 PVC는 보존합니다.
+
+## Retain 추출 reasoning effort (2026-11-22)
+
+- `runtime.retainReasoningEffort: "medium"`은 `HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT`를 설정합니다. 사실 추출(retain) 호출에만 적용됩니다. model은 그대로 `gpt-6.1-sol`이고, recall/reflect/consolidation은 생성값 `xhigh`를 그대로 씁니다. chart는 `low`, `medium`, `high`, `xhigh`와 빈 문자열만 받으며, 빈 문자열이면 env를 만들지 않아 생성값을 상속합니다. 값은 생성 파일 `kkamji_local_values.yaml`이 아니라 chart 기본값에 둡니다.
+- 이 값은 위 "별도 tuning을 추가하지 않습니다" 원칙의 유일한 예외이며 2026-11-22에 소유자가 승인했습니다.
+- 이유: 2026-11-21 08:08 UTC에 ChatGPT 구독의 Subscription Sharing 사용 한도에 처음 도달했고, 11-22 04:00 KST까지 약 11시간 동안 추출이 한 건도 성공하지 못했습니다(pending retain 85건, failed 0건). 한도 직전 13.3시간(11-20 18:45 ~ 11-21 08:03 UTC)의 성공한 추출 186건은 input 641,334 / output 168,627 / reasoning 332,859 token이었습니다. reasoning이 생성 token의 66%, 전체 token의 29%였습니다.
+- 확인하지 못한 것: 한도가 걸린 상태에서 바꿨으므로 `medium`의 추출 품질과 실제 token 절감은 측정하지 못했습니다. 한도 error에는 reset 시각이 없고(Hindsight는 30분 뒤로 미루기만 합니다) 한도 계산식도 공개돼 있지 않습니다.
+- 한도가 풀린 뒤 확인: `GET /llm-requests?operation=retain`에서 성공 호출의 `thoughts_tokens / output_tokens` 비율(이전 약 2.0)과 `duration_ms`가 줄었는지 봅니다. bank `GET /stats`의 `total_nodes / total_documents`(이전 5,085 / 1,147 = 문서당 4.4개)가 크게 떨어지지 않는지, 새 사실 몇 개의 내용이 원문과 맞는지 봅니다. 품질이 떨어지면 `high`로 올립니다.
+- Rollback: `runtime.retainReasoningEffort: ""`로 두거나 이 변경을 Git에서 되돌립니다. 배포와 재시작 영향은 위 "Retain extraction timeout" 절과 같습니다.
 
 ## Dedicated dot candidate
 
