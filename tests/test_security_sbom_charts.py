@@ -87,6 +87,8 @@ class SecuritySbomChartsTests(unittest.TestCase):
         )
         self.assertIn("kind: ServiceMonitor", rendered)
         self.assertIn("security-observability-hubble-metrics", rendered)
+        loki = next(doc for doc in rendered.split("\n---") if "name: security-observability-loki-metrics\n" in doc)
+        self.assertIn('key: prometheus.io/service-monitor\n        operator: NotIn\n        values: ["false"]', loki)
         self.assertIn("kind: PrometheusRule", rendered)
         self.assertIn("TrivyCriticalVulnerabilityDetected", rendered)
         self.assertIn("HubbleHighDropRate", rendered)

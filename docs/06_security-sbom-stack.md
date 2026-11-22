@@ -1,6 +1,6 @@
 ---
 title: Homelab security and SBOM stack
-updated: 2026-11-22T07:35+09:00
+updated: 2026-11-22T19:36+09:00
 type: architecture
 status: current
 ---
@@ -40,6 +40,8 @@ Total steady-state request addition is ~470 MiB (~1.0-1.4 GiB peak with one scan
 ## Hubble metrics discovery fix
 
 Live Prometheus audit found zero `hubble_*` series because `kube-system/hubble` ServiceMonitor lacked `release: kube-prometheus-stack`. `charts/security-observability/templates/servicemonitors.yaml` adds a labeled `ServiceMonitor` targeting `kube-system` (`k8s-app: hubble`, port `hubble-metrics`) and `monitoring` (`loki`, port `http-metrics`) without modifying SHA-pinned `charts/cilium`.
+
+The Loki monitor excludes Services labeled `prometheus.io/service-monitor: "false"`. This skips the gateway and headless discovery paths while keeping the single-binary Loki metrics endpoint.
 
 ## Staged rollout and rollback
 
