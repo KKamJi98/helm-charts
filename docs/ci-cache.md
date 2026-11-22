@@ -1,6 +1,6 @@
 ---
 title: CI cache registry (zot)
-updated: 2026-10-20T01:10:00+09:00
+updated: 2026-11-23T02:05:00+09:00
 type: architecture
 status: current
 ---
@@ -56,7 +56,8 @@ keeps the same definition; `tests/test_ci_cache.py` checks both and the kinds.
 
 | Resource | Value | Why |
 | --- | --- | --- |
-| memory | request 256Mi, limit 1Gi, `GOMEMLIMIT` 768MiB | sync streams blobs to disk |
+| cpu | request 15m (override in `kkamji_local_values.yaml`), limit 1 | 7d peak CPU is 6.5m; 15m avoids scheduling bloat while preserving burst |
+| memory | request 256Mi, limit 1Gi, `GOMEMLIMIT` 768MiB | sync streams blobs to disk (7d peak 504.6Mi) |
 | store | emptyDir `sizeLimit` 30Gi, ephemeral request 30Gi | local-path PVCs do not enforce size |
 | extensions | `sync` only | search/CVE would download a trivy DB and use memory |
 

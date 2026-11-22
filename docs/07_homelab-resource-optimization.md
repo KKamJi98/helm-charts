@@ -1,6 +1,6 @@
 ---
 title: Homelab Kubernetes resource and non-HA optimization
-updated: 2026-11-23T03:06:00+09:00
+updated: 2026-11-23T03:09:00+09:00
 type: runbook
 status: current
 ---
@@ -126,4 +126,5 @@ GitOps rollback is reverting the merge commit on `main` (or reverting individual
 ## 5. Rollout execution log
 
 - **Wave 1 (`fafd095`, 2026-11-23 03:03 KST)**: Deployed non-HA `metallb` (worker-only speaker, FRR disabled) and `cilium` (single worker-only operator, `debug=false`, `bgpControlPlane=false`, Istio Ambient CNI compatibility `cni.exclusive=false`, `socketLB.hostNamespaceOnly=true`, `bpf.masquerade=false`, `installNoConntrackIptablesRules=false`), rolled `ds/cilium` across all 3 nodes, verified `metallb` and `cilium` `Synced/Healthy` with `k8s-m1` live RAM down from 87% (2678Mi) to 75% (2295Mi) and `https://argocd.kkamji.net` returning HTTP/2 200.
-- **Wave 2 (in progress, 2026-11-23)**: Upgrading Istio `1.28.2 -> 1.31.4` Ambient Mode (`istio-base`, `istio-istiod`, worker-only `istio-cni` and `istio-ztunnel`) and applying right-sizing to `argocd`, `metrics-server`, `loki`, `alloy`, `cert-manager`, `external-secrets`, and `external-dns`.
+- **Wave 2 (`31a73ae`, 2026-11-23 03:08 KST)**: Upgraded Istio `1.28.2 -> 1.31.4` Ambient Mode (`istio-base`, `istio-istiod`, worker-only `istio-cni` and `istio-ztunnel` verified 2/2 Running on `k8s-w1`/`k8s-w2`, 0 on `k8s-m1`, CNI chained cleanly in `/etc/cni/net.d/05-cilium.conflist`, ztunnel WDS/XDS ready) and applied right-sizing to `argocd` (Dex removed, ApplicationSet 0 replicas), `metrics-server`, `loki`, `alloy`, `cert-manager`, `external-secrets`, and `external-dns`. All 34/34 Argo CD Applications converged `Synced/Healthy`.
+- **Wave 3 (2026-11-23 03:09 KST)**: Applying workload and CI right-sizing to `hindsight`, `ci-cache`, `arc-controller`, `arc-light` (`kkamji_local_values.yaml` and `terraform_lab_values.yaml`), `arc-bql-light`, and `arc-runtime`, and adding `tests/test_homelab_resource_optimization.py`.

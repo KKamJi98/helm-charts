@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-22T16:17:00+09:00
+updated: 2026-11-23T02:05:00+09:00
 type: runbook
 status: current
 ---
@@ -58,6 +58,7 @@ status: current
 | vendor | [hindsight-1.1.0.tgz](../charts/hindsight/charts/hindsight-1.1.0.tgz), SHA256 `5199851d7c998c14517d43d70d15f5c87756388acc8128621fd3504c77c275bd`. Chart.lock의 dependency digest와 archive checksum은 서로 다른 값입니다. |
 | writer | API StatefulSet 1 replica, OrderedReady. upstream API Deployment/독립 worker/PostgreSQL은 비활성입니다. surge, 강제 Pod 삭제나 병렬 OAuth writer를 허용하지 않습니다. |
 | PVC | `hindsight-data` 8Gi(DB), `hindsight-chatgpt` 1Gi(auth), `hindsight-models` 2Gi(model). `local-path`, 선택 노드 `k8s-w2`입니다. |
+| 리소스 (2026-11-23 최적화) | 7일 Prometheus 실측(API P95 75.4m/2001Mi, Max 153.6m/2063Mi; CP Max 1.1m/75.1Mi) 기준으로 `kkamji_local_values.yaml`에서 API를 `150m/2Gi` req, `2/4Gi` lim으로, Control Plane을 `10m/96Mi` req, `500m/256Mi` lim으로 조정했습니다([최적화 기준](07_homelab-resource-optimization.md)). embedded pg0와 E5 모델을 위해 API 2Gi 메모리 request는 유지합니다. |
 | LLM | [local values](../charts/hindsight/kkamji_local_values.yaml)를 따릅니다. 현재 값은 `gpt-6.2-sol` / `xhigh`입니다. effort는 canonical `kkamji-settings/agents/hermes/model-lane.sh`의 생성값이고, 별도 tuning/fallback을 추가하지 않습니다. 예외는 둘입니다. model은 Hermes lane과 따로 정합니다([LLM model](#llm-model-gpt-62-sol-2026-11-22)). 사실 추출의 effort는 `high`입니다([Retain 추출 reasoning effort](#retain-추출-reasoning-effort-2026-11-22)). |
 | embedding | `intfloat/multilingual-e5-small`, revision `614241f622f53c4eeff9890bdc4f31cfecc418b3`, ONNX CPU, 384차원, 최대 512 token, mean pooling + L2 정규화, `query: ` / `passage: ` prefix입니다. |
 | recall | RRF를 baseline으로 사용합니다. 별도 neural reranker나 외부 embedding API를 암묵적으로 추가하지 않습니다. |

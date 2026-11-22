@@ -1,2 +1,13 @@
-# kkamji-lab uses the chart defaults in values.yaml.
-{}
+# Homelab CPU request right-sizing (2026-11-23).
+# 7d metrics: P95 6.0m / 372.5Mi, Max 6.5m / 504.6Mi. Keep memory 256Mi/1Gi,
+# GOMEMLIMIT 768MiB, and bounded 30Gi/31Gi ephemeral storage unchanged.
+zot:
+  resources:
+    requests:
+      cpu: 15m
+      memory: 256Mi
+      ephemeral-storage: 30Gi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+      ephemeral-storage: 31Gi

@@ -5,5 +5,24 @@
 runtime:
   model: "gpt-6.2-sol"
   reasoningEffort: "xhigh"
+  # Right-sized from 7d Prometheus metrics (P95 75.4m / 2001Mi, Max 153.6m / 2063Mi).
+  # Keeps 2Gi memory request for embedded pg0 + multilingual-e5-small; cuts CPU req 1000m->150m and mem lim 6Gi->4Gi.
+  resources:
+    requests:
+      cpu: 150m
+      memory: 2Gi
+    limits:
+      cpu: "2"
+      memory: 4Gi
 exposure:
   enabled: true
+server:
+  controlPlane:
+    # Right-sized from 7d metrics (P95 0.4m / 71.9Mi, Max 1.1m / 75.1Mi; default 100m / 256Mi, lim 1 / 1Gi).
+    resources:
+      requests:
+        cpu: 10m
+        memory: 96Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi

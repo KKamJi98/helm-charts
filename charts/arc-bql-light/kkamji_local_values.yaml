@@ -28,14 +28,15 @@ listenerTemplate:
         capabilities:
           drop:
           - ALL
+      # Right-sized from 7d metrics (P95 0.1m / 29.8Mi, Max 0.4m / 30.1Mi).
       resources:
         requests:
-          cpu: 50m
-          memory: 64Mi
+          cpu: 5m
+          memory: 32Mi
           ephemeral-storage: 64Mi
         limits:
-          cpu: 250m
-          memory: 128Mi
+          cpu: 100m
+          memory: 96Mi
           ephemeral-storage: 128Mi
 template:
   metadata:

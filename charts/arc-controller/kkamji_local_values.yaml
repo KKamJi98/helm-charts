@@ -29,14 +29,15 @@ securityContext:
   capabilities:
     drop:
     - ALL
+# Right-sized from 7d metrics (P95 1.6m / 58.4Mi, Max 2.0m / 62.0Mi).
 resources:
   requests:
-    cpu: 100m
-    memory: 128Mi
+    cpu: 10m
+    memory: 64Mi
     ephemeral-storage: 64Mi
   limits:
-    cpu: 500m
-    memory: 256Mi
+    cpu: 250m
+    memory: 192Mi
     ephemeral-storage: 128Mi
 nodeSelector:
   kubernetes.io/hostname: k8s-w2

@@ -16,8 +16,8 @@
     },
     "hindsight": {
       "count": 30,
-      "objectsSha256": "97c5fef11335975cc5b36ec20ae6ed9fb8f0f83218d63660132b216df43d3fc2",
-      "rebaselined": "2026-11-22: API container env (concurrent 1->4, retain reasoning effort medium->high, model gpt-6.2-sol) and hindsight-gateway-client-keys ExternalSecret (+wsl_agy, +mac_agy); no other object changed"
+      "objectsSha256": "7779c173dd5af3781f6ce47af372fbd47953866db3dc35bfd749b941061d6a88",
+      "rebaselined": "2026-11-23: homelab resource right-sizing (API CPU req 1->150m & mem limit 6Gi->4Gi keeping 2Gi mem req; control-plane 100m/256Mi->10m/96Mi & 1/1Gi->500m/256Mi); zero auth/route/env/image changes"
     },
     "kube-prometheus-stack": {
       "count": 131,

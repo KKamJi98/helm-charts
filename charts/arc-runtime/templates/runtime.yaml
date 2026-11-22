@@ -106,9 +106,10 @@ spec:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
           capabilities: {drop: [ALL]}
+        # Right-sized from 7d metrics (P95 0.7m / 18.4Mi, Max 0.8m / 19.6Mi).
         resources:
-          requests: {cpu: 50m, memory: 64Mi}
-          limits: {cpu: 200m, memory: 128Mi}
+          requests: {cpu: 5m, memory: 24Mi}
+          limits: {cpu: 100m, memory: 64Mi}
         ports: [{name: health, containerPort: 8080}]
         readinessProbe:
           httpGet: {path: /health, port: health}
