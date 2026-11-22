@@ -1,0 +1,23 @@
+# Homelab non-HA L2-only optimization (2026-11-23).
+# MetalLB uses only L2Advertisement (no BGPPeers), and k8s-m1 carries
+# node.kubernetes.io/exclude-from-external-load-balancers. Disabling FRR and
+# control-plane toleration removes 10 unused containers (-115Mi on k8s-m1,
+# -112Mi on workers) and sets bounded Burstable resources from 7d metrics.
+metallb:
+  controller:
+    resources:
+      requests:
+        cpu: 5m
+        memory: 32Mi
+      limits:
+        memory: 256Mi
+  speaker:
+    tolerateMaster: false
+    frr:
+      enabled: false
+    resources:
+      requests:
+        cpu: 10m
+        memory: 24Mi
+      limits:
+        memory: 160Mi

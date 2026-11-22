@@ -9,8 +9,9 @@
       "objectsSha256": "34ae41acb30ed0998968b4c65a7a273814177679932dc26bb7e436de34890f86"
     },
     "cilium": {
-      "count": 54,
-      "objectsSha256": "a8c89496cfa152669d16a4fa4ec2ef0ee3d9cbffb8632197dc3e6ab7e785c87a"
+      "count": 52,
+      "objectsSha256": "4a711ddec88749df4d4a5035b0e9cc74e9dadb40be08739f887b65af48fc715d",
+      "rebaselined": "2026-11-23: homelab non-HA optimization + Istio Ambient Mode compatibility (operator replicas 2->1 worker-only, debug=false, bgpControlPlane=false, cni.exclusive=false, socketLB.hostNamespaceOnly=true, bpf.masquerade=false, installNoConntrackIptablesRules=false, operator/hubble resources bounded); zero L7/Hubble/Gateway route changes"
     },
     "hindsight": {
       "count": 30,

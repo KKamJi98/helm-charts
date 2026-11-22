@@ -7,8 +7,8 @@ cilium:
   autoDirectNodeRoutes: true
 
   bgpControlPlane:
-    # Keep the BGP control plane active for advertising service routes.
-    enabled: true
+    # Disabled on homelab (2026-11-23): zero BGP policies/routers exist; MetalLB uses L2 only.
+    enabled: false
 
   # Skip unreachable nodes when programming native direct routes.
   directRoutingSkipUnreachable: true
@@ -27,12 +27,21 @@ cilium:
   # Run the kube-proxy replacement datapath.
   kubeProxyReplacement: true
 
-  bpf:
-    # Enable BPF-based native masquerading.
-    masquerade: true
+  # Istio Ambient Mode compatibility (2026-11-23):
+  # - cni.exclusive=false allows istio-cni to chain in /etc/cni/net.d/.
+  # - socketLB.hostNamespaceOnly=true keeps pod traffic visible to ztunnel redirection.
+  # - bpf.masquerade=false + installNoConntrackIptablesRules=false avoid conntrack/probe
+  #   conflicts with chained istio-cni and ambient 169.254.7.127 host-probe SNAT.
+  cni:
+    exclusive: false
 
-  # Install conntrack bypass rules for kube-proxy-free routing.
-  installNoConntrackIptablesRules: true
+  socketLB:
+    hostNamespaceOnly: true
+
+  bpf:
+    masquerade: false
+
+  installNoConntrackIptablesRules: false
 
   # Advertise the workload pod CIDR through native routing.
   ipv4NativeRoutingCIDR: 10.233.64.0/18
@@ -68,8 +77,8 @@ cilium:
   #     backend: envoy
 
   debug:
-    # Enable debug logging for targeted troubleshooting.
-    enabled: true
+    # Disabled on steady-state homelab (2026-11-23) to reduce cilium-agent CPU/RAM/log churn on k8s-m1 and workers.
+    enabled: false
 
   hubble:
     # Keep Hubble datapath visibility enabled.
@@ -77,9 +86,29 @@ cilium:
     relay:
       # Run Hubble relay for aggregated flow export.
       enabled: true
+      resources:
+        requests:
+          cpu: 5m
+          memory: 24Mi
+        limits:
+          memory: 160Mi
     ui:
       # Deploy the Hubble UI.
       enabled: true
+      backend:
+        resources:
+          requests:
+            cpu: 5m
+            memory: 24Mi
+          limits:
+            memory: 160Mi
+      frontend:
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+          limits:
+            memory: 64Mi
       service:
         # ClusterIP only; external access via Ingress below.
         type: ClusterIP
@@ -121,8 +150,17 @@ cilium:
       # is provided by kube-prometheus-stack.
       trustCRDsExist: true
 
-  # Cilium operator: metrics + dashboards.
+  # Cilium operator: non-HA single replica on worker nodes only (relieves k8s-m1 RAM).
   operator:
+    replicas: 1
+    affinity: null
+    tolerations: []
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 256Mi
     prometheus:
       enabled: true
       serviceMonitor:

@@ -1,6 +1,6 @@
 ---
 title: Staged Keycloak consumer SSO
-updated: 2026-11-22T16:17:00+09:00
+updated: 2026-11-23T02:05:00+09:00
 type: architecture
 status: current
 ---
@@ -57,6 +57,18 @@ Adding `wsl_agy` and `mac_agy` to the `hindsight-gateway-client-keys`
 ExternalSecret updates only that one ExternalSecret object in the Hindsight
 render, so the same entry is re-baselined again; the object count, UI login,
 routes and every other chart remain unchanged.
+On 2026-11-23, homelab non-HA, Istio Ambient Mode compatibility, and resource right-sizing
+([Homelab Kubernetes resource and non-HA optimization](../07_homelab-resource-optimization.md))
+re-baselined the `argocd` (68 -> 63 objects: unused Dex removed, ApplicationSet
+scaled to 0, controller/repo/server/redis/notifications resources bounded),
+`cilium` (54 -> 52 objects: single worker-only operator, `debug=false`,
+`bgpControlPlane=false`, `cni.exclusive=false`, `socketLB.hostNamespaceOnly=true`,
+`bpf.masquerade=false`, `installNoConntrackIptablesRules=false`, operator/Hubble
+resources bounded), and `hindsight`
+(30 objects: API CPU req `1 -> 150m`, mem limit `6Gi -> 4Gi`, control-plane
+`100m/256Mi -> 10m/96Mi`) entries in `tests/fixtures/keycloak-consumers/main9a.json`
+using verified Helm 4.2.1. No Keycloak realm, client, SSO switch, Gateway route,
+or `kube-prometheus-stack` (131 / 141 objects) oracle changed.
 
 Grafana's parent-accepted native retained PVC, one replica, Recreate with
 `rollingUpdate: null`, fixed existingClaim/local-path/RWO/10Gi, disabled chown and

@@ -101,5 +101,23 @@
     "charts/argo-applications/automation_local_values.yaml",
     "charts/argo-applications/security_local_values.yaml",
     "tests/test_security_sbom_charts.py"
+  ],
+  "docs/07_homelab-resource-optimization.md": [
+    "charts/metallb/kkamji_local_values.yaml",
+    "charts/istio-base/kkamji_local_values.yaml",
+    "charts/istio-istiod/kkamji_local_values.yaml",
+    "charts/istio-cni/kkamji_local_values.yaml",
+    "charts/istio-ztunnel/kkamji_local_values.yaml",
+    "charts/metrics-server/kkamji_local_values.yaml",
+    "charts/alloy/kkamji_local_values.yaml",
+    "charts/cert-manager/kkamji_local_values.yaml",
+    "charts/external-secrets/kkamji_local_values.yaml",
+    "charts/external-dns/kkamji_local_values.yaml",
+    "charts/arc-controller/kkamji_local_values.yaml",
+    "charts/arc-light/kkamji_local_values.yaml",
+    "charts/arc-light/terraform_lab_values.yaml",
+    "charts/arc-bql-light/kkamji_local_values.yaml",
+    "charts/arc-runtime/templates/runtime.yaml",
+    "tests/test_homelab_resource_optimization.py"
   ]
 }
