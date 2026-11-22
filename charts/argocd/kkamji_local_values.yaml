@@ -47,8 +47,10 @@ argocd:
     replicas: 1
     resources:
       requests:
-        cpu: 10m
+        cpu: 5m
         memory: 64Mi
+      limits:
+        memory: 256Mi
     certificate:
       enabled: true
       issuer:
@@ -89,42 +91,51 @@ argocd:
   redis:
     resources:
       requests:
-        cpu: 10m
-        memory: 64Mi
+        cpu: 5m
+        memory: 48Mi
+      limits:
+        memory: 128Mi
 
+  # Disabled (2026-11-23): argocd-cm has no dex.config; future Keycloak SSO uses native OIDC.
   dex:
-    resources:
-      requests:
-        cpu: 10m
-        memory: 64Mi
+    enabled: false
 
   controller:
     replicas: 1
     resources:
       requests:
-        cpu: 100m
-        memory: 1Gi
+        cpu: 50m
+        memory: 640Mi
+      limits:
+        memory: 1280Mi
 
   repoServer:
     replicas: 1
     resources:
       requests:
-        cpu: 30m
-        memory: 256Mi
+        cpu: 15m
+        memory: 160Mi
+      limits:
+        memory: 384Mi
 
+  # Zero ApplicationSet CRs exist; scale to 0 to save idle controller RAM without removing CRD/Deployment.
   applicationSet:
-    replicas: 1
+    replicas: 0
     resources:
       requests:
-        cpu: 10m
-        memory: 64Mi
+        cpu: 5m
+        memory: 48Mi
+      limits:
+        memory: 192Mi
 
   notifications:
     enabled: true
     resources:
       requests:
-        cpu: 10m
-        memory: 64Mi
+        cpu: 5m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
     secret:
       create: false
       # External-Secrets 에서 불러오도록

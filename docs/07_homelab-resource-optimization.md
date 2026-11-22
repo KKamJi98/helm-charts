@@ -1,6 +1,6 @@
 ---
 title: Homelab Kubernetes resource and non-HA optimization
-updated: 2026-11-23T02:45:00+09:00
+updated: 2026-11-23T03:06:00+09:00
 type: runbook
 status: current
 ---
@@ -122,3 +122,8 @@ All changes below are verified with Helm `v4.2.1+gd591a19`, preserve all securit
 ### Rollback
 
 GitOps rollback is reverting the merge commit on `main` (or reverting individual `charts/<chart>/kkamji_local_values.yaml` files) and letting Argo CD self-sync converge. No PVCs, CNPG clusters, Secrets, or CRDs are deleted by Tier 1+2 changes.
+
+## 5. Rollout execution log
+
+- **Wave 1 (`fafd095`, 2026-11-23 03:03 KST)**: Deployed non-HA `metallb` (worker-only speaker, FRR disabled) and `cilium` (single worker-only operator, `debug=false`, `bgpControlPlane=false`, Istio Ambient CNI compatibility `cni.exclusive=false`, `socketLB.hostNamespaceOnly=true`, `bpf.masquerade=false`, `installNoConntrackIptablesRules=false`), rolled `ds/cilium` across all 3 nodes, verified `metallb` and `cilium` `Synced/Healthy` with `k8s-m1` live RAM down from 87% (2678Mi) to 75% (2295Mi) and `https://argocd.kkamji.net` returning HTTP/2 200.
+- **Wave 2 (in progress, 2026-11-23)**: Upgrading Istio `1.28.2 -> 1.31.4` Ambient Mode (`istio-base`, `istio-istiod`, worker-only `istio-cni` and `istio-ztunnel`) and applying right-sizing to `argocd`, `metrics-server`, `loki`, `alloy`, `cert-manager`, `external-secrets`, and `external-dns`.

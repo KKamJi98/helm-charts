@@ -1,6 +1,6 @@
 ---
 title: Homelab security and SBOM stack
-updated: 2026-11-22T19:36+09:00
+updated: 2026-11-23T02:05:00+09:00
 type: architecture
 status: current
 ---
@@ -24,7 +24,7 @@ Read-only measurements on `kkamji-lab` (Kubernetes v1.36.1, Hyper-V VMs):
 - `k8s-m1` (control-plane): 2.98 GiB allocatable, **2884 MiB (94%) used** (`kube-apiserver` 1735 MiB), 56 GiB root disk free. **No new workloads or DaemonSets may run on `k8s-m1`.** `charts/tetragon/kkamji_local_values.yaml` explicitly sets `tolerations: []` to override the upstream `operator: Exists` toleration.
 - `k8s-w1` (worker): 14.77 GiB allocatable, 3970 MiB (26%) used, 4.72 GiB (31%) requested, 122 GiB root disk free.
 - `k8s-w2` (worker): 14.77 GiB allocatable, 8042 MiB (53%) used, 10.82 GiB (73%) requested, 110 GiB root disk free.
-- Existing PVCs: Prometheus TSDB uses **558 MiB** on a 30 GiB PVC (`retention: 1d`); Loki `storage-loki-0` (10 GiB PVC) stores **~23.4 MiB** compressed chunks under 24h retention (~180 MiB raw ingested), so extending `charts/loki/kkamji_local_values.yaml` to `168h` (7 days) keeps usage well under 1.5 GiB.
+- Existing PVCs: Prometheus TSDB uses **558 MiB** on a 30 GiB PVC (`retention: 1d`); Loki `storage-loki-0` (10 GiB PVC) stores **~23.4 MiB** compressed chunks under 24h retention (~180 MiB raw ingested), so extending `charts/loki/kkamji_local_values.yaml` to `168h` (7 days) keeps usage well under 1.5 GiB. On 2026-11-23, Loki requests/limits were right-sized (`singleBinary` 15m/480Mi req, 896Mi lim; `sidecar` 5m/112Mi req, 192Mi lim; `gateway` 5m/24Mi req, 64Mi lim) while preserving `168h` retention unchanged ([homelab resource optimization](07_homelab-resource-optimization.md)).
 
 Estimated steady-state addition:
 

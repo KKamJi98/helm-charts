@@ -4,3 +4,10 @@ metrics-server:
   args:
     - --kubelet-insecure-tls
     - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+  # Right-sized from 7d metrics (P95 4.7m / 84.2Mi, Max 5.5m / 84.6Mi; upstream default 100m / 200Mi).
+  resources:
+    requests:
+      cpu: 10m
+      memory: 96Mi
+    limits:
+      memory: 192Mi

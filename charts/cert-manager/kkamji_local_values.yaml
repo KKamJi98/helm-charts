@@ -7,6 +7,28 @@ cert-manager:                       # ← sub-chart values (jetstack/cert-manage
   # envoy-gateway 보다 늦게 활성화되어야 한다 (CRD 설치 후 self-heal 됨).
   config:
     enableGatewayAPI: true
+  # Bounded Burstable resources from 7d metrics (controller max 1.5m/94.9Mi,
+  # cainjector max 2.1m/121.8Mi, webhook max 0.7m/70.7Mi).
+  resources:
+    requests:
+      cpu: 5m
+      memory: 32Mi
+    limits:
+      memory: 192Mi
+  cainjector:
+    resources:
+      requests:
+        cpu: 5m
+        memory: 32Mi
+      limits:
+        memory: 256Mi
+  webhook:
+    resources:
+      requests:
+        cpu: 5m
+        memory: 24Mi
+      limits:
+        memory: 160Mi
 
 # 우리 매니페스트용 (templates/clusterissuer.yaml 가 참조)
 issuer:

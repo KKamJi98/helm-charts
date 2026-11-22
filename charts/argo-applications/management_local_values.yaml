@@ -215,6 +215,8 @@ applications:
     enabled: true
     name: istio-base
     project: management
+    annotations:
+      argocd.argoproj.io/sync-wave: "-1"
     destination:
       namespace: istio-system
     syncPolicy:
@@ -245,6 +247,8 @@ applications:
     enabled: true
     name: istio-istiod
     project: management
+    annotations:
+      argocd.argoproj.io/sync-wave: "0"
     destination:
       namespace: istio-system
     syncPolicy:
@@ -262,6 +266,46 @@ applications:
       targetRevision: main
       path: charts/istio-istiod
       helm:
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  istio-cni:
+    enabled: true
+    name: istio-cni
+    project: management
+    annotations:
+      argocd.argoproj.io/sync-wave: "1"
+    destination:
+      namespace: istio-system
+    syncPolicy:
+      syncOptions:
+        - ServerSideApply=true
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/istio-cni
+      helm:
+        releaseName: istio-cni
+        valueFiles:
+          - kkamji_local_values.yaml
+
+  istio-ztunnel:
+    enabled: true
+    name: istio-ztunnel
+    project: management
+    annotations:
+      argocd.argoproj.io/sync-wave: "2"
+    destination:
+      namespace: istio-system
+    syncPolicy:
+      syncOptions:
+        - ServerSideApply=true
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/istio-ztunnel
+      helm:
+        releaseName: ztunnel
         valueFiles:
           - kkamji_local_values.yaml
 

@@ -1,0 +1,33 @@
+# Istio CNI node agent for kkamji-lab (Ambient Mode, worker-only)
+# Upstream chart baseline: istio/cni 1.31.4 (supports K8s 1.32 - 1.37)
+
+profile: ambient
+
+cniBinDir: /opt/cni/bin
+cniConfDir: /etc/cni/net.d
+
+ambient:
+  enabled: true
+
+# K8s >= 1.30 uses native securityContext.appArmorProfile instead of deprecated beta annotation.
+useAppArmorAnnotation: false
+
+# CRITICAL k8s-m1 RAM guard: never run ambient CNI agent on the 4GiB control-plane node.
+tolerations: []
+
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: DoesNotExist
+            - key: node-role.kubernetes.io/master
+              operator: DoesNotExist
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    memory: 128Mi

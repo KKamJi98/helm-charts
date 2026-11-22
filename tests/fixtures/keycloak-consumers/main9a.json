@@ -5,8 +5,9 @@
   "skipTests": true,
   "local": {
     "argocd": {
-      "count": 68,
-      "objectsSha256": "34ae41acb30ed0998968b4c65a7a273814177679932dc26bb7e436de34890f86"
+      "count": 63,
+      "objectsSha256": "0a03c6532d2cbba102c95013ddc8a8a8a291e7c987e31b40c6aa95b11cc6fece",
+      "rebaselined": "2026-11-23: homelab non-HA optimization (dex disabled, applicationSet replicas 1->0, controller/repo/server/redis/notifications requests/limits right-sized); zero SSO/routing/project contract changes"
     },
     "cilium": {
       "count": 52,

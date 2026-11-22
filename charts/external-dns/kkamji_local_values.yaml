@@ -16,6 +16,14 @@ external-dns:
     zoneType: public          # public / private
     region: ap-northeast-2
 
+  # Bounded Burstable resources from 7d metrics (P95 1.3m / 114.5Mi, Max 1.6m / 115.2Mi).
+  resources:
+    requests:
+      cpu: 5m
+      memory: 32Mi
+    limits:
+      memory: 256Mi
+
   env:                         # extraEnv 대신 env 사용
     - name: AWS_REGION
       value: ap-northeast-2

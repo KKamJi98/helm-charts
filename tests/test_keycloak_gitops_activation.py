@@ -101,7 +101,7 @@ class ManagementServerActivationTests(unittest.TestCase):
             before_values = Path(temporary) / "management-values.yaml"
             before_values.write_text(yaml.safe_dump(original, sort_keys=False))
             before, after = management(before_values), management()
-        self.assertEqual(len(before), 17)
+        self.assertEqual(len(before), 19)
         self.assertEqual(set(after), set(before))
         self.assertEqual(after["Application", "keycloak-idp"]["spec"]["source"]["helm"].pop("parameters", None),
                          [{"name": "productionPhase", "value": "application", "forceString": True}])

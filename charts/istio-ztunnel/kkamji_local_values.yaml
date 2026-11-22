@@ -1,0 +1,25 @@
+# Istio ztunnel L4 ambient data plane for kkamji-lab (worker-only)
+# Upstream chart baseline: istio/ztunnel 1.31.4 (supports K8s 1.32 - 1.37)
+
+profile: ambient
+
+# CRITICAL k8s-m1 RAM guard: run ztunnel on worker nodes only (zero ambient workloads on k8s-m1).
+tolerations: []
+
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: DoesNotExist
+            - key: node-role.kubernetes.io/master
+              operator: DoesNotExist
+
+# Upstream default 200m/512Mi targets 200k-pod clusters; homelab (~74 pods) needs a fraction.
+resources:
+  requests:
+    cpu: 10m
+    memory: 48Mi
+  limits:
+    memory: 192Mi

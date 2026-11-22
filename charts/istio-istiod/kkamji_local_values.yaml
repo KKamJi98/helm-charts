@@ -1,5 +1,7 @@
-# Istio istiod values for kube-rca
-# Upstream chart baseline: istio/istiod 1.28.2
+# Istio istiod values for kkamji-lab (Ambient Mode, non-HA)
+# Upstream chart baseline: istio/istiod 1.31.4 (supports K8s 1.32 - 1.37)
+
+profile: ambient
 
 global:
   istioNamespace: istio-system
@@ -18,14 +20,20 @@ global:
         cpu: 200m
         memory: 512Mi
 
+# Non-HA minimal footprint (2026-11-23): disable HPA and size from 7d peak (4.2m / 148Mi).
+autoscaleEnabled: false
+replicaCount: 1
+
 resources:
   requests:
-    cpu: 500m
-    memory: 256Mi
+    cpu: 10m
+    memory: 160Mi
+  limits:
+    memory: 320Mi
 
 # Mesh config used to generate istio configmap.
 meshConfig:
-  # Tempo 제거 후 trace 수신 백엔드가 없으므로 sidecar tracing 을 끈다.
+  # Tempo 제거 후 trace 수신 백엔드가 없으므로 sidecar/waypoint tracing 을 끈다.
   enableTracing: false
   defaultProviders:
     metrics:
