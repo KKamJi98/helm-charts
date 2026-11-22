@@ -14,8 +14,8 @@
     },
     "hindsight": {
       "count": 30,
-      "objectsSha256": "0367b84e5d8819dd0bfc880423b2c39d0f0f50adc41235c80b682289fbb64465",
-      "rebaselined": "2026-11-22: API container env (concurrent 1->4, retain reasoning effort medium, model gpt-6.2-sol) and hindsight-gateway-client-keys ExternalSecret (+wsl_agy, +mac_agy); no other object changed"
+      "objectsSha256": "97c5fef11335975cc5b36ec20ae6ed9fb8f0f83218d63660132b216df43d3fc2",
+      "rebaselined": "2026-11-22: API container env (concurrent 1->4, retain reasoning effort medium->high, model gpt-6.2-sol) and hindsight-gateway-client-keys ExternalSecret (+wsl_agy, +mac_agy); no other object changed"
     },
     "kube-prometheus-stack": {
       "count": 131,

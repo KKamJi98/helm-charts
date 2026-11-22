@@ -1,6 +1,6 @@
 ---
 title: Staged Keycloak consumer SSO
-updated: 2026-11-22T06:50:00+09:00
+updated: 2026-11-22T16:17:00+09:00
 type: architecture
 status: current
 ---
@@ -46,9 +46,9 @@ StatefulSet differs by that one value, the Hindsight entry of the render oracle
 (`tests/fixtures/keycloak-consumers/main9a.json`) was re-baselined in the same
 change; the other three charts keep the hashes captured at the recorded base.
 The retain reasoning effort value (`runtime.retainReasoningEffort`,
-[runbook](../03_hindsight.md#retain-추출-reasoning-effort-2026-11-22)) adds one
-more environment variable to the same container and re-baselines the same
-entry again; nothing else in the oracle moves.
+[runbook](../03_hindsight.md#retain-추출-reasoning-effort-2026-11-22)) sets one
+environment variable on the same container (initially `medium`, later raised to
+`high`) and re-baselines the same entry; nothing else in the oracle moves.
 The Hindsight model value (`runtime.model` in the local values,
 [runbook](../03_hindsight.md#llm-model-gpt-62-sol-2026-11-22)) changes the value of
 one existing environment variable of that container, so the same entry is
