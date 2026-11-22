@@ -117,8 +117,8 @@ class ChartTests(unittest.TestCase):
                 self.assertNotEqual(failed.returncode, 0)
                 self.assertIn("runtime.llmMaxConcurrent", failed.stderr)
 
-    def test_only_retain_extraction_runs_at_medium_effort(self):
-        self.assertEqual(self.env["HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT"], "medium")
+    def test_only_retain_extraction_runs_at_high_effort(self):
+        self.assertEqual(self.env["HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT"], "high")
         # Every other operation keeps the generated model lane.
         self.assertEqual(self.env["HINDSIGHT_API_LLM_REASONING_EFFORT"], "xhigh")
         inherited = objects(render("--set", "runtime.retainReasoningEffort="))
@@ -126,7 +126,7 @@ class ChartTests(unittest.TestCase):
         names = [e["name"] for e in api["spec"]["template"]["spec"]["containers"][0]["env"]]
         self.assertNotIn("HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT", names)
         self.assertIn("HINDSIGHT_API_LLM_REASONING_EFFORT", names)
-        for allowed in ("low", "high", "xhigh"):
+        for allowed in ("low", "medium", "xhigh"):
             with self.subTest(value=allowed):
                 api = next(
                     d
@@ -135,7 +135,7 @@ class ChartTests(unittest.TestCase):
                 )
                 env = {e["name"]: e.get("value") for e in api["spec"]["template"]["spec"]["containers"][0]["env"]}
                 self.assertEqual(env["HINDSIGHT_API_RETAIN_LLM_REASONING_EFFORT"], allowed)
-        for bad in ("none", "minimal", "Medium", "max", "medium "):
+        for bad in ("none", "minimal", "High", "max", "high "):
             with self.subTest(value=bad):
                 failed = render("--set-string", f"runtime.retainReasoningEffort={bad}")
                 self.assertNotEqual(failed.returncode, 0)
