@@ -1,6 +1,6 @@
 ---
 title: Istio 1.31.4 Ambient Mode mesh architecture and operations
-updated: 2026-11-23T20:54:00+09:00
+updated: 2026-11-23T21:11:00+09:00
 type: runbook
 status: current
 ---
@@ -32,11 +32,17 @@ Sidecar retirement cleanup:
 Declarative GitOps enrollment via `syncPolicy.managedNamespaceMetadata.labels` (`istio.io/dataplane-mode: ambient`) in `charts/argo-applications/personal_local_values.yaml`:
 
 - **Enrolled in Ambient Mode (L4 HBONE mTLS active)**:
-  - `real-life-rpg`: `real-life-rpg` <-> `postgres-1` and `real-life-rpg-scheduler` CronJob <-> `postgres-1` upgraded transparently to HBONE mTLS with zero sidecar containers (CronJobs exit cleanly). Public traffic from non-ambient `Envoy Gateway` arrives on port `3000` (PERMISSIVE inbound).
-  - `kkamji-platform`: `kkamji-platform-api` <-> `kkamji-platform-db-1` upgraded transparently to HBONE mTLS. Existing ingress `NetworkPolicy` (`kkamji-platform-api`, `kkamji-platform-web`) continues allowing non-ambient `Envoy Gateway` traffic on TCP `8080`.
+  - `real-life-rpg`: `real-life-rpg` <-> `postgres-1` and `real-life-rpg-scheduler` CronJob <-> `postgres-1` upgraded transparently to HBONE mTLS with zero sidecar containers (CronJobs exit cleanly). Public traffic from non-ambient `Envoy Gateway` arrives on port `3000` (PERMISSIVE inbound). Note: `helm/real-life-rpg/templates/namespace.yaml` renders its own `Namespace` resource, so `istio.io/dataplane-mode: ambient` is declared in both `real-life-rpg` chart and Argo CD `managedNamespaceMetadata`.
+  - `kkamji-platform`: `kkamji-platform-api` <-> `kkamji-platform-db-1` upgraded transparently to HBONE mTLS. Ingress `NetworkPolicy` resources (`kkamji-platform-api`, `kkamji-platform-web`) allow non-ambient `Envoy Gateway` traffic on TCP `8080` and Istio Ambient host-probe SNAT traffic from `169.254.7.127/32` on TCP `8080`.
 - **Intentionally excluded (`istio-cni` `excludeNamespaces` + strict policy boundaries)**:
   - System / infra / CI namespaces (`kube-system`, `istio-system`, `metallb-system`, `cilium-secrets`, `envoy-gateway-system`, `cert-manager`, `external-secrets`, `external-dns`, `cnpg-system`, `argocd`, `monitoring`, `security`, `arc-system`, `arc-runtime`, `ci-pr`, `ci-full`, `ci-cache`).
-  - `keycloak` and `hindsight`: enforce strict port-scoped `NetworkPolicy`/`CiliumNetworkPolicy` contracts (`8080`/`5432`/`8888`) that intentionally do not open HBONE TCP `15008`. Enroll only after explicitly adding TCP `15008` rules to their policy contracts.
+  - `keycloak` and `hindsight`: enforce strict port-scoped `NetworkPolicy`/`CiliumNetworkPolicy` contracts (`8080`/`5432`/`8888`) that intentionally do not open HBONE TCP `15008` or kubelet probe SNAT `169.254.7.127/32`. Enroll only after explicitly adding TCP `15008` and `169.254.7.127/32` rules to their policy contracts.
+
+### NetworkPolicy requirement for Ambient-enrolled pods on Cilium
+
+`istio-cni` installs an `ISTIO_POSTRT` SNAT rule on worker nodes that rewrites host kubelet health probes targeting Ambient pods to link-local source IP `169.254.7.127` so probes bypass in-pod `ztunnel` redirection. Cilium classifies `169.254.7.127` as a non-host identity, so any Ambient-enrolled pod governed by an Ingress `NetworkPolicy` or `CiliumNetworkPolicy` must explicitly allow TCP ingress from `169.254.7.127/32` on its probe port(s) (and TCP `15008` for HBONE pod-to-pod mTLS if pod-to-pod ingress is restricted).
+
+Do not work around this with a cluster-wide empty-selector `CiliumClusterwideNetworkPolicy` (`endpointSelector: {}`), because selecting pods that have no Ingress policy enables default-deny for all other ingress on those pods. Always add `169.254.7.127/32` inside the pod's own `NetworkPolicy` or `CiliumNetworkPolicy`.
 
 ## 3. Verification and rollback
 
