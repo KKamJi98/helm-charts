@@ -11,7 +11,12 @@
 #   - 신규 서비스 온보딩 = 자기 차트에 HTTPRoute 추가
 #     (parentRef {name: kkamji, namespace: envoy-gateway-system, sectionName: https})
 
-gateway-helm: {}
+gateway-helm:
+  config:
+    envoyGateway:
+      extensionApis:
+        # Required by Keycloak consumer SecurityPolicies for Backend strict upstream TLS + DNS SAN verification.
+        enableBackend: true
 
 keycloakAdminPrivate:
   enabled: true
@@ -24,6 +29,10 @@ gateway:
   externalDNSTarget: 121.130.214.237
   issuer: letsencrypt-prod
   wildcardHost: "*.kkamji.net"
+  publicProxy:
+    name: kkamji-public
+    # Strip query strings (OAuth callback code/state) and omit auth/cookie/referer/identity headers in stdout access logs.
+    stripQueryAccessLog: true
 
 # TLS passthrough 리스너는 폐지(2026-08-31). 443 단일 Terminate 리스너로 통일 -
 # 다중 443 리스너 잔존 시 EG hostname intersection 이 깨져 신규 HTTPRoute 가

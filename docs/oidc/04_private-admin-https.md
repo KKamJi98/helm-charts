@@ -1,6 +1,6 @@
 ---
 title: Private Keycloak admin HTTPS candidate
-updated: 2026-11-23T02:45:00+09:00
+updated: 2026-11-23T19:59:00+09:00
 type: runbook
 status: current
 ---
@@ -21,7 +21,7 @@ management root는 `keycloak-admin-access` Application 하나를 추가합니다
 
 ## Exact private path
 
-- `Gateway/envoy-gateway-system/keycloak-admin-private`는 기존 `GatewayClass/envoy`를 사용합니다. 새 GatewayClass를 만들거나 기존 class에 `parametersRef`를 넣지 않습니다.
+- `Gateway/envoy-gateway-system/keycloak-admin-private`는 기존 `GatewayClass/envoy`를 사용합니다. 새 GatewayClass를 만들거나 기존 class에 `parametersRef`를 넣지 않습니다. (공용 `Gateway/kkamji`의 `EnvoyProxy/kkamji-public`과 컨트롤러 `extensionApis.enableBackend: true`는 공용 런타임 선행 조건으로 분리되어 있으며 private 7개 보안 객체 계약은 변경하지 않습니다.)
 - 해당 Gateway의 `infrastructure.parametersRef`만 동일 namespace의 전용 `EnvoyProxy/keycloak-admin-private`를 가리킵니다. Envoy Gateway v1.8.1의 per-Gateway 구성을 사용하고 `mergeGateways: false`를 명시합니다.
 - listener는 `https` 하나로 exact `sso.kkamji.net`, HTTPS 443, TLS Terminate입니다. `wildcard-kkamji-net-tls`는 같은 namespace의 Secret reference만 사용합니다. Secret/key/certificate를 읽거나 복사/생성하지 않으며 새 Certificate/Issuer, cross-namespace TLS grant와 HTTP/passthrough listener가 없습니다.
 - allowedRoutes는 같은 namespace의 HTTPRoute뿐입니다. route의 유일한 parent는 private Gateway의 `https` section입니다. `/` PathPrefix는 이 private parent에서만 admin/master 경로를 포함합니다.
