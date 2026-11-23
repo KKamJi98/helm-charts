@@ -312,6 +312,78 @@ class HomelabResourceOptimizationTests(unittest.TestCase):
                 self.assertEqual(res["requests"]["memory"], req_m)
                 self.assertEqual(res["limits"]["memory"], lim_m)
 
+    def test_tier3_envoy_gateway_kps_and_keycloak_right_sizing(self):
+        eg_docs = render_yaml("envoy-gateway", "envoy-gateway-system")
+        eg_dep = next(
+            d
+            for d in eg_docs
+            if d["kind"] == "Deployment" and d["metadata"]["name"] == "envoy-gateway"
+        )
+        eg_res = eg_dep["spec"]["template"]["spec"]["containers"][0]["resources"]
+        self.assertEqual(eg_res["requests"], {"cpu": "10m", "memory": "96Mi"})
+        self.assertEqual(eg_res["limits"]["memory"], "384Mi")
+        eg_proxy = next(
+            d
+            for d in eg_docs
+            if d["kind"] == "EnvoyProxy" and d["metadata"]["name"] == "kkamji-public"
+        )
+        self.assertEqual(eg_proxy["spec"]["concurrency"], 1)
+        proxy_res = eg_proxy["spec"]["provider"]["kubernetes"]["envoyDeployment"][
+            "container"
+        ]["resources"]
+        self.assertEqual(proxy_res["requests"], {"cpu": "20m", "memory": "192Mi"})
+        self.assertEqual(proxy_res["limits"]["memory"], "384Mi")
+        gw = next(
+            d
+            for d in eg_docs
+            if d["kind"] == "Gateway" and d["metadata"]["name"] == "kkamji"
+        )
+        self.assertEqual(
+            gw["spec"]["infrastructure"]["parametersRef"],
+            {
+                "group": "gateway.envoyproxy.io",
+                "kind": "EnvoyProxy",
+                "name": "kkamji-public",
+            },
+        )
+
+        kps_docs = render_yaml("kube-prometheus-stack", "monitoring")
+        am = next(d for d in kps_docs if d["kind"] == "Alertmanager")
+        self.assertEqual(
+            am["spec"]["resources"],
+            {
+                "requests": {"cpu": "5m", "memory": "80Mi"},
+                "limits": {"memory": "192Mi"},
+            },
+        )
+        prom = next(d for d in kps_docs if d["kind"] == "Prometheus")
+        self.assertEqual(
+            prom["spec"]["resources"],
+            {
+                "requests": {"cpu": "25m", "memory": "768Mi"},
+                "limits": {"memory": "1536Mi"},
+            },
+        )
+        sm = next(
+            d
+            for d in kps_docs
+            if d["kind"] == "ServiceMonitor"
+            and d["metadata"]["name"] == "kube-prometheus-stack-apiserver"
+        )
+        relabels = sm["spec"]["endpoints"][0]["metricRelabelings"]
+        self.assertEqual(len(relabels), 2)
+        self.assertIn("watch_events_dispatch_duration_seconds", relabels[1]["regex"])
+
+        kc_op = render_yaml("keycloak-operator", "keycloak")
+        op_dep = next(d for d in kc_op if d["kind"] == "Deployment")
+        self.assertEqual(
+            op_dep["spec"]["template"]["spec"]["containers"][0]["resources"],
+            {
+                "requests": {"cpu": "10m", "memory": "256Mi"},
+                "limits": {"cpu": "500m", "memory": "450Mi"},
+            },
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

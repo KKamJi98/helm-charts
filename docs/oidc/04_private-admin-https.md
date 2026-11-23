@@ -1,6 +1,6 @@
 ---
 title: Private Keycloak admin HTTPS candidate
-updated: 2026-11-23T19:59:00+09:00
+updated: 2026-11-23T20:13:00+09:00
 type: runbook
 status: current
 ---
@@ -17,7 +17,7 @@ status: current
 
 management root는 `keycloak-admin-access` Application 하나를 추가합니다. destination은 `envoy-gateway-system`, release는 `keycloak-admin-access`, valueFiles는 `kkamji_local_values.yaml` 하나이며 기존 repo/main/project와 sync policy를 상속합니다. 이전 16개 Application은 전체 객체를 보존하여 management 17개, automation 9개, personal 1개입니다. IdP application 17개/DB 기본 16개/Operator 18개/IdP default 8개 렌더는 변경하지 않습니다. main 반영은 GitOps 배포 경계이며 이 문서는 반영 승인이 아닙니다.
 
-별도의 [모카 recall 연동](../03_hindsight.md#모카chatgpt-읽기-전용-recall-연동)은 automation의 기존 Hindsight Application에 `moka_private_values.yaml`만 추가합니다. 이 때문에 automation 10개 객체의 검증 해시만 바뀝니다. 이후 `personal-root`에 `real-life-rpg`가 재활성화되어 personal 2개가 되었고, 2026-11-23 [홈랩 리소스 및 Istio Ambient 전환](../07_homelab-resource-optimization.md)으로 `management-root`에 `istio-cni`, `istio-ztunnel` 2개 Application(sync-wave 포함)이 추가되어 management 19개(`keycloak-admin-access` 제외 18개)가 되었습니다. Keycloak admin 경로와 7개 보안 객체 계약은 변경하지 않습니다.
+별도의 [모카 recall 연동](../03_hindsight.md#모카chatgpt-읽기-전용-recall-연동)은 automation의 기존 Hindsight Application에 `moka_private_values.yaml`만 추가합니다. 이 때문에 automation 10개 객체의 검증 해시만 바뀝니다. 이후 `personal-root`에 `real-life-rpg`가 재활성화되어 personal 2개가 되었고, 2026-11-23 [홈랩 리소스 및 Istio Ambient 전환](../07_homelab-resource-optimization.md)으로 `management-root`에 `istio-cni`, `istio-ztunnel` 2개 Application(sync-wave 포함)이 추가되어 management 19개(`keycloak-admin-access` 제외 18개)가 되었으며, Tier 3 최적화에서 `envoy-gateway` controller와 공용 `EnvoyProxy/kkamji-public`(`concurrency: 1`, `20m/192Mi`, lim `384Mi`) 리소스만 경량화했습니다. PR #117의 Backend API 및 공용 access log query 제거와 Keycloak admin 7개 보안 객체 계약은 변경하지 않습니다.
 
 ## Exact private path
 

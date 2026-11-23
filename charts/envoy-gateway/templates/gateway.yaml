@@ -5,6 +5,23 @@ metadata:
   name: {{ .Values.gateway.publicProxy.name }}
   namespace: {{ .Release.Namespace }}
 spec:
+{{- if .Values.gateway.publicProxy.concurrency }}
+  concurrency: {{ .Values.gateway.publicProxy.concurrency }}
+{{- end }}
+{{- if or .Values.gateway.publicProxy.replicas .Values.gateway.publicProxy.resources }}
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+{{- if .Values.gateway.publicProxy.replicas }}
+        replicas: {{ .Values.gateway.publicProxy.replicas }}
+{{- end }}
+{{- if .Values.gateway.publicProxy.resources }}
+        container:
+          resources:
+{{ toYaml .Values.gateway.publicProxy.resources | indent 12 }}
+{{- end }}
+{{- end }}
   telemetry:
     accessLog:
       settings:

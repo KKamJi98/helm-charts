@@ -413,7 +413,7 @@ class PrivateRefusalTests(unittest.TestCase):
         rendered = documents(render(PLATFORM))
         old = [obj for key, obj in rendered.items() if not key[2].startswith(NAME)]
         self.assertEqual(len(old), 44)
-        self.assertEqual(digest(old), "b19d1ecc0149e383247c6ce094197b58fefa46635bc81f8a4734782f20cd35ce")
+        self.assertEqual(digest(old), "4dad73ddc2577124334104085ebfcfc2a8e0c8349c76ffd0b265ad7fe75a95a8")
         self.assertEqual(hashlib.sha256((PLATFORM / "charts/gateway-helm-1.8.1.tgz").read_bytes()).hexdigest(),
                          "5a632f35e784ba58938d7a360745c3d3e71a290244ee01aa22584dba8c5b06d8")
         self.assertNotIn("parametersRef", rendered["GatewayClass", "", "envoy"]["spec"])

@@ -4,9 +4,24 @@ preparationProfile: keycloak-26.8.2-production
 productionPhase: database
 keycloak:
   instances: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 768Mi
+    limits:
+      cpu: 1500m
+      memory: 1536Mi
 publicCaProjection:
   enabled: true
 database:
+  instances: 1
+  resources:
+    requests:
+      cpu: 25m
+      memory: 256Mi
+    limits:
+      cpu: '1'
+      memory: 512Mi
   backup:
     retentionPolicy: 30d
     barmanObjectStore:

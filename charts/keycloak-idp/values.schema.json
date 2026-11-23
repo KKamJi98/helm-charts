@@ -68,16 +68,7 @@
           "const": false
         },
         "resources": {
-          "const": {
-            "requests": {
-              "cpu": "1",
-              "memory": "2Gi"
-            },
-            "limits": {
-              "cpu": "2",
-              "memory": "2Gi"
-            }
-          }
+          "type": "object"
         },
         "db": {
           "const": {
@@ -272,6 +263,18 @@
           "properties": {
             "instances": {
               "const": 2
+            },
+            "resources": {
+              "const": {
+                "requests": {
+                  "cpu": "1",
+                  "memory": "2Gi"
+                },
+                "limits": {
+                  "cpu": "2",
+                  "memory": "2Gi"
+                }
+              }
             }
           }
         }
@@ -302,6 +305,18 @@
           "properties": {
             "instances": {
               "const": 1
+            },
+            "resources": {
+              "const": {
+                "requests": {
+                  "cpu": "50m",
+                  "memory": "768Mi"
+                },
+                "limits": {
+                  "cpu": "1500m",
+                  "memory": "1536Mi"
+                }
+              }
             }
           }
         }
@@ -370,7 +385,7 @@
     },
     "productionDatabase": {
       "const": {
-        "instances": 3,
+        "instances": 1,
         "imageName": "ghcr.io/cloudnative-pg/postgresql:18.4-system-trixie@sha256:42708a75345b7a48fdd9257b071830783a97fd228529196b6313187a7198e185",
         "enableSuperuserAccess": false,
         "certificates": {
@@ -393,12 +408,12 @@
         },
         "resources": {
           "requests": {
-            "cpu": "250m",
-            "memory": "1Gi"
+            "cpu": "25m",
+            "memory": "256Mi"
           },
           "limits": {
             "cpu": "1",
-            "memory": "1Gi"
+            "memory": "512Mi"
           }
         },
         "affinity": {

@@ -16,6 +16,7 @@
 {{- if eq $object.kind "Deployment" -}}
 {{- range $container := $object.spec.template.spec.containers -}}
 {{- $_ := set $container "image" $root.Values.images.operator -}}
+{{- $_ := set $container "resources" $root.Values.resources -}}
 {{- range $env := $container.env -}}
 {{- if has $env.name (list "kc.operator.keycloak.image" "RELATED_IMAGE_KEYCLOAK") -}}
 {{- $_ := set $env "value" $root.Values.images.keycloak -}}

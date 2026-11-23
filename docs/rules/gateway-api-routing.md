@@ -1,6 +1,6 @@
 ---
 title: Gateway API routing rules
-updated: 2026-11-23T19:59:00+09:00
+updated: 2026-11-23T20:13:00+09:00
 type: rule
 status: current
 ---
@@ -21,7 +21,7 @@ ArgoCD SSA diff 방지 규칙이다.
 ## Shared runtime prerequisites for Keycloak SSO (2026-11-23)
 
 - `charts/envoy-gateway/kkamji_local_values.yaml`에서 `gateway-helm.config.envoyGateway.extensionApis.enableBackend: true`를 활성화한다. 소비자 `SecurityPolicy`(OIDC token exchange 및 remote JWKS)가 namespaced `Backend`를 통해 `sso.kkamji.net:443`의 strict upstream TLS와 DNS SAN 검증을 수행하기 위한 공유 컨트롤러 선행 조건이다.
-- 공용 `Gateway/kkamji`는 `spec.infrastructure.parametersRef`로 전용 `EnvoyProxy/kkamji-public`을 참조한다(`GatewayClass/envoy`는 class parametersRef 없이 유지). `EnvoyProxy/kkamji-public`은 stdout JSON access log의 `path` 필드에 `%REQ_WITHOUT_QUERY(X-ENVOY-ORIGINAL-PATH?:PATH)%`를 사용해 OAuth callback의 `code`/`state` query string을 제거하고, `Authorization`, `Cookie`, `Set-Cookie`, `Referer` 및 identity 헤더를 기록하지 않는다. `metallb.io/loadBalancerIPs: 10.0.1.100` 고정과 private `keycloak-admin-private` 격리 객체 7개는 변경하지 않는다.
+- 공용 `Gateway/kkamji`는 `spec.infrastructure.parametersRef`로 전용 `EnvoyProxy/kkamji-public`을 참조한다(`GatewayClass/envoy`는 class parametersRef 없이 유지). `EnvoyProxy/kkamji-public`은 stdout JSON access log의 `path` 필드에 `%REQ_WITHOUT_QUERY(X-ENVOY-ORIGINAL-PATH?:PATH)%`를 사용해 OAuth callback의 `code`/`state` query string을 제거하고, `Authorization`, `Cookie`, `Set-Cookie`, `Referer` 및 identity 헤더를 기록하지 않는다. 또한 2026-11-23 [홈랩 Tier 3 최적화](../07_homelab-resource-optimization.md)에서 `EnvoyProxy/kkamji-public`(`concurrency: 1`, `replicas: 1`, `20m/192Mi` req, `384Mi` lim)과 `envoy-gateway` controller(`10m/96Mi` req, `384Mi` lim)를 경량화했다. `metallb.io/loadBalancerIPs: 10.0.1.100` 고정과 private `keycloak-admin-private` 격리 객체 7개는 변경하지 않는다.
 
 ## Private management ownership exception
 

@@ -1,6 +1,6 @@
 ---
 title: Homelab Kubernetes resource and non-HA optimization
-updated: 2026-11-23T03:09:00+09:00
+updated: 2026-11-23T20:08:00+09:00
 type: runbook
 status: current
 ---
@@ -127,4 +127,10 @@ GitOps rollback is reverting the merge commit on `main` (or reverting individual
 
 - **Wave 1 (`fafd095`, 2026-11-23 03:03 KST)**: Deployed non-HA `metallb` (worker-only speaker, FRR disabled) and `cilium` (single worker-only operator, `debug=false`, `bgpControlPlane=false`, Istio Ambient CNI compatibility `cni.exclusive=false`, `socketLB.hostNamespaceOnly=true`, `bpf.masquerade=false`, `installNoConntrackIptablesRules=false`), rolled `ds/cilium` across all 3 nodes, verified `metallb` and `cilium` `Synced/Healthy` with `k8s-m1` live RAM down from 87% (2678Mi) to 75% (2295Mi) and `https://argocd.kkamji.net` returning HTTP/2 200.
 - **Wave 2 (`31a73ae`, 2026-11-23 03:08 KST)**: Upgraded Istio `1.28.2 -> 1.31.4` Ambient Mode (`istio-base`, `istio-istiod`, worker-only `istio-cni` and `istio-ztunnel` verified 2/2 Running on `k8s-w1`/`k8s-w2`, 0 on `k8s-m1`, CNI chained cleanly in `/etc/cni/net.d/05-cilium.conflist`, ztunnel WDS/XDS ready) and applied right-sizing to `argocd` (Dex removed, ApplicationSet 0 replicas), `metrics-server`, `loki`, `alloy`, `cert-manager`, `external-secrets`, and `external-dns`. All 34/34 Argo CD Applications converged `Synced/Healthy`.
-- **Wave 3 (2026-11-23 03:09 KST)**: Applying workload and CI right-sizing to `hindsight`, `ci-cache`, `arc-controller`, `arc-light` (`kkamji_local_values.yaml` and `terraform_lab_values.yaml`), `arc-bql-light`, and `arc-runtime`, and adding `tests/test_homelab_resource_optimization.py`.
+- **Wave 3 (`7c67382`, 2026-11-23 03:11 KST)**: Deployed workload and CI right-sizing (`hindsight`, `ci-cache`, `arc-controller`, `arc-light` both value files, `arc-bql-light`, `arc-runtime`) with `tests/test_homelab_resource_optimization.py`. All 34/34 Argo CD Applications converged `Synced/Healthy` and GitHub Actions CI passed.
+- **Wave 4 (`k8s-m1` Kubespray/control-plane, 2026-11-23 03:13 KST)**: Removed `kube-system/dns-autoscaler`, scaled `deploy/coredns` to 1 worker-only replica, applied `GOMEMLIMIT=1400MiB` to `kube-apiserver-k8s-m1` with persistent `/etc/kubernetes/patches/kube-apiserver0+strategic.yaml`, and synced Kubespray inventory `k8s-cluster.yml`.
+- **16.5h Post-Rollout Verification (2026-11-23 19:53 KST)**: 0 OOMKilled events and 0 unexpected restarts across all 34 Applications; `kube-apiserver` RSS held steadily at `1405 MiB` (`1574 MiB` OS `available` on `k8s-m1`, vs `543.9 MiB` 7d min before).
+- **Tier 3 + Cleanup (2026-11-23 20:08 KST, owner-approved)**:
+  - Deleted retired empty namespaces (`litellm`, `openclaw`, `play-hub`).
+  - External app repos right-sized: `KKamJi98/kkamji-platform` (`7b6d3eb`, `-125m / -472Mi` req across `api`/`search`/`web`/`git-sync`) and `KKamJi98/real-life-rpg` (`0b16b9a`, `-85m / -192Mi` app req + `-40m / -64Mi` scheduler req).
+  - `helm-charts` Tier 3: `envoy-gateway` controller (`10m/96Mi`, lim `384Mi`) + public `EnvoyProxy/kkamji-public` (`concurrency: 1`, `20m/192Mi`, lim `384Mi`, preserving PR #117 Backend API and query-stripped access log privacy), `kube-prometheus-stack` Alertmanager (`5m/80Mi`, lim `192Mi`) + Prometheus (`25m/768Mi`, lim `1536Mi`) + `kubeApiServer` unused histogram bucket drop (`~27.8k` series), and Keycloak production profile (`keycloak-idp` CNPG `instances: 3 -> 1`, DB `25m/256Mi` lim `1/512Mi`, server `50m/768Mi` lim `1500m/1536Mi`, `keycloak-operator` `10m/256Mi` lim `500m/450Mi`; S3 Barman backup and all security/TLS contracts preserved). Istio Ambient remains opt-in ready and Hubble UI remains enabled.

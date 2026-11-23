@@ -17,6 +17,15 @@ gateway-helm:
       extensionApis:
         # Required by Keycloak consumer SecurityPolicies for Backend strict upstream TLS + DNS SAN verification.
         enableBackend: true
+  deployment:
+    envoyGateway:
+      # Homelab right-sizing (2026-11-23): live usage 3m / 48Mi vs 100m / 256Mi upstream default.
+      resources:
+        requests:
+          cpu: 10m
+          memory: 96Mi
+        limits:
+          memory: 384Mi
 
 keycloakAdminPrivate:
   enabled: true
@@ -33,6 +42,16 @@ gateway:
     name: kkamji-public
     # Strip query strings (OAuth callback code/state) and omit auth/cookie/referer/identity headers in stdout access logs.
     stripQueryAccessLog: true
+    # Homelab right-sizing (2026-11-23): single Envoy worker thread and bounded Burstable resources
+    # (live 5m / 151Mi vs 100m / 512Mi upstream default).
+    concurrency: 1
+    replicas: 1
+    resources:
+      requests:
+        cpu: 20m
+        memory: 192Mi
+      limits:
+        memory: 384Mi
 
 # TLS passthrough 리스너는 폐지(2026-08-31). 443 단일 Terminate 리스너로 통일 -
 # 다중 443 리스너 잔존 시 EG hostname intersection 이 깨져 신규 HTTPRoute 가

@@ -18,8 +18,8 @@ import test_grafana_pvc_preparation as prep
 ARGO_GOLDENS = {
     False: (132, "06d9dbd91278b3e4d92727b1a1ced777f4556ea413ab531e6acec35f6309f9cd",
             "8c94924add936fe5fe34b8fb0cc01917a9fb96fbad76bcfdf786c355f436451a"),
-    True: (140, "59eb71febcac1bfec6a9e23fa89e27df86b46f689c3bc655bfbc128aa19e4d70",
-           "10b6110b7475b488f344aaa6eb8dbbdb62f3a263242c3d257326e067265775a7"),
+    True: (140, "8f44c924eac77cd9b670665d2ee4db27942b9099ef39fa1356c803d273c62ece",
+           "cfd9cac92edb464006c82a02edc183a81a9ed2bb9332b5746f6fb2fcfc9c5139"),
 }
 CLAIM = '{{ include "grafana.fullname" . }}'
 ACTIVE_STORAGE = {"name": "storage", "persistentVolumeClaim": {"claimName": "kube-prometheus-stack-grafana"}}

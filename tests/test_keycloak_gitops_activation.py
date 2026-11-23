@@ -137,16 +137,18 @@ class ManagementServerActivationTests(unittest.TestCase):
         server = rendered["Keycloak", "keycloak"]
         expected_spec = copy.deepcopy(default["Keycloak", "keycloak"]["spec"])
         expected_spec["instances"] = 1
+        expected_spec["resources"] = {"requests": {"cpu": "50m", "memory": "768Mi"}, "limits": {"cpu": "1500m", "memory": "1536Mi"}}
         self.assertEqual(server["spec"], expected_spec)
         self.assertEqual(default["Keycloak", "keycloak"]["spec"]["instances"], 2)
-        self.assertEqual(cluster["spec"]["instances"], 3)
+        self.assertEqual(cluster["spec"]["instances"], 1)
+        self.assertEqual(cluster["spec"]["resources"], {"requests": {"cpu": "25m", "memory": "256Mi"}, "limits": {"cpu": "1", "memory": "512Mi"}})
         self.assertEqual(server["apiVersion"], "k8s.keycloak.org/v2beta1")
         self.assertEqual(server["metadata"]["annotations"], {"argocd.argoproj.io/sync-wave": "1"})
         spec = server["spec"]
         self.assertEqual(spec["image"], preparation.SERVER_IMAGE)
         self.assertIs(spec["startOptimized"], False)
         self.assertEqual(spec["instances"], 1)
-        self.assertEqual(spec["resources"]["requests"], {"cpu": "1", "memory": "2Gi"})
+        self.assertEqual(spec["resources"]["requests"], {"cpu": "50m", "memory": "768Mi"})
         self.assertEqual(spec["additionalOptions"], [{"name": "db-tls-mode", "value": "verify-server"}])
         self.assertEqual(spec["db"]["host"], "keycloak-db-rw.keycloak.svc.cluster.local")
         self.assertEqual(spec["truststores"], {"database": {"secret": {"name": "keycloak-db-client-trust", "optional": False}}})

@@ -266,6 +266,7 @@ class KeycloakPreparationTests(unittest.TestCase):
             if obj["kind"] == "Deployment":
                 for container in expected["spec"]["template"]["spec"]["containers"]:
                     container["image"] = OPERATOR_IMAGE
+                    container["resources"] = {"requests": {"cpu": "10m", "memory": "256Mi"}, "limits": {"cpu": "500m", "memory": "450Mi"}}
                     for env in container["env"]:
                         if env["name"] in ("kc.operator.keycloak.image", "RELATED_IMAGE_KEYCLOAK"):
                             env["value"] = SERVER_IMAGE
@@ -444,21 +445,21 @@ class KeycloakPreparationTests(unittest.TestCase):
         server = resource_vector(self.kc["spec"]["resources"])
         db = resource_vector(self.db["spec"]["resources"])
         imp = resource_vector(self.realm["spec"]["resources"])
-        self.assertEqual(op, (300, 450, 700, 450))
+        self.assertEqual(op, (10, 256, 500, 450))
         self.assertEqual(server, (1000, 2048, 2000, 2048))
         self.assertEqual(db, (250, 1024, 1000, 1024))
         self.assertEqual(imp, server, "Explicit RealmImport resources avoid upstream fallback ambiguity")
         self.assertEqual((self.kc["spec"]["instances"], self.db["spec"]["instances"]), (2, 3))
         steady = sum_vectors(op, server, server, db, db, db)
-        self.assertEqual(steady, (3050, 7618, 7700, 7618))
-        self.assertEqual(sum_vectors(steady, imp), (4050, 9666, 9700, 9666))
-        self.assertEqual(sum_vectors(steady, op), (3350, 8068, 8400, 8068))
-        self.assertEqual(sum_vectors(steady, op, imp), (4350, 10116, 10400, 10116))
+        self.assertEqual(steady, (2760, 7424, 7500, 7618))
+        self.assertEqual(sum_vectors(steady, imp), (3760, 9472, 9500, 9666))
+        self.assertEqual(sum_vectors(steady, op), (2770, 7680, 8000, 8068))
+        self.assertEqual(sum_vectors(steady, op, imp), (3770, 9728, 10000, 10116))
         # CNPG regular init and main each use Cluster resources: serial max.
         effective_cnpg = tuple(max(main, init) for main, init in zip(db, db))
         self.assertEqual(effective_cnpg, db)
-        self.assertEqual(sum_vectors(steady, effective_cnpg), (3300, 8642, 8700, 8642))
-        self.assertEqual(sum_vectors(steady, imp, op, effective_cnpg), (4600, 11140, 11400, 11140))
+        self.assertEqual(sum_vectors(steady, effective_cnpg), (3010, 8448, 8500, 8642))
+        self.assertEqual(sum_vectors(steady, imp, op, effective_cnpg), (4020, 10752, 11000, 11140))
         self.assertNotIn("plugins", self.db["spec"])
         self.assertNotIn("initContainers", self.op_by[("Deployment", "keycloak-operator")]["spec"]["template"]["spec"])
         # Default Deployment RollingUpdate maxSurge=25% rounds UP for one Operator.
@@ -469,11 +470,11 @@ class KeycloakPreparationTests(unittest.TestCase):
         # Future Auto, NOT SELECTED: one normal init + one app container execute serially.
         effective_update = tuple(max(a, b) for a, b in zip(server, server))
         self.assertEqual(effective_update, server)
-        self.assertEqual(sum_vectors(steady, effective_update), (4050, 9666, 9700, 9666))
+        self.assertEqual(sum_vectors(steady, effective_update), (3760, 9472, 9500, 9666))
         # Feasible request-only example, NOT scheduler/runtime proof: 2 DB + KC + op + import on w1.
         w1 = sum_vectors(server, db, db, op, imp)
         w2 = sum_vectors(server, db)
-        self.assertEqual((w1[0], w1[1], w2[0], w2[1]), (2800, 6594, 1250, 3072))
+        self.assertEqual((w1[0], w1[1], w2[0], w2[1]), (2510, 6400, 1250, 3072))
         self.assertLess(w1[0], Decimal("6575"))
         self.assertLess(w1[1], Decimal("8240.712890625"))
         self.assertLess(w2[0], Decimal("4795"))

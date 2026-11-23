@@ -26,10 +26,13 @@ kube-prometheus-stack:
                 storage: 1Gi
       # Discord 메시지의 Silence 링크(.ExternalURL)가 외부 도메인을 가리키도록 설정
       externalUrl: https://alertmanager.kkamji.net
+      # Homelab right-sizing (2026-11-23): live 1m / 43Mi vs 10m / 200Mi.
       resources:
         requests:
-          cpu: 10m
-          memory: 200Mi
+          cpu: 5m
+          memory: 80Mi
+        limits:
+          memory: 192Mi
     # Runtime Alertmanager configuration and templates are rendered only by
     # templates/alertmanager-discord-ces.yaml. Keep no duplicate config here.
   grafana:
@@ -163,10 +166,27 @@ kube-prometheus-stack:
       retention: 1d
       # 시간 기준 retention 과 별개로 TSDB 블록 크기 상한을 둔다 (PVC 30Gi).
       retentionSize: 10GB
+      # Homelab right-sizing (2026-11-23): bounded after dropping unused apiserver buckets.
       resources:
         requests:
-          cpu: 50m
-          memory: 1Gi
+          cpu: 25m
+          memory: 768Mi
+        limits:
+          memory: 1536Mi
+  # Drop unused high-cardinality apiserver histogram buckets (~27.8k series, 22% of TSDB)
+  # while preserving upstream noisy-le bucket drops and all SLO/recording rule metrics.
+  kubeApiServer:
+    serviceMonitor:
+      metricRelabelings:
+        - action: drop
+          regex: (etcd_request|apiserver_request_slo|apiserver_request_sli|apiserver_request)_duration_seconds_bucket;(0\.15|0\.2|0\.3|0\.35|0\.4|0\.45|0\.6|0\.7|0\.8|0\.9|1\.25|1\.5|1\.75|2|3|3\.5|4|4\.5|6|7|8|9|15|20|40|45|50)(\.0)?
+          sourceLabels:
+            - __name__
+            - le
+        - action: drop
+          regex: apiserver_(watch_events_dispatch_duration_seconds|watch_list_duration_seconds|storage_list_duration_seconds|response_sizes|watch_cache_read_wait_seconds|watch_cache_initialization_duration_seconds|request_body_size_bytes)_bucket
+          sourceLabels:
+            - __name__
   # CrashLoopBackOff 전용 알람을 복원한다 (이전에 disabled 였으나, pod 단위
   # crashloop 신호가 없으면 KubePodNotReady 등 간접 알람만 남아 추적이 어렵다).
   defaultRules: {}
