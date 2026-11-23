@@ -1,4 +1,4 @@
-# Istio istiod values for kkamji-lab (Ambient Mode, non-HA)
+# Istio istiod values for kkamji-lab (Ambient Mode, non-HA, sidecarless)
 # Upstream chart baseline: istio/istiod 1.31.4 (supports K8s 1.32 - 1.37)
 
 profile: ambient
@@ -9,16 +9,32 @@ global:
   # istio-base still owns CRDs; istio-istiod owns its runtime RBAC.
   resourceScope: all
 
-  # Keep proxy tracer disabled to rely on meshConfig extensionProviders.
-  proxy:
-    tracer: none
+  # Right-sized worker-only defaults if an opt-in L7 Waypoint Proxy is ever deployed.
+  waypoint:
     resources:
       requests:
-        cpu: 50m
+        cpu: 25m
         memory: 64Mi
       limits:
-        cpu: 200m
-        memory: 512Mi
+        cpu: 500m
+        memory: 256Mi
+    tolerations: []
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: node-role.kubernetes.io/control-plane
+                  operator: DoesNotExist
+                - key: node-role.kubernetes.io/master
+                  operator: DoesNotExist
+
+# Never inject legacy Envoy sidecars by default or onto any Ambient-enrolled workload.
+sidecarInjectorWebhook:
+  enableNamespacesByDefault: false
+  neverInjectSelector:
+    - matchLabels:
+        istio.io/dataplane-mode: ambient
 
 # Non-HA minimal footprint (2026-11-23): disable HPA and size from 7d peak (4.2m / 148Mi).
 autoscaleEnabled: false
@@ -33,7 +49,7 @@ resources:
 
 # Mesh config used to generate istio configmap.
 meshConfig:
-  # Tempo 제거 후 trace 수신 백엔드가 없으므로 sidecar/waypoint tracing 을 끈다.
+  # Tempo 제거 후 trace 수신 백엔드가 없으므로 tracing 을 끈다.
   enableTracing: false
   defaultProviders:
     metrics:

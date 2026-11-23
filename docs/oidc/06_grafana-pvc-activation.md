@@ -1,6 +1,6 @@
 ---
 title: Grafana native PVC activation candidate
-updated: 2026-11-23T20:05:00+09:00
+updated: 2026-11-23T20:54:00+09:00
 type: runbook
 status: current
 ---
@@ -18,8 +18,10 @@ consumer 기본 인증은 계속 legacy이고, source의 SSO acknowledgement는 
 
 새 keycloakSSO 기본값은 additive입니다. 기존 default/preparation/activation의 고정
 whole-object/raw/hash, crypto, sidecar, ownership guard는 그대로이며 defaults exact
-검사만 새 legacy 필드를 명시합니다. 2026-11-23 [홈랩 Tier 3 최적화](../07_homelab-resource-optimization.md)에서
-Alertmanager/Prometheus 리소스 경계와 `kubeApiServer` 미사용 histogram bucket drop을 반영해
+검사만 새 legacy 필드를 명시합니다. 2026-11-23 [홈랩 Tier 3 최적화](../07_homelab-resource-optimization.md) 및
+[Istio Ambient 전환](../08_istio-ambient-mesh.md)에서
+Alertmanager/Prometheus 리소스 경계, `kubeApiServer` 미사용 histogram bucket drop 및
+레거시 sidecar `envoy-stats` scrape job 제거를 반영해
 `ARGO_GOLDENS[True]` 로컬 전체 해시만 재기준선화했으며, Grafana Deployment/Pod template과
 retained-PVC/storage guard는 바이트 단위로 보존됩니다. 별도 current-main 회귀는 131/141 객체와
 retained-PVC + synthetic canary/final 조합을 immutable 9a baseline으로 검사합니다.

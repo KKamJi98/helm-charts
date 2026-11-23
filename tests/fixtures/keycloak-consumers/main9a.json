@@ -21,19 +21,19 @@
     },
     "kube-prometheus-stack": {
       "count": 131,
-      "objectsSha256": "7fde27db02028e09d8a8224a610b13112d8ec112e998ad8ed20701c76e562892",
+      "objectsSha256": "40457d5f4070e2b15f524adc88ee1bdd79c17ba83bd637cc28a4c788d40b2a79",
       "grafanaAnnotations": [
         "checksum/config",
         "checksum/sc-dashboard-provider-config",
         "kubectl.kubernetes.io/default-container"
       ],
       "grafanaWithoutConfigChecksumSha256": "31048995c0554ae15d949e3b50a604d0c3ac14e4c7124a463681cac01ddcb5cb",
-      "rebaselined": "2026-11-23: Tier 3 homelab optimization (alertmanager 5m/80Mi lim 192Mi, prometheus 25m/768Mi lim 1536Mi, drop 7 unused high-cardinality apiserver histogram buckets ~27.8k series); zero Grafana/storage/SSO/rule changes"
+      "rebaselined": "2026-11-23: Tier 3 homelab optimization + Istio Ambient cutover (alertmanager 5m/80Mi lim 192Mi, prometheus 25m/768Mi lim 1536Mi, drop 7 unused apiserver buckets ~27.8k series, remove legacy sidecar envoy-stats job); zero Grafana/storage/SSO/rule changes"
     }
   },
   "kpsIncludeCRDs": {
     "count": 141,
-    "objectsSha256": "478e904c5f87eaf36ee00e079a282c52aeca42006fe73385c01241fa35c4c438",
+    "objectsSha256": "3ff4ac11e432c4b5eb46f2bfd2c2383c0f4641a90a7b70e61c33ec3eadeccb88",
     "grafanaAnnotations": [
       "checksum/config",
       "checksum/sc-dashboard-provider-config",

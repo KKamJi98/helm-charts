@@ -131,22 +131,9 @@ kube-prometheus-stack:
               target_label: __address__
               regex: (.+)(?::\d+);(\d+)
               replacement: $1:$2
-        # Istio Envoy sidecar metrics
-        - job_name: "envoy-stats"
-          metrics_path: /stats/prometheus
-          kubernetes_sd_configs:
-            - role: pod
-          relabel_configs:
-            - source_labels: [__meta_kubernetes_pod_container_port_name]
-              action: keep
-              regex: ".*-envoy-prom"
-            - action: labelmap
-              regex: __meta_kubernetes_pod_label_(.+)
-            - source_labels: [__meta_kubernetes_namespace]
-              target_label: namespace
-            - source_labels: [__meta_kubernetes_pod_name]
-              target_label: pod
-        # Istiod control plane metrics
+        # Istio Ambient Mode telemetry (2026-11-23): legacy sidecar envoy-stats job removed.
+        # ztunnel (:15020/metrics) and istio-cni-node (:15014/metrics) carry prometheus.io/scrape=true
+        # and are scraped by kubernetes-pods; istiod control-plane metrics are scraped below.
         - job_name: "istiod"
           kubernetes_sd_configs:
             - role: endpoints

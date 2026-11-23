@@ -1,6 +1,6 @@
 ---
 title: Homelab Kubernetes resource and non-HA optimization
-updated: 2026-11-23T20:08:00+09:00
+updated: 2026-11-23T20:54:00+09:00
 type: runbook
 status: current
 ---
@@ -133,4 +133,5 @@ GitOps rollback is reverting the merge commit on `main` (or reverting individual
 - **Tier 3 + Cleanup (2026-11-23 20:08 KST, owner-approved)**:
   - Deleted retired empty namespaces (`litellm`, `openclaw`, `play-hub`).
   - External app repos right-sized: `KKamJi98/kkamji-platform` (`7b6d3eb`, `-125m / -472Mi` req across `api`/`search`/`web`/`git-sync`) and `KKamJi98/real-life-rpg` (`0b16b9a`, `-85m / -192Mi` app req + `-40m / -64Mi` scheduler req).
-  - `helm-charts` Tier 3: `envoy-gateway` controller (`10m/96Mi`, lim `384Mi`) + public `EnvoyProxy/kkamji-public` (`concurrency: 1`, `20m/192Mi`, lim `384Mi`, preserving PR #117 Backend API and query-stripped access log privacy), `kube-prometheus-stack` Alertmanager (`5m/80Mi`, lim `192Mi`) + Prometheus (`25m/768Mi`, lim `1536Mi`) + `kubeApiServer` unused histogram bucket drop (`~27.8k` series), and Keycloak production profile (`keycloak-idp` CNPG `instances: 3 -> 1`, DB `25m/256Mi` lim `1/512Mi`, server `50m/768Mi` lim `1500m/1536Mi`, `keycloak-operator` `10m/256Mi` lim `500m/450Mi`; S3 Barman backup and all security/TLS contracts preserved). Istio Ambient remains opt-in ready and Hubble UI remains enabled.
+  - `helm-charts` Tier 3: `envoy-gateway` controller (`10m/96Mi`, lim `384Mi`) + public `EnvoyProxy/kkamji-public` (`concurrency: 1`, `20m/192Mi`, lim `384Mi`, preserving PR #117 Backend API and query-stripped access log privacy), `kube-prometheus-stack` Alertmanager (`5m/80Mi`, lim `192Mi`) + Prometheus (`25m/768Mi`, lim `1536Mi`) + `kubeApiServer` unused histogram bucket drop (`~27.8k` series), and Keycloak production profile (`keycloak-idp` CNPG `instances: 3 -> 1`, DB `25m/256Mi` lim `1/512Mi`, server `50m/768Mi` lim `1500m/1536Mi`, `keycloak-operator` `10m/256Mi` lim `500m/450Mi`; S3 Barman backup and all security/TLS contracts preserved). Hubble UI remains enabled.
+- **Istio Sidecar -> Ambient Full Cutover (2026-11-23 20:54 KST)**: See [Istio 1.31.4 Ambient Mode mesh architecture and operations](08_istio-ambient-mesh.md). Removed legacy sidecar `global.proxy` and Prometheus `envoy-stats` scrape job, added `istio-cni` `excludeNamespaces` and `neverInjectSelector` guards, and declaratively enrolled `real-life-rpg` and `kkamji-platform` via `istio.io/dataplane-mode: ambient` in `charts/argo-applications/personal_local_values.yaml`.

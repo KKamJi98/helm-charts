@@ -119,5 +119,12 @@
     "charts/arc-bql-light/kkamji_local_values.yaml",
     "charts/arc-runtime/templates/runtime.yaml",
     "tests/test_homelab_resource_optimization.py"
+  ],
+  "docs/08_istio-ambient-mesh.md": [
+    "charts/istio-base/kkamji_local_values.yaml",
+    "charts/istio-istiod/kkamji_local_values.yaml",
+    "charts/istio-cni/kkamji_local_values.yaml",
+    "charts/istio-ztunnel/kkamji_local_values.yaml",
+    "charts/argo-applications/personal_local_values.yaml"
   ]
 }

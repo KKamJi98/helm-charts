@@ -257,7 +257,7 @@ class PrivateActivationTests(unittest.TestCase):
                          "annotations": {"argocd.argoproj.io/manifest-generate-paths": "."}})
         for root, count, expected in [
             ("automation", 10, "10aacd1ce691c59b15a2711dac01fa395d2ef13cb28b4fa1b7cf2cdc8295307f"),
-            ("personal", 2, "8cb44053c4c0b149857efdfa75984e95dd79dc95a7c72e9af39bca492d7960e8"),
+            ("personal", 2, "b3ba1fb82e70aab14d7423f9987ced4b963e0a0d0b8e083d1e55f8f998353e47"),
         ]:
             args[2] = root + "-root"
             args[-1] = str(chart / (root + "_local_values.yaml"))

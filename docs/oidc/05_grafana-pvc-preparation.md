@@ -1,6 +1,6 @@
 ---
 title: Grafana PVC preparation only
-updated: 2026-11-23T20:05:00+09:00
+updated: 2026-11-23T20:54:00+09:00
 type: runbook
 status: current
 ---
@@ -18,11 +18,12 @@ consumer 기본 인증은 계속 legacy이고, source의 SSO acknowledgement는 
 
 새 keycloakSSO 기본값은 additive입니다. 기존 default/preparation/activation의 고정
 whole-object/raw/hash, crypto, sidecar, ownership guard는 그대로이며 defaults exact
-검사만 새 legacy 필드를 명시합니다. 2026-11-23 [홈랩 Tier 3 최적화](../07_homelab-resource-optimization.md)에서
+검사만 새 legacy 필드를 명시합니다. 2026-11-23 [홈랩 Tier 3 최적화](../07_homelab-resource-optimization.md) 및
+[Istio Ambient 전환](../08_istio-ambient-mesh.md)에서
 Alertmanager(`5m/80Mi`, lim `192Mi`), Prometheus(`25m/768Mi`, lim `1536Mi`), `kubeApiServer`
-미사용 고카디널리티 histogram bucket drop(`~27.8k` series)을 반영해 `kube-prometheus-stack`
-로컬 전체 해시만 재기준선화했으며, Grafana Deployment/Pod template 해시와 PVC/storage guard는
-바이트 단위로 보존됩니다. 별도 current-main 회귀는 131/141 객체와
+미사용 고카디널리티 histogram bucket drop(`~27.8k` series), 레거시 sidecar `envoy-stats`
+scrape job 제거를 반영해 `kube-prometheus-stack` 로컬 전체 해시만 재기준선화했으며,
+Grafana Deployment/Pod template 해시와 PVC/storage guard는 바이트 단위로 보존됩니다. 별도 current-main 회귀는 131/141 객체와
 retained-PVC + synthetic canary/final 조합을 immutable 9a baseline으로 검사합니다.
 mutable values 두 벌의 동등성으로 storage 검증을 대체하지 않습니다.
 

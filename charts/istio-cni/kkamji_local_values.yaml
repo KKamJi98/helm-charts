@@ -3,11 +3,34 @@
 
 profile: ambient
 
+chained: true
 cniBinDir: /opt/cni/bin
 cniConfDir: /etc/cni/net.d
 
 ambient:
   enabled: true
+  dnsCapture: true
+  reconcileIptablesOnStartup: true
+
+# Defense-in-depth: never capture infrastructure, CNI, Gateway, monitoring, or CI runner namespaces.
+excludeNamespaces:
+  - kube-system
+  - istio-system
+  - metallb-system
+  - cilium-secrets
+  - envoy-gateway-system
+  - cert-manager
+  - external-secrets
+  - external-dns
+  - cnpg-system
+  - argocd
+  - monitoring
+  - security
+  - arc-system
+  - arc-runtime
+  - ci-pr
+  - ci-full
+  - ci-cache
 
 # K8s >= 1.30 uses native securityContext.appArmorProfile instead of deprecated beta annotation.
 useAppArmorAnnotation: false

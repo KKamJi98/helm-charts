@@ -18,7 +18,7 @@ import test_grafana_pvc_preparation as prep
 ARGO_GOLDENS = {
     False: (132, "06d9dbd91278b3e4d92727b1a1ced777f4556ea413ab531e6acec35f6309f9cd",
             "8c94924add936fe5fe34b8fb0cc01917a9fb96fbad76bcfdf786c355f436451a"),
-    True: (140, "8f44c924eac77cd9b670665d2ee4db27942b9099ef39fa1356c803d273c62ece",
+    True: (140, "9c9b19375b9c6ece55e50a81fe74e918d9be765d68efd2347e5a0258236ba57f",
            "cfd9cac92edb464006c82a02edc183a81a9ed2bb9332b5746f6fb2fcfc9c5139"),
 }
 CLAIM = '{{ include "grafana.fullname" . }}'

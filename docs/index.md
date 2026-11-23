@@ -13,6 +13,7 @@ status: current
 
 - [Platform resource baseline](04_resource-baseline.md) - 실제 사용량, Grafana 데이터 보존, HPA와 memory limit 경계, 렌더 및 GitOps rollout 검증.
 - [Homelab Kubernetes resource and non-HA optimization](07_homelab-resource-optimization.md) - 7일 Prometheus 실측 기반 non-HA 구조 전환, Request/Limit 최소화, k8s-m1 메모리 해소와 단계별 롤아웃/롤백.
+- [Istio 1.31.4 Ambient Mode mesh architecture and operations](08_istio-ambient-mesh.md) - Sidecar 폐기 및 Istio 1.31.4 Ambient 전환, Cilium KPR 호환성, 네임스페이스 편입 경계, HBONE mTLS 검증과 롤백.
 
 - [Makefile operations](operations.md) - Makefile 타깃 표와 기본 변수. `Makefile` 이나 `scripts/` 를 고치면 같이 고친다.
 - [Argo CD upgrades](argocd-upgrades.md) - 버전 핀, Helm 4/확장 호환성, 검증 및 롤백 경로.

@@ -1,6 +1,6 @@
 ---
 title: Staged Keycloak consumer SSO
-updated: 2026-11-23T20:05:00+09:00
+updated: 2026-11-23T20:54:00+09:00
 type: architecture
 status: current
 ---
@@ -67,10 +67,11 @@ scaled to 0, controller/repo/server/redis/notifications resources bounded),
 resources bounded), and `hindsight`
 (30 objects: API CPU req `1 -> 150m`, mem limit `6Gi -> 4Gi`, control-plane
 `100m/256Mi -> 10m/96Mi`), and `kube-prometheus-stack` (131 / 141 objects:
-Alertmanager `5m/80Mi` lim `192Mi`, Prometheus `25m/768Mi` lim `1536Mi`, and
-`kubeApiServer` unused high-cardinality histogram bucket drop) entries in
-`tests/fixtures/keycloak-consumers/main9a.json` using verified Helm 4.2.1. No
-Keycloak realm, client, SSO switch, Gateway route, Grafana deployment/PVC, or
+Alertmanager `5m/80Mi` lim `192Mi`, Prometheus `25m/768Mi` lim `1536Mi`,
+`kubeApiServer` unused high-cardinality histogram bucket drop, and removal of
+legacy Istio sidecar `envoy-stats` scrape job after [Ambient Mode cutover](../08_istio-ambient-mesh.md))
+entries in `tests/fixtures/keycloak-consumers/main9a.json` using verified Helm 4.2.1.
+No Keycloak realm, client, SSO switch, Gateway route, Grafana deployment/PVC, or
 `storageGuardSha256` oracle changed.
 
 Grafana's parent-accepted native retained PVC, one replica, Recreate with

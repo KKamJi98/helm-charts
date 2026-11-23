@@ -384,6 +384,71 @@ class HomelabResourceOptimizationTests(unittest.TestCase):
             },
         )
 
+    def test_istio_ambient_full_cutover_and_declarative_enrollment(self):
+        istiod_docs = render_yaml("istio-istiod", "istio-system")
+        inj_cm = next(
+            d
+            for d in istiod_docs
+            if d["kind"] == "ConfigMap"
+            and d["metadata"]["name"] == "istio-sidecar-injector"
+        )
+        inj_cfg = yaml.safe_load(inj_cm["data"]["config"])
+        self.assertIn(
+            {"matchLabels": {"istio.io/dataplane-mode": "ambient"}},
+            inj_cfg.get("neverInjectSelector", []),
+        )
+        istiod_vals = yaml.safe_load(
+            (ROOT / "charts/istio-istiod/kkamji_local_values.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertNotIn("proxy", istiod_vals.get("global", {}))
+        self.assertEqual(
+            istiod_vals["global"]["waypoint"]["resources"]["requests"],
+            {"cpu": "25m", "memory": "64Mi"},
+        )
+
+        cni_docs = render_yaml("istio-cni", "istio-system")
+        cni_cm = next(
+            d
+            for d in cni_docs
+            if d["kind"] == "ConfigMap" and d["metadata"]["name"] == "istio-cni-config"
+        )
+        self.assertEqual(cni_cm["data"]["AMBIENT_ENABLED"], "true")
+        self.assertEqual(cni_cm["data"]["AMBIENT_DNS_CAPTURE"], "true")
+        self.assertIn("envoy-gateway-system", cni_cm["data"]["EXCLUDE_NAMESPACES"])
+        self.assertIn("kube-system", cni_cm["data"]["EXCLUDE_NAMESPACES"])
+
+        kps_docs = render_yaml("kube-prometheus-stack", "monitoring")
+        prom_secret = next(
+            d
+            for d in kps_docs
+            if d["kind"] == "Secret"
+            and d["metadata"]["name"] == "kube-prometheus-stack-prometheus-scrape-confg"
+        )
+        import base64
+
+        scrape_yaml = base64.b64decode(
+            prom_secret["data"]["additional-scrape-configs.yaml"]
+        ).decode("utf-8")
+        scrape_jobs = [
+            j["job_name"] for j in yaml.safe_load(scrape_yaml) if isinstance(j, dict)
+        ]
+        self.assertNotIn("envoy-stats", scrape_jobs)
+        self.assertIn("istiod", scrape_jobs)
+
+        personal_docs = render_yaml(
+            "argo-applications",
+            "argocd",
+            values="personal_local_values.yaml",
+        )
+        by_name = {d["metadata"]["name"]: d for d in personal_docs}
+        for app_name in ("real-life-rpg", "kkamji-platform"):
+            labels = by_name[app_name]["spec"]["syncPolicy"][
+                "managedNamespaceMetadata"
+            ]["labels"]
+            self.assertEqual(labels.get("istio.io/dataplane-mode"), "ambient")
+
 
 if __name__ == "__main__":
     unittest.main()
