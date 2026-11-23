@@ -402,6 +402,7 @@ class PrivateRefusalTests(unittest.TestCase):
         crd = rendered["CustomResourceDefinition", "", "envoyproxies.gateway.envoyproxy.io"]
         schema = preparation.crd_schema(crd, "v1alpha1")
         preparation.validate_document(schema, rendered["EnvoyProxy", NAMESPACE, NAME])
+        preparation.validate_document(schema, rendered["EnvoyProxy", NAMESPACE, "kkamji-public"])
         invalid = copy.deepcopy(rendered["EnvoyProxy", NAMESPACE, NAME])
         invalid["spec"]["provider"]["kubernetes"]["envoyService"]["unsupportedField"] = True
         import jsonschema
@@ -411,11 +412,23 @@ class PrivateRefusalTests(unittest.TestCase):
     def test_platform_public_whole_object_baseline_is_preserved(self):
         rendered = documents(render(PLATFORM))
         old = [obj for key, obj in rendered.items() if not key[2].startswith(NAME)]
-        self.assertEqual(len(old), 43)
-        self.assertEqual(digest(old), "a42c644bf2f08c34b3fae24cf7d084891c0719143f537b7a02feddeaa1af7eb0")
+        self.assertEqual(len(old), 44)
+        self.assertEqual(digest(old), "b19d1ecc0149e383247c6ce094197b58fefa46635bc81f8a4734782f20cd35ce")
         self.assertEqual(hashlib.sha256((PLATFORM / "charts/gateway-helm-1.8.1.tgz").read_bytes()).hexdigest(),
                          "5a632f35e784ba58938d7a360745c3d3e71a290244ee01aa22584dba8c5b06d8")
         self.assertNotIn("parametersRef", rendered["GatewayClass", "", "envoy"]["spec"])
+        eg_cfg = yaml.safe_load(rendered["ConfigMap", NAMESPACE, "envoy-gateway-config"]["data"]["envoy-gateway.yaml"])
+        self.assertEqual(eg_cfg.get("extensionApis"), {"enableBackend": True})
+        pub_gw = rendered["Gateway", NAMESPACE, "kkamji"]
+        self.assertEqual(pub_gw["spec"]["infrastructure"]["annotations"]["metallb.io/loadBalancerIPs"], "10.0.1.100")
+        self.assertEqual(pub_gw["spec"]["infrastructure"]["parametersRef"],
+                         {"group": "gateway.envoyproxy.io", "kind": "EnvoyProxy", "name": "kkamji-public"})
+        pub_proxy = rendered["EnvoyProxy", NAMESPACE, "kkamji-public"]
+        log_json = pub_proxy["spec"]["telemetry"]["accessLog"]["settings"][0]["format"]["json"]
+        self.assertEqual(log_json["path"], "%REQ_WITHOUT_QUERY(X-ENVOY-ORIGINAL-PATH?:PATH)%")
+        joined = json.dumps(log_json).lower()
+        for forbidden in ("authorization", "cookie", "referer", "x-grafana-keycloak-id-token", "%req(:path)%", "%req(x-envoy-original-path"):
+            self.assertNotIn(forbidden, joined)
 
     def test_lint_platform_service_and_management_root(self):
         for chart, values, namespace in [

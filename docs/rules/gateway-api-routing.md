@@ -1,6 +1,6 @@
 ---
 title: Gateway API routing rules
-updated: 2026-11-16T10:20:04+09:00
+updated: 2026-11-23T19:59:00+09:00
 type: rule
 status: current
 ---
@@ -17,6 +17,11 @@ ArgoCD SSA diff 방지 규칙이다.
 - external-dns 의 gateway 소스는 target annotation 을 HTTPRoute 가 아닌 **Gateway** 에서 읽는다. Gateway 의 target annotation 이 빠지면 A 레코드가 내부 LB IP 로 덮여 외부 접근이 끊긴다.
 - basic auth 는 Envoy SecurityPolicy 로 적용한다 ({SHA} htpasswd 만 지원 - basic-auth secret 의 .htpasswd 키 <- SSM /kkamji/monitoring/ingress/basic-auth-sha).
 - 인증서: letsencrypt-prod 는 DNS-01(route53, zone 한정 cert_manager IAM user) 단일 solver 다. wildcard(*.kkamji.net) 인증서는 DNS-01 로만 발급된다.
+
+## Shared runtime prerequisites for Keycloak SSO (2026-11-23)
+
+- `charts/envoy-gateway/kkamji_local_values.yaml`에서 `gateway-helm.config.envoyGateway.extensionApis.enableBackend: true`를 활성화한다. 소비자 `SecurityPolicy`(OIDC token exchange 및 remote JWKS)가 namespaced `Backend`를 통해 `sso.kkamji.net:443`의 strict upstream TLS와 DNS SAN 검증을 수행하기 위한 공유 컨트롤러 선행 조건이다.
+- 공용 `Gateway/kkamji`는 `spec.infrastructure.parametersRef`로 전용 `EnvoyProxy/kkamji-public`을 참조한다(`GatewayClass/envoy`는 class parametersRef 없이 유지). `EnvoyProxy/kkamji-public`은 stdout JSON access log의 `path` 필드에 `%REQ_WITHOUT_QUERY(X-ENVOY-ORIGINAL-PATH?:PATH)%`를 사용해 OAuth callback의 `code`/`state` query string을 제거하고, `Authorization`, `Cookie`, `Set-Cookie`, `Referer` 및 identity 헤더를 기록하지 않는다. `metallb.io/loadBalancerIPs: 10.0.1.100` 고정과 private `keycloak-admin-private` 격리 객체 7개는 변경하지 않는다.
 
 ## Private management ownership exception
 
