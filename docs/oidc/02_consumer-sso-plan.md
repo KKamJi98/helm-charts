@@ -1,6 +1,6 @@
 ---
 title: Staged Keycloak consumer SSO
-updated: 2026-11-23T20:54:00+09:00
+updated: 2026-11-24T15:50:00+09:00
 type: architecture
 status: current
 ---
@@ -188,7 +188,7 @@ Always compose the chart's `kkamji_local_values.yaml` first.
 ### Argo CD native OIDC
 
 - Default: `keycloakSSO.mode=legacy`, no new SSO resources.
-- Canary: append `charts/argocd/keycloak-canary-values.yaml`.
+- Canary (active in `management_local_values.yaml` since 2026-11-24 R5): append `charts/argocd/keycloak-canary-values.yaml`.
   Admin recovery remains enabled, native Keycloak is available, group RBAC is
   fail-closed, anonymous access is off and issuer TLS verification is on.
 - Final: additionally append `keycloak-only-values.yaml` and set

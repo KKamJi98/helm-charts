@@ -26,6 +26,7 @@ applications:
       helm:
         valueFiles:
           - kkamji_local_values.yaml
+          - keycloak-canary-values.yaml
 
   # NOTE: argo-projects (AppProject CRs) and root-applications (local-root,
   # kuberca-root meta) are bundled into the argo-cd umbrella chart as subcharts.
