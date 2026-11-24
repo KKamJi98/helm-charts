@@ -121,6 +121,21 @@ applications:
         valueFiles:
           - kkamji_local_values.yaml
 
+  keycloak-public-access:
+    enabled: true
+    name: keycloak-public-access
+    project: management
+    destination:
+      namespace: keycloak
+    source:
+      repoURL: https://github.com/KKamJi98/helm-charts.git
+      targetRevision: main
+      path: charts/keycloak-public-access
+      helm:
+        releaseName: keycloak-public-access
+        valueFiles:
+          - kkamji_local_values.yaml
+
   metrics-server:
     enabled: true
     name: metrics-server

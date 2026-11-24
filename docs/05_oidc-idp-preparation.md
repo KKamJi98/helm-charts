@@ -1,6 +1,6 @@
 ---
 title: Keycloak OIDC IdP preparation
-updated: 2026-11-23T20:05:00+09:00
+updated: 2026-11-24T15:40:00+09:00
 type: runbook
 status: current
 ---
@@ -17,7 +17,7 @@ status: current
 - 공식 YAML을 감싼 얇은 로컬 Helm chart이며 공식 application Helm이라고 부르지 않습니다.
 - experimental cluster-wide Operator Helm, OLM, preview Client CR와 custom provider를 사용하지 않습니다.
 - 기본 준비 렌더는 외부 HTTPRoute, Application과 RealmImport를 생성하지 않습니다.
-- 관리 root의 `keycloak-idp`는 기존 `productionPhase=application`, `forceString: true` parameter를 유지합니다. [별도 private admin-access 후보](oidc/04_private-admin-https.md)는 기존 Application 전체 객체를 보존하고 `keycloak-admin-access`를 추가했으며, 2026-11-23 Istio Ambient 전환(`istio-cni`, `istio-ztunnel`) 반영 후 management 19개, automation 10개, personal 2개입니다. 같은 날 [홈랩 Tier 3 최적화](07_homelab-resource-optimization.md)에서 소유자 승인에 따라 production profile의 Keycloak 서버(`50m/768Mi` req, `1500m/1536Mi` lim), CNPG DB(`instances: 3 -> 1`, `25m/256Mi` req, `1/512Mi` lim, S3 Barman 백업 유지), Operator(`10m/256Mi` req, `500m/450Mi` lim)로 경량화했으며 local preparation profile(`2 app / 3 DB`), 보안 정책, DB TLS, 백업 및 로그인 계약은 그대로 보존합니다.
+- 관리 root의 `keycloak-idp`는 기존 `productionPhase=application`, `forceString: true` parameter를 유지합니다. [별도 private admin-access 후보](oidc/04_private-admin-https.md)는 기존 Application 전체 객체를 보존하고 `keycloak-admin-access`를 추가했으며, 2026-11-23 Istio Ambient 전환(`istio-cni`, `istio-ztunnel`) 반영 후 management 19개였고, 2026-11-24 R4 공개 라우트(`charts/keycloak-public-access`, `/realms/kkamji`와 `/resources` 전용) 추가로 management 20개, automation 10개, personal 2개입니다. 같은 날 [홈랩 Tier 3 최적화](07_homelab-resource-optimization.md)에서 소유자 승인에 따라 production profile의 Keycloak 서버(`50m/768Mi` req, `1500m/1536Mi` lim), CNPG DB(`instances: 3 -> 1`, `25m/256Mi` req, `1/512Mi` lim, S3 Barman 백업 유지), Operator(`10m/256Mi` req, `500m/450Mi` lim)로 경량화했으며 local preparation profile(`2 app / 3 DB`), 보안 정책, DB TLS, 백업 및 로그인 계약은 그대로 보존합니다.
 - 이 차트는 credential 값, AWS IAM이나 SSM 원본을 생성하지 않습니다. Secret 참조가 렌더됐다고 원본 존재를 주장하지 않습니다.
 - 오프라인 schema/render 검증은 admission, 이미지 실행, DB TLS와 사용자 인증 인수의 대체가 아닙니다.
 - [Grafana PVC 준비 전용 후보](oidc/05_grafana-pvc-preparation.md)는 monitoring에 unused PVC 하나만 추가합니다. 기존 Grafana emptyDir와 전체 Deployment/Pod template, config/Secret 참조/route, 다른 monitoring 객체와 UI7 legacy 인증을 보존합니다. fresh backup, binding/copy/restore와 실제 crypto-key decrypt 검증 전에는 원본 Grafana Pod를 교체하지 않으며 이 후보는 migration 완료가 아닙니다.
@@ -159,12 +159,10 @@ JRE 기본 trust anchors도 남으므로 DB 전용 CA만 허용하는 독점 pin
 
 ## Envoy와 노출
 
-공개 origin 제안은 `https://sso.kkamji.net`입니다. DNS/route를 생성하지 않았습니다.
-기존 envoy-gateway-system/kkamji의 https listener를 사용하고 공용 Gateway/certificate를 수정하지 않습니다.
+공개 origin은 `https://sso.kkamji.net`이며, `charts/keycloak-public-access` 차트(`HTTPRoute/keycloak/keycloak-public`)가 기존 `Gateway/envoy-gateway-system/kkamji`의 `https` listener에 `/realms/kkamji`와 `/resources` PathPrefix 2개만 연결합니다. 공용 Gateway/certificate는 수정하지 않습니다.
 TLS termination 뒤 supported HTTP8080/xforwarded/strict hostname을 사용하며 Operator Ingress는 끕니다.
-향후 backend는 `keycloak-service:8080`입니다. management9000을 공개하지 않습니다.
-공개 route는 `/realms/kkamji`와 `/resources`만 허용합니다. 8080의 admin UI/API와 `/realms/master`는 내부 관리 경로로 남깁니다.
-9000 차단만으로 admin API가 숨겨지지는 않습니다. 별도 관리 접근과 인코딩/경로 정규화 우회 거부를 실제로 인수해야 합니다.
+backend는 동일 namespace의 `keycloak-service:8080`입니다. management 9000, `/`, `/admin`, `/realms/master`는 공개 route에 포함하지 않고 private admin 경로(`charts/keycloak-admin-access`)로 분리합니다.
+9000 차단만으로 admin API가 숨겨지지는 않으므로 R4 배포 후 실제 경로 차단(`/admin`, `/realms/master`, 경로 정규화 우회)과 클러스터 내부 hairpin TLS를 라이브 검증합니다.
 
 실제 Envoy selector로만 앱 ingress를 허용하고, Operator management/peer/JGroups/DB 경로는 소스와 대조합니다.
 egress 정책을 추가하지 않으므로 기존 egress 제어를 강제로 열지 않습니다.
