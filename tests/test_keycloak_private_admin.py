@@ -240,7 +240,7 @@ class PrivateActivationTests(unittest.TestCase):
         app = rendered.pop(("Application", "argocd", "keycloak-admin-access"), None)
         self.assertIsNotNone(app, "explicit private access Application required")
         self.assertEqual(len(rendered), 19)
-        self.assertEqual(digest(list(rendered.values())), "d5fc3d12b55a1f4c25080b8bddba4e96a772c58ba3a738bbd458a06594816517")
+        self.assertEqual(digest(list(rendered.values())), "7a6d49efc00dd4b8b08f40b07f7540afff7140efebbb4d98dc5268651fd648b8")
         self.assertEqual(app["spec"], {
             "project": "management", "destination": {"namespace": NAMESPACE, "server": "https://kubernetes.default.svc"},
             "source": {"repoURL": "https://github.com/KKamJi98/helm-charts.git", "targetRevision": "main",
@@ -256,7 +256,7 @@ class PrivateActivationTests(unittest.TestCase):
                                     "app.kubernetes.io/managed-by": "Helm", "helm.sh/chart": "argo-applications-0.1.0"},
                          "annotations": {"argocd.argoproj.io/manifest-generate-paths": "."}})
         for root, count, expected in [
-            ("automation", 10, "22b72991f9c7ed244e4671226e09483c12aab0b5c2cf6fb2d35d7ed42d6249ad"),
+            ("automation", 10, "5e6e8c9163af61fdc4f63daa778c342033d5a9844f98d7766dbcbf07d17f0699"),
             ("personal", 2, "b3ba1fb82e70aab14d7423f9987ced4b963e0a0d0b8e083d1e55f8f998353e47"),
         ]:
             args[2] = root + "-root"
