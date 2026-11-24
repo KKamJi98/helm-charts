@@ -1,0 +1,5 @@
+apiVersion: v2
+name: keycloak-public-access
+version: 0.1.0
+description: Scoped public Keycloak HTTPRoute (/realms/kkamji and /resources only).
+type: application
