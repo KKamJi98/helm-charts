@@ -27,6 +27,10 @@ applications:
         valueFiles:
           - kkamji_local_values.yaml
           - keycloak-canary-values.yaml
+          - keycloak-only-values.yaml
+        parameters:
+          - name: keycloakSSO.adminTokenMigrationConfirmed
+            value: "true"
 
   # NOTE: argo-projects (AppProject CRs) and root-applications (local-root,
   # kuberca-root meta) are bundled into the argo-cd umbrella chart as subcharts.
@@ -50,7 +54,7 @@ applications:
           - name: keycloakSSO.backendTLSReady
             value: "true"
           - name: keycloakSSO.mode
-            value: canary
+            value: only
 
   metallb:
     enabled: true
@@ -344,16 +348,19 @@ applications:
         valueFiles:
           - kkamji_local_values.yaml
           - keycloak-canary-values.yaml
+          - keycloak-only-values.yaml
         parameters:
           - name: keycloakSSO.backendTLSReady
             value: "true"
           - name: keycloakSSO.prometheus.mode
-            value: canary
+            value: only
           - name: keycloakSSO.alertmanager.mode
-            value: canary
+            value: only
           - name: keycloakSSO.grafana.dataPreservationReady
             value: "true"
           - name: keycloakSSO.grafana.accessLogsSafe
+            value: "true"
+          - name: keycloakSSO.grafana.cutoverApproved
             value: "true"
 
   alloy:

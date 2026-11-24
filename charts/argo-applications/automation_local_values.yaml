@@ -183,7 +183,7 @@ applications:
         - name: keycloakSSO.backendTLSReady
           value: "true"
         - name: keycloakSSO.mode
-          value: canary
+          value: only
 
   hindsight-dot-staging:
     # Retired 2026-11-22 (user request): ChatGPT 연동은 별도 인스턴스 대신 기존
