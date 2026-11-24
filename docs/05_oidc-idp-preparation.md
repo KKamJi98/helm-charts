@@ -1,6 +1,6 @@
 ---
 title: Keycloak OIDC IdP preparation
-updated: 2026-11-24T15:40:00+09:00
+updated: 2026-11-24T15:50:00+09:00
 type: runbook
 status: current
 ---

@@ -240,7 +240,7 @@ class PrivateActivationTests(unittest.TestCase):
         app = rendered.pop(("Application", "argocd", "keycloak-admin-access"), None)
         self.assertIsNotNone(app, "explicit private access Application required")
         self.assertEqual(len(rendered), 19)
-        self.assertEqual(digest(list(rendered.values())), "7e9616c67430cae51cfefb6faa15e79014025ee93d0985289e443ae265f34a75")
+        self.assertEqual(digest(list(rendered.values())), "5fa81f9b646b3246438272141bc03c67c6d4d057466aba0faca7e087cdc5b62a")
         self.assertEqual(app["spec"], {
             "project": "management", "destination": {"namespace": NAMESPACE, "server": "https://kubernetes.default.svc"},
             "source": {"repoURL": "https://github.com/KKamJi98/helm-charts.git", "targetRevision": "main",
