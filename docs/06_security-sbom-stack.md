@@ -1,6 +1,6 @@
 ---
 title: Homelab security and SBOM stack
-updated: 2026-11-23T02:05:00+09:00
+updated: 2026-11-24T15:55:00+09:00
 type: architecture
 status: current
 ---

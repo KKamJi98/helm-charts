@@ -179,6 +179,11 @@ applications:
         valueFiles:
         - kkamji_local_values.yaml
         - moka_private_values.yaml
+        parameters:
+        - name: keycloakSSO.backendTLSReady
+          value: "true"
+        - name: keycloakSSO.mode
+          value: canary
 
   hindsight-dot-staging:
     # Retired 2026-11-22 (user request): ChatGPT 연동은 별도 인스턴스 대신 기존
