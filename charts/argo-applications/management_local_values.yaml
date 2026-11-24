@@ -46,6 +46,11 @@ applications:
       helm:
         valueFiles:
           - kkamji_local_values.yaml
+        parameters:
+          - name: keycloakSSO.backendTLSReady
+            value: "true"
+          - name: keycloakSSO.mode
+            value: canary
 
   metallb:
     enabled: true
@@ -338,6 +343,13 @@ applications:
       helm:
         valueFiles:
           - kkamji_local_values.yaml
+        parameters:
+          - name: keycloakSSO.backendTLSReady
+            value: "true"
+          - name: keycloakSSO.prometheus.mode
+            value: canary
+          - name: keycloakSSO.alertmanager.mode
+            value: canary
 
   alloy:
     enabled: true
