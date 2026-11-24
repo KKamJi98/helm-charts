@@ -1,6 +1,6 @@
 ---
 title: Private Keycloak admin HTTPS candidate
-updated: 2026-11-24T15:55:00+09:00
+updated: 2026-11-24T16:00:00+09:00
 type: runbook
 status: current
 ---

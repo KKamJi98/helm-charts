@@ -343,6 +343,7 @@ applications:
       helm:
         valueFiles:
           - kkamji_local_values.yaml
+          - keycloak-canary-values.yaml
         parameters:
           - name: keycloakSSO.backendTLSReady
             value: "true"
@@ -350,6 +351,10 @@ applications:
             value: canary
           - name: keycloakSSO.alertmanager.mode
             value: canary
+          - name: keycloakSSO.grafana.dataPreservationReady
+            value: "true"
+          - name: keycloakSSO.grafana.accessLogsSafe
+            value: "true"
 
   alloy:
     enabled: true
