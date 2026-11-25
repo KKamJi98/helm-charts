@@ -6,6 +6,12 @@ profile: ambient
 chained: true
 cniBinDir: /opt/cni/bin
 cniConfDir: /etc/cni/net.d
+# Prevent Cilium startup conflist overwrite (write-cni-conf-when-ready -> 05-cilium.conflist)
+# from dropping istio-cni out of the chain during node reboots (istio/istio#60882).
+# Istio 1.31.4 requires cniConfFileName whenever istioOwnedCNIConfig is true.
+cniConfFileName: 05-cilium.conflist
+istioOwnedCNIConfig: true
+istioOwnedCNIConfigFileName: 02-istio-cni.conflist
 
 ambient:
   enabled: true

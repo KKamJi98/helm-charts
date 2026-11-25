@@ -416,6 +416,12 @@ class HomelabResourceOptimizationTests(unittest.TestCase):
         )
         self.assertEqual(cni_cm["data"]["AMBIENT_ENABLED"], "true")
         self.assertEqual(cni_cm["data"]["AMBIENT_DNS_CAPTURE"], "true")
+        self.assertEqual(cni_cm["data"]["CNI_CONF_NAME"], "05-cilium.conflist")
+        self.assertEqual(cni_cm["data"]["ISTIO_OWNED_CNI_CONFIG"], "true")
+        self.assertEqual(
+            cni_cm["data"]["ISTIO_OWNED_CNI_CONFIG_FILENAME"],
+            "02-istio-cni.conflist",
+        )
         self.assertIn("envoy-gateway-system", cni_cm["data"]["EXCLUDE_NAMESPACES"])
         self.assertIn("kube-system", cni_cm["data"]["EXCLUDE_NAMESPACES"])
 
