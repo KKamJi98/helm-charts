@@ -1,6 +1,6 @@
 ---
 title: Private Keycloak admin HTTPS candidate
-updated: 2026-11-24T16:15:00+09:00
+updated: 2026-11-25T21:59:24+09:00
 type: runbook
 status: current
 ---
@@ -18,6 +18,25 @@ status: current
 management root는 `keycloak-admin-access` Application 하나를 추가합니다. destination은 `envoy-gateway-system`, release는 `keycloak-admin-access`, valueFiles는 `kkamji_local_values.yaml` 하나이며 기존 repo/main/project와 sync policy를 상속합니다. 이전 16개 Application은 전체 객체를 보존하여 management 17개, automation 9개, personal 1개입니다. IdP application 17개/DB 기본 16개/Operator 18개/IdP default 8개 렌더는 변경하지 않습니다. main 반영은 GitOps 배포 경계이며 이 문서는 반영 승인이 아닙니다.
 
 별도의 [모카 recall 연동](../03_hindsight.md#모카chatgpt-읽기-전용-recall-연동)은 automation의 기존 Hindsight Application에 `moka_private_values.yaml`만 추가합니다. 이 때문에 automation 10개 객체의 검증 해시만 바뀝니다. 이후 `personal-root`에 `real-life-rpg`가 재활성화되어 personal 2개가 되었고(2026-11-23 [Istio Ambient 전환](../08_istio-ambient-mesh.md)으로 `real-life-rpg`와 `kkamji-platform`에 `istio.io/dataplane-mode: ambient` 네임스페이스 라벨 관리 추가), 2026-11-23 [홈랩 리소스 및 Istio Ambient 전환](../07_homelab-resource-optimization.md)으로 `management-root`에 `istio-cni`, `istio-ztunnel` 2개 Application(sync-wave 포함)이 추가되어 management 19개가 되었으며, 2026-11-24 R4 공개 라우트(`charts/keycloak-public-access`, `/realms/kkamji`와 `/resources` 전용) 추가로 management 20개(`keycloak-admin-access` 제외 19개)가 되었습니다. Tier 3 최적화에서 `envoy-gateway` controller와 공용 `EnvoyProxy/kkamji-public`(`concurrency: 1`, `20m/192Mi`, lim `384Mi`) 리소스만 경량화했습니다. PR #117의 Backend API 및 공용 access log query 제거와 Keycloak admin 7개 보안 객체 계약은 변경하지 않습니다.
+
+## Separate discovery-only opt-in
+
+The [owner discovery candidate](07_owner-enrollment-source.md#discovery-only-gateway-source-candidate)
+adds three platform and two service objects under a distinct
+`keycloakOwnerDiscovery.enabled` flag, default `false` and enabled only by the two
+current local overlays. These five objects use `keycloak-owner-enrollment` names
+and do not modify the seven admin objects described here. Current local renders
+therefore contain platform 50 objects including shared CRDs and service 6 objects;
+disabling discovery restores platform 47 and service 4, with whole-object equality.
+The new route permits only exact GET realm discovery, reuses the existing named
+Service ReferenceGrant and cannot render without that grant's admin opt-in.
+There is no new admin/login path, Application, DNS publication or credential.
+
+The sealed admin regression helper now explicitly disables discovery; fixed admin
+specs, security mutations and whole-object digests are unchanged. The separate
+owner suite checks the same full seven-object contract with discovery enabled and
+that only its exact five objects are added. Real lint/template source checks do
+not replace the pinned Helm 4.2.1 CI or parent-owned runtime gates below.
 
 ## Exact private path
 

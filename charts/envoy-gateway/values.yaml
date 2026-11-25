@@ -1,3 +1,7 @@
 # Private management infrastructure is opt-in. Public values remain unchanged.
 keycloakAdminPrivate:
   enabled: false
+
+# Dedicated ClusterIP, GET discovery only; not an owner login route.
+keycloakOwnerDiscovery:
+  enabled: false

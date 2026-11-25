@@ -29,6 +29,9 @@ def render(chart, override=None, release=None, namespace=NAMESPACE, local=True, 
         command += ["-f", str(chart / "kkamji_local_values.yaml")]
     if skip_schema:
         command.append("--skip-schema-validation")
+    # Keep this sealed seven-object suite on its original admin-only profile.
+    # The separate owner-discovery suite proves enabled adds only its exact five objects.
+    override = {"keycloakOwnerDiscovery": {"enabled": False}, **(override or {})}
     with tempfile.TemporaryDirectory(prefix="keycloak-private-") as temporary:
         if override is not None:
             path = Path(temporary) / "override.json"
@@ -202,8 +205,8 @@ class PrivateServiceTests(unittest.TestCase):
             ("NetworkPolicy", "keycloak", NAME + "-server-ingress"),
             METRICS,
         })
-        self.assertEqual(yaml.safe_load((SERVICE / "values.yaml").read_text()), {"keycloakAdminPrivate": {"enabled": False}})
-        self.assertEqual(yaml.safe_load((SERVICE / "kkamji_local_values.yaml").read_text()), {"keycloakAdminPrivate": {"enabled": True}})
+        self.assertEqual(yaml.safe_load((SERVICE / "values.yaml").read_text()), {"keycloakAdminPrivate": {"enabled": False}, "keycloakOwnerDiscovery": {"enabled": False}})
+        self.assertEqual(yaml.safe_load((SERVICE / "kkamji_local_values.yaml").read_text()), {"keycloakAdminPrivate": {"enabled": True}, "keycloakOwnerDiscovery": {"enabled": True}})
         self.assertNotIn("dependencies", yaml.safe_load((SERVICE / "Chart.yaml").read_text()))
         self.assertFalse((SERVICE / "Chart.lock").exists())
 
@@ -223,7 +226,7 @@ class PrivatePlatformTests(unittest.TestCase):
         self.assertEqual({key: obj for key, obj in after.items() if key not in added}, before)
         self.assertFalse(private(before))
         self.assertEqual(yaml.safe_load((PLATFORM / "values.yaml").read_text()),
-                         {"keycloakAdminPrivate": {"enabled": False}})
+                         {"keycloakAdminPrivate": {"enabled": False}, "keycloakOwnerDiscovery": {"enabled": False}})
 
 
 def digest(objects):

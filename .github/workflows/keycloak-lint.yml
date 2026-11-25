@@ -9,10 +9,13 @@ on:
       - "charts/envoy-gateway/values.yaml"
       - "charts/envoy-gateway/kkamji_local_values.yaml"
       - "charts/envoy-gateway/templates/keycloak-admin-private.yaml"
+      - "charts/envoy-gateway/templates/keycloak-owner-discovery.tpl"
+      - "charts/envoy-gateway/values.schema.json"
       - "charts/argo-applications/**"
       - "examples/keycloak-preparation/**"
       - "tests/test_keycloak*.py"
       - "tests/fixtures/keycloak-idp/**"
+      - "tests/fixtures/keycloak-owner-discovery/**"
       - ".github/workflows/keycloak-lint.yml"
   push:
     branches: [main]
@@ -24,10 +27,13 @@ on:
       - "charts/envoy-gateway/values.yaml"
       - "charts/envoy-gateway/kkamji_local_values.yaml"
       - "charts/envoy-gateway/templates/keycloak-admin-private.yaml"
+      - "charts/envoy-gateway/templates/keycloak-owner-discovery.tpl"
+      - "charts/envoy-gateway/values.schema.json"
       - "charts/argo-applications/**"
       - "examples/keycloak-preparation/**"
       - "tests/test_keycloak*.py"
       - "tests/fixtures/keycloak-idp/**"
+      - "tests/fixtures/keycloak-owner-discovery/**"
       - ".github/workflows/keycloak-lint.yml"
   workflow_dispatch:
 permissions:

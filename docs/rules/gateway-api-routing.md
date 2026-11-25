@@ -1,6 +1,6 @@
 ---
 title: Gateway API routing rules
-updated: 2026-11-23T20:13:00+09:00
+updated: 2026-11-25T21:59:24+09:00
 type: rule
 status: current
 ---
@@ -28,6 +28,29 @@ ArgoCD SSA diff 방지 규칙이다.
 `keycloakAdminPrivate.enabled`로 선택하는 [private Keycloak admin HTTPS 후보](../oidc/04_private-admin-https.md)는 public `kkamji`에 listener나 privileged route를 추가하지 않는다. 플랫폼은 별도 `EnvoyProxy`/`Gateway`와 그 proxy만 선택하는 ingress-deny NetworkPolicy를 소유한다. 서비스 차트 `charts/keycloak-admin-access`는 private HTTPRoute, named backend ReferenceGrant와 narrow server ingress NetworkPolicy만 소유한다.
 
 기존 `GatewayClass/envoy`를 그대로 재사용하며 class parametersRef는 추가하지 않는다. private Gateway의 infrastructure.parametersRef만 전용 EnvoyProxy를 참조하고 `mergeGateways: false`, `envoyService.type: ClusterIP`를 명시한다. wildcard TLS Secret은 같은 namespace의 reference만 재사용한다. public Gateway/redirect/certificate, controller 설정과 vendor/image는 보존한다. private route와 generated Service의 ExternalDNS controller mismatch annotation은 필수다. Gateway annotation 하나로 route exclusion을 보장한다고 가정하지 않으며 global DNS 설정을 바꾸지 않는다. 실제 port-forward/HTTPS/DNS/CNI 검증은 source render와 분리한다.
+
+## Discovery-only owner enrollment exception
+
+The [owner discovery source candidate](../oidc/07_owner-enrollment-source.md#discovery-only-gateway-source-candidate)
+uses the same ownership split: platform owns a separate EnvoyProxy/Gateway/proxy
+NetworkPolicy, while `keycloak-admin-access` owns only the new exact-GET HTTPRoute
+and narrow backend NetworkPolicy. `keycloakOwnerDiscovery.enabled` defaults off
+in both charts and is selected only in their current local overlays. The five
+`keycloak-owner-enrollment` objects never extend public or private-admin listeners
+or routes. The only path is exact GET
+`/realms/kkamji/.well-known/openid-configuration`, not a login or enrollment flow.
+
+The proxy is ClusterIP with merging/access logs disabled, same-namespace TLS Secret
+reference and Same-namespace HTTPRoute attachment. Gateway, route and generated
+Service each carry controller mismatch `keycloak-owner-disabled` for ExternalDNS.
+Proxy ingress remains denied; the backend policy ANDs the exact source namespace
+and enrollment proxy labels, selecting only Keycloak server labels on TCP 8080.
+The route reuses the unchanged private admin named Service ReferenceGrant; no new
+or expanded grant is created. Template guards remain effective without schema,
+and the platform's new values schema constrains only this discovery block.
+Public controller/vendor/class/certificate/DNS and all existing admin/login
+contracts stay unchanged. Admission, DNS/CNI, HTTPS and human ceremonies remain
+parent-owned checks; source render is not runtime acceptance.
 
 ## 공유 CRD의 1.8.1 한정 backport
 

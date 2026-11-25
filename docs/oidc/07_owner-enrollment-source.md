@@ -1,6 +1,6 @@
 ---
 title: Controlled Keycloak owner enrollment source checklist
-updated: 2026-11-17T01:39:57+09:00
+updated: 2026-11-25T21:59:24+09:00
 type: runbook
 status: current
 ---
@@ -9,7 +9,7 @@ status: current
 
 ## Source boundary
 
-This is a procedure for the parent, not an enrollment implementation, flow export,
+This is a procedure for the parent, not an enrollment flow implementation, flow export,
 activation permission or runtime verdict. `runtimeAccepted=false` and
 `dataMigrationAccepted=false` describe this source task, not a reversal of the
 parent's completed Grafana storage acceptance. Normal consumer modes remain
@@ -26,6 +26,106 @@ flow graph, execution ID or new public route. `openid` is the OIDC request scope
 not a fabricated Keycloak client-scope object. Argo and the four generic edges
 may request the existing built-in `profile` scope; Grafana requests only
 `openid groups` and must have no inherited profile/email default mappers.
+
+## Discovery-only Gateway source candidate
+
+`keycloakOwnerDiscovery.enabled` is a separate boolean opt-in in both existing
+owners: `charts/envoy-gateway` and `charts/keycloak-admin-access`. Defaults are
+`false`; only their current `kkamji_local_values.yaml` files select `true`.
+No new Application or valueFiles entry is needed. Main publication remains the
+GitOps deployment boundary, not an action authorized by local source tests.
+
+The candidate adds exactly five source objects, without changing the existing
+public Gateway, private admin seven-object contract, Keycloak server, realm,
+clients or any service login:
+
+| Owner | New objects |
+|---|---|
+| `envoy-gateway` | `EnvoyProxy/keycloak-owner-enrollment`, `Gateway/keycloak-owner-enrollment`, `NetworkPolicy/keycloak-owner-enrollment-deny-ingress` in `envoy-gateway-system` |
+| `keycloak-admin-access` | `HTTPRoute/keycloak-owner-enrollment` in `envoy-gateway-system`, `NetworkPolicy/keycloak-owner-enrollment-server-ingress` in `keycloak` |
+
+The only route match is method `GET`, path type `Exact`, value
+`/realms/kkamji/.well-known/openid-configuration`. It attaches only to this
+separate Gateway's `https` listener, not public `kkamji` or private
+`keycloak-admin-private`. There is no login/auth/token, account, resources,
+admin/master, prefix or catch-all match. Discovery alone cannot complete owner
+registration or WebAuthn enrollment; no ceremony or service cutover is accepted.
+
+The dedicated proxy stays `ClusterIP`, `mergeGateways: false`, replicas 1,
+concurrency 1, requests `100m/128Mi`, limits `500m/256Mi`. Access logging is disabled
+and the default log level is `warn`. The Gateway reuses `GatewayClass/envoy` and
+the same-namespace `wildcard-kkamji-net-tls` Secret reference, with exact host
+`sso.kkamji.net`, HTTPS 443/TLS Terminate and Same-namespace HTTPRoute attachment.
+No new certificate, key, class, external IP, NodePort or LoadBalancer is added.
+
+Gateway, HTTPRoute and generated Service annotations all require
+`external-dns.alpha.kubernetes.io/controller: keycloak-owner-disabled`; no
+hostname/target annotations or global ExternalDNS changes are added. The proxy
+ingress-deny selects only `kkamji.net/access: keycloak-owner-enrollment`, with
+`policyTypes: [Ingress]` and no allows. Its backend policy selects the four exact
+Keycloak server labels and permits only TCP 8080 from one peer requiring the
+`envoy-gateway-system` namespace AND all four enrollment proxy labels (component,
+owning Gateway name/namespace, custom access). No egress or metrics allow is added.
+The policies are additive, not a proof of live isolation or port-forward behavior.
+
+The route reuses the unchanged `ReferenceGrant/keycloak/keycloak-admin-private`:
+HTTPRoute sources in `envoy-gateway-system` may reference only the named
+`Service/keycloak-service`. It is not a Secret or namespace-wide backend grant;
+ports are narrowed by this route and server policy to TCP 8080. The service chart
+refuses discovery enabled with `keycloakAdminPrivate.enabled=false`, so it cannot
+silently omit its existing grant. Cross-Application readiness/order remains a
+parent-owned runtime gate.
+
+Both charts reject malformed flags and any extra discovery fields, even with
+schema validation bypassed, and reject an enabled release/namespace other than
+`envoy-gateway` or `keycloak-admin-access` in `envoy-gateway-system`. The platform
+values schema constrains only the new block, leaving its existing public values
+interface intact. The service schema still denies other root keys.
+
+The fixed public fixture
+[`approved.json`](../../tests/fixtures/keycloak-owner-discovery/approved.json)
+comes only from the approved five-object preflight. Source normalization drops
+`EnvoyProxy.envoyService.externalTrafficPolicy: Local` (irrelevant to ClusterIP)
+and explicitly states HTTPRoute parent group/kind/namespace for SSA; it does not
+copy generated metadata/status/default noise. The absent deny `ingress` list means
+no allows, as in the approved candidate. Existing objects are not normalized or
+rewritten.
+
+### Local verification and remaining gates
+
+```bash
+export HELM_BIN="$(command -v helm)"
+# CI uses Helm 4.2.1 and Python 3.12 with PyYAML/jsonschema.
+python3 -m unittest discover -s tests -p test_keycloak_owner_discovery.py -v
+python3 -m unittest discover -s tests -p test_keycloak_private_admin.py -v
+python3 -m unittest discover -s tests -p 'test_keycloak*.py' -v
+python3 docs/_meta/docs_lint.py --root . --base origin/main
+```
+
+The focused suite exercises real Helm lint/template for enabled and disabled
+profiles, schema and schema-bypass refusals, exact five-object equality, existing
+named grant reuse, unchanged legacy renders and source-derived route/policy
+negative controls. The old admin suite keeps its exact specs and baseline digests
+on the explicitly disabled discovery profile; the new suite also checks that
+entire seven-object admin contract with discovery enabled. No old oracle is
+recalculated or broad assertion removed.
+
+Local source checks are not fresh required CI. This isolated draft has only Helm
+3.16.2 available, not the pinned 4.2.1 renderer; the canonical full suite's version
+guards must remain intact. Final-commit docs freshness/coupling and current-main
+compatibility must be rerun by the parent after review/publication with the pinned
+toolchain. No credentials, network, cluster operations, commit/push or deployment
+are part of this source task.
+
+The parent still owns admission/Accepted/ResolvedRefs, generated ClusterIP and
+ExternalDNS exclusion, additive-policy overlap, trusted HTTPS and exact GET
+success plus other method/path refusal, actual CNI/port-forward and log privacy.
+The deny also leaves metrics ingress closed; target/scrape impact must be reviewed
+without widening this five-object candidate or hiding targets/alerts. All human,
+owner/MFA/recovery and service login gates below remain pending. To withdraw,
+disable only `keycloakOwnerDiscovery.enabled` in both owners and review pruning of
+these five objects; retain the private admin grant/path, public routing, server,
+DB/PVC, Secrets, certificate and existing authentication.
 
 ## Create-only versus update and rotation
 

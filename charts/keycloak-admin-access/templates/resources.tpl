@@ -1,4 +1,5 @@
-{{- if and (ne (toJson .Values) (toJson (dict "keycloakAdminPrivate" (dict "enabled" false)))) (ne (toJson .Values) (toJson (dict "keycloakAdminPrivate" (dict "enabled" true)))) -}}
+{{- $adminValues := omit .Values "keycloakOwnerDiscovery" -}}
+{{- if and (ne (toJson $adminValues) (toJson (dict "keycloakAdminPrivate" (dict "enabled" false)))) (ne (toJson $adminValues) (toJson (dict "keycloakAdminPrivate" (dict "enabled" true)))) -}}
 {{- fail "Private admin blocked: only boolean keycloakAdminPrivate.enabled is supported" -}}
 {{- end -}}
 {{- if .Values.keycloakAdminPrivate.enabled -}}
