@@ -30,6 +30,10 @@ gateway-helm:
 keycloakAdminPrivate:
   enabled: true
 
+# Dedicated ClusterIP, GET discovery only; not an owner login route.
+keycloakOwnerDiscovery:
+  enabled: true
+
 gateway:
   name: kkamji
   className: envoy

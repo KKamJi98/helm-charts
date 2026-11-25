@@ -1,6 +1,6 @@
 ---
 title: Keycloak OIDC IdP preparation
-updated: 2026-11-24T16:15:00+09:00
+updated: 2026-11-25T21:59:24+09:00
 type: runbook
 status: current
 ---
@@ -21,6 +21,18 @@ status: current
 - 이 차트는 credential 값, AWS IAM이나 SSM 원본을 생성하지 않습니다. Secret 참조가 렌더됐다고 원본 존재를 주장하지 않습니다.
 - 오프라인 schema/render 검증은 admission, 이미지 실행, DB TLS와 사용자 인증 인수의 대체가 아닙니다.
 - [Grafana PVC 준비 전용 후보](oidc/05_grafana-pvc-preparation.md)는 monitoring에 unused PVC 하나만 추가합니다. 기존 Grafana emptyDir와 전체 Deployment/Pod template, config/Secret 참조/route, 다른 monitoring 객체와 UI7 legacy 인증을 보존합니다. fresh backup, binding/copy/restore와 실제 crypto-key decrypt 검증 전에는 원본 Grafana Pod를 교체하지 않으며 이 후보는 migration 완료가 아닙니다.
+
+## Separate discovery-only source candidate
+
+The [owner discovery Gateway](oidc/07_owner-enrollment-source.md#discovery-only-gateway-source-candidate)
+adds only five objects through existing `envoy-gateway` and `keycloak-admin-access`
+owners, with a separate default-off flag enabled in their current local overlays.
+It preserves management Applications, IdP/Operator/DB profiles, private admin,
+public routes and all service login/client/realm contracts. Its only HTTP match is
+exact GET `/realms/kkamji/.well-known/openid-configuration` on a separate ClusterIP
+Gateway. The existing Keycloak workflow covers the new platform template/schema,
+fixture and `test_keycloak_owner_discovery.py`; pinned Helm 4.2.1 CI and all actual
+owner enrollment, WebAuthn/recovery and runtime acceptance remain separate gates.
 
 ## DB 기본값과 private server GitOps 단계
 

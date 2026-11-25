@@ -1,6 +1,6 @@
 ---
 title: Makefile operations
-updated: 2026-11-16T11:54:46.572023+00:00
+updated: 2026-11-25T21:59:24+09:00
 type: runbook
 status: current
 ---
@@ -66,6 +66,19 @@ PR 검사는 [docs-lint workflow](../.github/workflows/docs-lint.yml)와 같은 
 `make deps`는 1.8.1 원본을 다시 받아 CRD backport를 지울 수 있다. 의존성 갱신 뒤 `python3 scripts/patch_envoy_gateway_crd.py`로 승인된 두 줄 수정만 재적용하고 `--check`로 확인한다. 다른 버전이나 미확인 vendor를 자동 수정하지 않는다. 범위, upstream provenance, checksum, full Git history를 쓰는 테스트 및 제거 조건은 [공유 CRD backport](rules/gateway-api-routing.md#공유-crd의-181-한정-backport)를 따른다.
 
 [Envoy Gateway CI](../.github/workflows/envoy-gateway-lint.yml)는 vendor/script/test/workflow 변경에 실행되며 check, local values를 명시한 Helm lint/render와 전체 렌더 회귀 테스트를 수행한다. 이 gate는 클러스터 admission이나 실제 429 검증을 대신하지 않는다. 테스트 전용 임시 파일은 `TMPDIR` 아래에 두며 render Secret 값은 기록하지 않는다.
+
+## Discovery-only owner Gateway source checks
+
+The existing [Keycloak workflow](../.github/workflows/keycloak-lint.yml) now also
+selects the dedicated discovery platform template/schema and fixed public fixture.
+It keeps Helm 4.2.1/Python 3.12 and `test_keycloak*.py` discovery. The
+[owner discovery contract](oidc/07_owner-enrollment-source.md#local-verification-and-remaining-gates)
+adds actual lint/template positive/negative checks without cluster/network access.
+Helm lint can report a template `fail` as informational, so the negative lint gate
+uses the values schema, while template refusals are also tested with schema
+bypassed. Do not count lint exit 0 alone as proof that unsafe values are refused.
+Local Helm 3.16.2 results do not satisfy the pinned-renderer gate. Uncommitted docs
+lint cannot establish final-commit freshness/coupling or fresh required CI.
 
 ## Normal changes
 

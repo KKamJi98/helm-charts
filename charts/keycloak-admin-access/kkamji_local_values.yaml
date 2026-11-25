@@ -1,2 +1,6 @@
 keycloakAdminPrivate:
   enabled: true
+
+# Dedicated ClusterIP, GET discovery only; not an owner login route.
+keycloakOwnerDiscovery:
+  enabled: true
