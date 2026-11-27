@@ -104,9 +104,10 @@ metadata:
   name: full-default-deny
   namespace: ci-full
 spec:
+  # An empty rule selects nothing; `ingress: []` / `egress: []` is rejected as invalid in Cilium 1.19.
   endpointSelector: {}
-  ingress: []
-  egress: []
+  ingress: [{}]
+  egress: [{}]
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy

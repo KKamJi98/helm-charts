@@ -1,6 +1,6 @@
 ---
 title: Private Keycloak admin HTTPS candidate
-updated: 2026-11-25T21:59:24+09:00
+updated: 2026-11-27T11:55:00+09:00
 type: runbook
 status: current
 ---
@@ -22,20 +22,23 @@ management root는 `keycloak-admin-access` Application 하나를 추가합니다
 ## Separate discovery-only opt-in
 
 The [owner discovery candidate](07_owner-enrollment-source.md#discovery-only-gateway-source-candidate)
-adds three platform and two service objects under a distinct
+adds three platform and three service objects under a distinct
 `keycloakOwnerDiscovery.enabled` flag, default `false` and enabled only by the two
-current local overlays. These five objects use `keycloak-owner-enrollment` names
+current local overlays. These six objects use `keycloak-owner-enrollment` names
 and do not modify the seven admin objects described here. Current local renders
-therefore contain platform 50 objects including shared CRDs and service 6 objects;
+therefore contain platform 50 objects including shared CRDs and service 7 objects;
 disabling discovery restores platform 47 and service 4, with whole-object equality.
 The new route permits only exact GET realm discovery, reuses the existing named
 Service ReferenceGrant and cannot render without that grant's admin opt-in.
+The added service `CiliumNetworkPolicy/keycloak-owner-enrollment-prometheus-ingress`
+mirrors the narrow L7 Prometheus scrape rule (`monitoring/kube-prometheus-stack-prometheus`,
+TCP 19001, `GET ^/stats/prometheus$`).
 There is no new admin/login path, Application, DNS publication or credential.
 
 The sealed admin regression helper now explicitly disables discovery; fixed admin
 specs, security mutations and whole-object digests are unchanged. The separate
 owner suite checks the same full seven-object contract with discovery enabled and
-that only its exact five objects are added. Real lint/template source checks do
+that only its exact six objects are added. Real lint/template source checks do
 not replace the pinned Helm 4.2.1 CI or parent-owned runtime gates below.
 
 ## Exact private path

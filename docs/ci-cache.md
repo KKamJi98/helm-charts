@@ -1,6 +1,6 @@
 ---
 title: CI cache registry (zot)
-updated: 2026-11-23T02:05:00+09:00
+updated: 2026-11-27T11:55:00+09:00
 type: architecture
 status: current
 ---
@@ -85,7 +85,8 @@ rejects `ingress: []` / `egress: []` as a rule with no sections (status
 `Valid: False`), so that form denies nothing. Stage 1 shipped the invalid
 form; zot itself was still locked down because its two valid policies put
 both directions into default deny. `full-default-deny` in `charts/arc-full`
-has the same invalid form (observed 2026-10-19, not changed here).
+and `runtime-no-network` in `charts/arc-runtime` were aligned to the same
+`ingress: [{}]` / `egress: [{}]` form on 2026-11-27.
 
 ## Fail-open
 

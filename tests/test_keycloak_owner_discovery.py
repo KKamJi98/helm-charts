@@ -28,18 +28,18 @@ def discovery(objects):
 
 
 class OwnerDiscoveryTests(unittest.TestCase):
-    def test_local_values_add_exact_approved_five_objects_with_existing_owners(self):
+    def test_local_values_add_exact_approved_six_objects_with_existing_owners(self):
         platform = admin.documents(render(admin.PLATFORM))
         service = admin.documents(render(admin.SERVICE))
         self.assertEqual(discovery(platform), {key: obj for key, obj in EXPECTED.items()
                                              if key[0] in ("EnvoyProxy", "Gateway") or key[2].endswith("-deny-ingress")})
         self.assertEqual(discovery(service), {key: obj for key, obj in EXPECTED.items()
-                                            if key[0] == "HTTPRoute" or key[2].endswith("-server-ingress")})
+                                            if key[0] in ("HTTPRoute", "CiliumNetworkPolicy") or key[2].endswith("-server-ingress")})
         self.assertEqual({**discovery(platform), **discovery(service)}, EXPECTED)
         admin.assert_contract(self, {**admin.private(platform), **admin.private(service)})
 
     def test_defaults_off_and_explicit_disable_preserve_all_prior_objects(self):
-        for chart, expected_delta in ((admin.PLATFORM, 3), (admin.SERVICE, 2)):
+        for chart, expected_delta in ((admin.PLATFORM, 3), (admin.SERVICE, 3)):
             with self.subTest(chart=chart.name):
                 values = yaml.safe_load((chart / "values.yaml").read_text())
                 self.assertEqual(values[FLAG], {"enabled": False})
@@ -200,6 +200,9 @@ class OwnerDiscoveryTests(unittest.TestCase):
             (("NetworkPolicy", NAMESPACE, NAME + "-deny-ingress"), ("spec", "ingress"), [{}]),
             (("NetworkPolicy", "keycloak", NAME + "-server-ingress"), ("spec", "ingress", 0, "from"), [{}]),
             (("NetworkPolicy", "keycloak", NAME + "-server-ingress"), ("spec", "ingress", 0, "ports", 0, "port"), 9000),
+            (("CiliumNetworkPolicy", NAMESPACE, NAME + "-prometheus-ingress"), ("spec", "ingress", 0, "fromEndpoints"), [{}]),
+            (("CiliumNetworkPolicy", NAMESPACE, NAME + "-prometheus-ingress"), ("spec", "ingress", 0, "toPorts", 0, "ports", 0, "port"), "19000"),
+            (("CiliumNetworkPolicy", NAMESPACE, NAME + "-prometheus-ingress"), ("spec", "ingress", 0, "toPorts", 0, "rules", "http", 0, "path"), "/stats"),
         ]
         mutations += [(key, ("metadata", "annotations"), value)
                       for key in (("Gateway", NAMESPACE, NAME), ("HTTPRoute", NAMESPACE, NAME))
@@ -221,6 +224,25 @@ class OwnerDiscoveryTests(unittest.TestCase):
                 target[path[-1]] = value
                 with self.assertRaises(AssertionError):
                     self.assertEqual(changed, EXPECTED)
+
+    def test_metrics_policy_requires_exact_prometheus_identity_and_http_get(self):
+        policy = admin.documents(render(admin.SERVICE))["CiliumNetworkPolicy", NAMESPACE, NAME + "-prometheus-ingress"]
+        proxy = {**admin.PROXY, "gateway.envoyproxy.io/owning-gateway-name": NAME, "kkamji.net/access": NAME}
+        self.assertTrue(admin.metrics_exception_allows(policy, proxy, admin.PROMETHEUS))
+        for field in admin.PROMETHEUS:
+            for value in (None, "default", "other"):
+                with self.subTest(source_field=field, value=value):
+                    self.assertFalse(admin.metrics_exception_allows(policy, proxy, {**admin.PROMETHEUS, field: value}))
+        for field in proxy:
+            for value in (None, "kkamji", admin.NAME):
+                with self.subTest(target_field=field, value=value):
+                    self.assertFalse(admin.metrics_exception_allows(policy, {**proxy, field: value}, admin.PROMETHEUS))
+        for port in (80, 443, 8080, 10443, 19000, 19002):
+            self.assertFalse(admin.metrics_exception_allows(policy, proxy, admin.PROMETHEUS, port=port))
+        for method in ("HEAD", "POST", "PUT", "DELETE", "get"):
+            self.assertFalse(admin.metrics_exception_allows(policy, proxy, admin.PROMETHEUS, method=method))
+        for path in ("/", "/config_dump", "/ready", "/stats", "/stats/prometheus/", "/stats/prometheus?format=json"):
+            self.assertFalse(admin.metrics_exception_allows(policy, proxy, admin.PROMETHEUS, path=path))
 
     def test_existing_ci_covers_discovery_templates_schema_fixture_and_suite(self):
         workflow = yaml.load((ROOT / ".github/workflows/keycloak-lint.yml").read_text(), Loader=yaml.BaseLoader)
