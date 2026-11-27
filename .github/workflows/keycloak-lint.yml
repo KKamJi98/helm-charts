@@ -56,5 +56,5 @@ jobs:
       - name: Offline Keycloak preparation, CA, production and GitOps contracts
         run: |
           export HELM_BIN="$(command -v helm)"
-          uv run --no-project --python 3.12 --with pyyaml --with jsonschema \
+          uv run --no-project --python 3.12 --with pyyaml --with jsonschema --with lupa \
             python -m unittest discover -s tests -p 'test_keycloak*.py' -v

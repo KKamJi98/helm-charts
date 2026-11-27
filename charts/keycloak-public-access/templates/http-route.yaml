@@ -33,4 +33,19 @@ spec:
           name: keycloak-service
           port: 8080
           weight: 1
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: keycloak-public-persistent-sso
+  namespace: keycloak
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: keycloak-public
+  lua:
+    - type: Inline
+      inline: |
+{{ .Files.Get "files/persistent-sso-cookie.lua" | indent 8 }}
 {{- end }}

@@ -1,6 +1,6 @@
 ---
 title: Keycloak OIDC IdP preparation
-updated: 2026-11-25T21:59:24+09:00
+updated: 2026-11-27T16:05:00+09:00
 type: runbook
 status: current
 ---
@@ -172,6 +172,7 @@ JRE 기본 trust anchors도 남으므로 DB 전용 CA만 허용하는 독점 pin
 ## Envoy와 노출
 
 공개 origin은 `https://sso.kkamji.net`이며, `charts/keycloak-public-access` 차트(`HTTPRoute/keycloak/keycloak-public`)가 기존 `Gateway/envoy-gateway-system/kkamji`의 `https` listener에 `/realms/kkamji`와 `/resources` PathPrefix 2개만 연결합니다. 공용 Gateway/certificate는 수정하지 않습니다.
+같은 차트의 `EnvoyExtensionPolicy/keycloak/keycloak-public-persistent-sso` 응답 Lua 필터는 Google IdP broker 로그인처럼 `Remember me` 체크박스를 거치지 않아 `Max-Age`가 생략된 `kkamji` realm의 비어 있지 않은 `KEYCLOAK_IDENTITY`/`KEYCLOAK_SESSION` 쿠키에만 `Max-Age=2592000`(30일, 서버 Idle 7일/Max 30일 정책과 일치)을 부여하며 로그아웃(`Max-Age=0`/빈 값), 기존 `Max-Age`/`Expires`, 임시 인증 쿠키(`AUTH_SESSION_ID`, `KC_RESTART`)와 다른 realm 경로는 건드리지 않습니다.
 TLS termination 뒤 supported HTTP8080/xforwarded/strict hostname을 사용하며 Operator Ingress는 끕니다.
 backend는 동일 namespace의 `keycloak-service:8080`입니다. management 9000, `/`, `/admin`, `/realms/master`는 공개 route에 포함하지 않고 private admin 경로(`charts/keycloak-admin-access`)로 분리합니다.
 9000 차단만으로 admin API가 숨겨지지는 않으므로 R4 배포 후 실제 경로 차단(`/admin`, `/realms/master`, 경로 정규화 우회)과 클러스터 내부 hairpin TLS를 라이브 검증합니다.
