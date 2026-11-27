@@ -5,6 +5,14 @@
     "_archived/ 는 폐기 자산이고 수정 대상이 아니므로 매핑하지 않는다.",
     "docs/specs/ 는 시점 설계 기록이라 코드 변경에 따라 갱신되지 않는다. 매핑하지 않는다."
   ],
+  "docs/rules/job-failure-alerts.md": [
+    "charts/kube-prometheus-stack/kkamji_local_values.yaml",
+    "tests/test_kube_job_failed_rules.py",
+    "tests/prometheus/kube-job-failed.test.yaml",
+    "tests/test_grafana_pvc_preparation.py",
+    "tests/test_grafana_pvc_activation.py",
+    "tests/test_keycloak_current_main.py"
+  ],
   "docs/operations.md": [
     "Makefile",
     "scripts/*.sh",

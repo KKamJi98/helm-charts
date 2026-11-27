@@ -176,12 +176,49 @@ kube-prometheus-stack:
             - __name__
   # CrashLoopBackOff 전용 알람을 복원한다 (이전에 disabled 였으나, pod 단위
   # crashloop 신호가 없으면 KubePodNotReady 등 간접 알람만 남아 추적이 어렵다).
-  defaultRules: {}
+  defaultRules:
+    disabled:
+      # Replaced below under the same alert name, duration, labels and annotations.
+      # Only proven recovered Jobs owned by the exact RPG CronJob are excluded.
+      KubeJobFailed: true
 
   # 기본 TargetDown 은 job/namespace 단위 집계라 어떤 target 이 죽었는지 안 보인다.
   # per-target 룰을 추가하고, TargetDown 은 inhibit_rules 로 억제한다 (안전망으로 유지).
   # keep_firing_for 로 resolve 직후 재발화(flapping) 시 중복 알림을 막는다.
   additionalPrometheusRulesMap:
+    kkamji-job-failed:
+      groups:
+        - name: kkamji.job-failed
+          rules:
+            - alert: KubeJobFailed
+              # Preserve the upstream signal for every Job unless all recovery
+              # evidence exists. No name-prefix exclusion or blanket silence.
+              # Aggregate exporter replicas before joins; keep cluster isolation.
+              expr: |-
+                (kube_job_failed{job="kube-state-metrics", namespace=~".*"} > 0)
+                unless on (cluster, namespace, job_name)
+                (
+                  (
+                    max by (cluster, namespace, job_name) (
+                      kube_job_status_start_time{job="kube-state-metrics", namespace="real-life-rpg"} > 0
+                    )
+                    < on (cluster, namespace) group_left ()
+                    max by (cluster, namespace) (
+                      kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="real-life-rpg", cronjob="real-life-rpg-scheduler"} > 0
+                    )
+                  )
+                  and on (cluster, namespace, job_name)
+                  max by (cluster, namespace, job_name) (
+                    kube_job_owner{job="kube-state-metrics", namespace="real-life-rpg", owner_kind="CronJob", owner_name="real-life-rpg-scheduler", owner_is_controller="true"} == 1
+                  )
+                )
+              for: 15m
+              labels:
+                severity: warning
+              annotations:
+                summary: 'Job failed to complete.'
+                description: 'Job {{ $labels.namespace }}/{{ $labels.job_name }} failed to complete. Removing failed job after investigation should clear this alert on cluster {{ $labels.cluster }}.'
+                runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
     kkamji-scrape-target:
       groups:
         - name: kkamji.scrape-target

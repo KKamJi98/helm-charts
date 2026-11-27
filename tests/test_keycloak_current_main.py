@@ -13,6 +13,15 @@ import test_grafana_pvc_preparation as prep
 
 ROOT = Path(__file__).resolve().parents[1]
 ORACLE = json.loads((ROOT / 'tests/fixtures/keycloak-consumers/main9a.json').read_text())
+# Preserve the immutable main9a storage/crypto and other-chart oracles. Only the
+# monitoring whole-render counts/hashes change for the Job alert relocation;
+# test_kube_job_failed_rules verifies its exact delta against immutable fc09262.
+MONITORING_JOB_FAILED_ORACLE = {
+    'local': {'count': 132, 'objectsSha256':
+              '9131f4a4774effb9c19fa601fc05db34de5508f5bc13b1bc3ae1031edc0c4774'},
+    'includeCRDs': {'count': 142, 'objectsSha256':
+                    '3cd44fcc35fbd40291f099ad1ac9beeeccf7d1bfe1e1c89e0b149807e2d03d2a'},
+}
 SSO_DEFAULTS = {
     'backendTLSReady': False,
     'grafana': {'mode': 'legacy', 'cutoverApproved': False,
@@ -96,11 +105,14 @@ class CurrentMainTests(unittest.TestCase):
                 args = [prep.HELM, 'template', chart, str(path), '-n', namespace, '--skip-tests',
                         '--kube-version', '1.36.1', '-f', str(path / 'kkamji_local_values.yaml')]
                 objects = prep.documents(prep.helm_command(args))
-                self.assertEqual(len(objects), ORACLE['local'][chart]['count'])
-                self.assertEqual(prep.digest([objects[k] for k in sorted(objects)]), ORACLE['local'][chart]['objectsSha256'])
+                oracle = (MONITORING_JOB_FAILED_ORACLE['local'] if chart == 'kube-prometheus-stack'
+                          else ORACLE['local'][chart])
+                self.assertEqual(len(objects), oracle['count'])
+                self.assertEqual(prep.digest([objects[k] for k in sorted(objects)]), oracle['objectsSha256'])
         objects = prep.documents(prep.render(prepared=False, include_crds=True))
-        self.assertEqual(len(objects), 141)
-        self.assertEqual(prep.digest([objects[k] for k in sorted(objects)]), ORACLE['kpsIncludeCRDs']['objectsSha256'])
+        self.assertEqual(len(objects), MONITORING_JOB_FAILED_ORACLE['includeCRDs']['count'])
+        self.assertEqual(prep.digest([objects[k] for k in sorted(objects)]),
+                         MONITORING_JOB_FAILED_ORACLE['includeCRDs']['objectsSha256'])
 
     def test_retained_pvc_composes_with_canary_and_final_synthetic_only(self):
         for mode in ('canary', 'only'):

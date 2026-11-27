@@ -1,6 +1,6 @@
 ---
 title: Docs index
-updated: 2026-11-23
+updated: 2026-11-27
 type: architecture
 status: current
 ---
@@ -33,6 +33,8 @@ status: current
 - [Grafana native PVC activation candidate](oidc/06_grafana-pvc-activation.md) - existingClaim/Recreate 후보, 전체 141개 보존 계약, Draft PR/CI와 운영 전환 분리, 최종 copy/crypto/write 정합성 인수 전 main 병합 금지, PVC 보존 rollback.
 
 ## Rules
+
+- [Job failure alert recovery exception](rules/job-failure-alerts.md) - RPG scheduler의 후속 성공으로 복구된 과거 실패만 제외하고 기본 Job 실패 및 재발 알림을 보존하는 로컬 후보.
 
 - [External Secrets rules](rules/external-secrets.md) - ESO 함정, ownerReference GC, SSM 키 네이밍.
 - [Gateway API routing rules](rules/gateway-api-routing.md) - 플랫폼과 서비스 차트의 소유 경계, 신규 서비스 온보딩, SSA diff 방지.

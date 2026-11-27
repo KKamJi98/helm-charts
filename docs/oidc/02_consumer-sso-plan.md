@@ -1,11 +1,21 @@
 ---
 title: Staged Keycloak consumer SSO
-updated: 2026-11-24T16:15:00+09:00
+updated: 2026-11-27
 type: architecture
 status: current
 ---
 
 # Staged Keycloak consumer SSO
+
+## Monitoring alert-only regression update
+
+2026-11-27 local candidate: [Job failure recovery exception](../rules/job-failure-alerts.md)
+relocates only `KubeJobFailed` and changes its expression. Normal local render
+counts become 132/142 (without/with CRDs). Only monitoring whole-object/raw
+counts and hashes are rebased after exact full-render comparison against
+`fc09262727ab1cd6e6bd9f7247166a70f8b601e2`; Grafana Deployment/Pod hashes,
+storage/crypto/sidecar guards, default profile and immutable `main9a.json` stay
+unchanged. This does not reopen storage, SSO or runtime acceptance.
 
 ## Scope and current state
 
