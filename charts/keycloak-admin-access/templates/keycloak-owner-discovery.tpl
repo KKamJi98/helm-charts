@@ -67,4 +67,30 @@ spec:
       path:
         type: Exact
         value: /realms/kkamji/.well-known/openid-configuration
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: keycloak-owner-enrollment-prometheus-ingress
+  namespace: envoy-gateway-system
+spec:
+  endpointSelector:
+    matchLabels:
+      k8s:app.kubernetes.io/component: proxy
+      k8s:gateway.envoyproxy.io/owning-gateway-name: keycloak-owner-enrollment
+      k8s:gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway-system
+      k8s:kkamji.net/access: keycloak-owner-enrollment
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s:io.kubernetes.pod.namespace: monitoring
+        k8s:io.cilium.k8s.policy.serviceaccount: kube-prometheus-stack-prometheus
+    toPorts:
+    - ports:
+      - port: "19001"
+        protocol: TCP
+      rules:
+        http:
+        - method: GET
+          path: "^/stats/prometheus$"
 {{- end }}

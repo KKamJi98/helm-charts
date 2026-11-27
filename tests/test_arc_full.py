@@ -265,6 +265,35 @@ class ArcFullContractTests(unittest.TestCase):
                 self.assertNotEqual(r.returncode, 0)
                 self.assertIn("ARC full boundary", r.stderr)
 
+    def test_cilium_default_deny_policies_use_valid_empty_rule_objects(self):
+        import yaml
+
+        full = self.render(local=True)
+        self.assertEqual(full.returncode, 0, full.stderr)
+        full_docs = [d for d in yaml.safe_load_all(full.stdout) if d]
+        full_deny = next(
+            d for d in full_docs
+            if d["kind"] == "CiliumNetworkPolicy" and d["metadata"]["name"] == "full-default-deny"
+        )
+        self.assertEqual(full_deny["spec"]["ingress"], [{}])
+        self.assertEqual(full_deny["spec"]["egress"], [{}])
+
+        rt = subprocess.run(
+            [
+                HELM, "template", "arc-runtime", str(ROOT / "charts/arc-runtime"),
+                "-n", "arc-runtime", "-f", str(ROOT / "charts/arc-runtime/kkamji_local_values.yaml"),
+            ],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(rt.returncode, 0, rt.stderr)
+        rt_docs = [d for d in yaml.safe_load_all(rt.stdout) if d]
+        rt_deny = next(
+            d for d in rt_docs
+            if d["kind"] == "CiliumNetworkPolicy" and d["metadata"]["name"] == "runtime-no-network"
+        )
+        self.assertEqual(rt_deny["spec"]["ingress"], [{}])
+        self.assertEqual(rt_deny["spec"]["egress"], [{}])
+
 
 class DiskReserveTests(unittest.TestCase):
     def test_memory_guard_holds_the_pool_pod_budget_plus_one_gib(self):

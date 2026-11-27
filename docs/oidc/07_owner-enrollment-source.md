@@ -1,6 +1,6 @@
 ---
 title: Controlled Keycloak owner enrollment source checklist
-updated: 2026-11-25T21:59:24+09:00
+updated: 2026-11-27T11:55:00+09:00
 type: runbook
 status: current
 ---
@@ -35,14 +35,14 @@ owners: `charts/envoy-gateway` and `charts/keycloak-admin-access`. Defaults are
 No new Application or valueFiles entry is needed. Main publication remains the
 GitOps deployment boundary, not an action authorized by local source tests.
 
-The candidate adds exactly five source objects, without changing the existing
+The candidate adds exactly six source objects, without changing the existing
 public Gateway, private admin seven-object contract, Keycloak server, realm,
 clients or any service login:
 
 | Owner | New objects |
 |---|---|
 | `envoy-gateway` | `EnvoyProxy/keycloak-owner-enrollment`, `Gateway/keycloak-owner-enrollment`, `NetworkPolicy/keycloak-owner-enrollment-deny-ingress` in `envoy-gateway-system` |
-| `keycloak-admin-access` | `HTTPRoute/keycloak-owner-enrollment` in `envoy-gateway-system`, `NetworkPolicy/keycloak-owner-enrollment-server-ingress` in `keycloak` |
+| `keycloak-admin-access` | `HTTPRoute/keycloak-owner-enrollment` in `envoy-gateway-system`, `NetworkPolicy/keycloak-owner-enrollment-server-ingress` in `keycloak`, `CiliumNetworkPolicy/keycloak-owner-enrollment-prometheus-ingress` in `envoy-gateway-system` |
 
 The only route match is method `GET`, path type `Exact`, value
 `/realms/kkamji/.well-known/openid-configuration`. It attaches only to this
@@ -65,7 +65,11 @@ ingress-deny selects only `kkamji.net/access: keycloak-owner-enrollment`, with
 `policyTypes: [Ingress]` and no allows. Its backend policy selects the four exact
 Keycloak server labels and permits only TCP 8080 from one peer requiring the
 `envoy-gateway-system` namespace AND all four enrollment proxy labels (component,
-owning Gateway name/namespace, custom access). No egress or metrics allow is added.
+owning Gateway name/namespace, custom access). Metrics scrape on the enrollment
+proxy is restricted by `CiliumNetworkPolicy/keycloak-owner-enrollment-prometheus-ingress`
+to `monitoring/kube-prometheus-stack-prometheus` on TCP 19001 (`GET ^/stats/prometheus$`),
+mirroring `keycloak-admin-private-prometheus-ingress` so `ScrapeTargetDown` does not fire.
+No egress or broader ingress allow is added.
 The policies are additive, not a proof of live isolation or port-forward behavior.
 
 The route reuses the unchanged `ReferenceGrant/keycloak/keycloak-admin-private`:

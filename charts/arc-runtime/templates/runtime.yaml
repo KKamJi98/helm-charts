@@ -134,7 +134,8 @@ metadata:
   name: runtime-no-network
   namespace: arc-runtime
 spec:
+  # An empty rule selects nothing; `ingress: []` / `egress: []` is rejected as invalid in Cilium 1.19.
   endpointSelector: {}
-  ingress: []
-  egress: []
+  ingress: [{}]
+  egress: [{}]
 {{- end }}
