@@ -1,6 +1,6 @@
 ---
 title: Controlled Keycloak owner enrollment source checklist
-updated: 2026-11-27T11:55:00+09:00
+updated: 2026-11-27T16:08:00+09:00
 type: runbook
 status: current
 ---
@@ -99,7 +99,7 @@ rewritten.
 
 ```bash
 export HELM_BIN="$(command -v helm)"
-# CI uses Helm 4.2.1 and Python 3.12 with PyYAML/jsonschema.
+# CI uses Helm 4.2.1 and Python 3.12 with PyYAML/jsonschema/lupa.
 python3 -m unittest discover -s tests -p test_keycloak_owner_discovery.py -v
 python3 -m unittest discover -s tests -p test_keycloak_private_admin.py -v
 python3 -m unittest discover -s tests -p 'test_keycloak*.py' -v
