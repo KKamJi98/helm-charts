@@ -14,12 +14,13 @@ import test_grafana_pvc_preparation as prep
 
 # Pristine 9c8ea6fb84e474095a62c34013d5644f7fa5d0f6, Helm 4.2.1,
 # Kube 1.36.1, monitoring, --skip-tests --include-crds. Default alone uses FIXTURE.
-# All four legacy no-CRD goldens remain unchanged in the preparation tests.
+# Default goldens and all Grafana Deployment/Pod hashes remain unchanged.
+# Local whole-render goldens additionally include the verified Job alert rule move.
 ARGO_GOLDENS = {
     False: (132, "06d9dbd91278b3e4d92727b1a1ced777f4556ea413ab531e6acec35f6309f9cd",
             "8c94924add936fe5fe34b8fb0cc01917a9fb96fbad76bcfdf786c355f436451a"),
-    True: (140, "9c9b19375b9c6ece55e50a81fe74e918d9be765d68efd2347e5a0258236ba57f",
-           "cfd9cac92edb464006c82a02edc183a81a9ed2bb9332b5746f6fb2fcfc9c5139"),
+    True: (141, "e5d54dd4fd0eed49ae5492958cdd4baf63f6621af853dde826e6f7aed3873c56",
+           "23e483ef5394c0a9cc52102582b8b3f752c617f46ce78e4847d2551d1a54e8b9"),
 }
 CLAIM = '{{ include "grafana.fullname" . }}'
 ACTIVE_STORAGE = {"name": "storage", "persistentVolumeClaim": {"claimName": "kube-prometheus-stack-grafana"}}
@@ -163,7 +164,7 @@ class GrafanaPvcActivationTests(unittest.TestCase):
         active, active_raw = check_candidate(self)
         prepared, prepared_raw = prep.raw_documents(prep.render(include_crds=True))
         self.assertEqual(set(active), set(prepared))
-        self.assertEqual(len(active), 141)
+        self.assertEqual(len(active), 142)
         changed = {k for k in active if prep.digest(active[k]) != prep.digest(prepared[k])}
         self.assertEqual(changed, {prep.GRAFANA_KEY})
         self.assertEqual(paths(prepared[prep.GRAFANA_KEY], active[prep.GRAFANA_KEY]), ALLOWED_PATHS)

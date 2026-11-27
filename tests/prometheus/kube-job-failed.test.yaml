@@ -1,0 +1,1010 @@
+# Synthetic lifecycle inputs based on observed kube-state-metrics metric/label names.
+evaluation_interval: 1m
+tests:
+- name: historical scheduler failure stays silent beyond notification repeat interval
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 720m
+    alertname: KubeJobFailed
+    exp_alerts: []
+- name: ongoing failure after previous success
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 50+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: new failure after a later success
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 300+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: equal timestamps do not prove later success
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 200+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: zero last success is not recovery
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 0+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: zero start time is not recovery
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 0+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: missing start time fails open
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: missing owner fails open
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: missing last successful time fails open
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: other CronJob in same namespace
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="another-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: non-controller owner
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="false"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: non CronJob owner
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="Job",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: unrelated batch Job
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="batch",job_name="batch-1",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: batch
+        job_name: batch-1
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job batch/batch-1 failed to complete. Removing failed job after investigation should clear this alert
+          on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: batch
+        job_name: batch-1
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job batch/batch-1 failed to complete. Removing failed job after investigation should clear this alert
+          on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: migration Job in RPG namespace
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-migration",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-migration
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-migration failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-migration
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-migration failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: scheduler prefix lookalike is not an exclusion
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-manual",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-manual
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-manual failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-manual
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-manual failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: same scheduler name in other namespace
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="other",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: other
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job other/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: other
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job other/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: mixed workloads keep default labels and warning
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_failed{job="kube-state-metrics",namespace="batch",job_name="batch-1",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: batch
+        job_name: batch-1
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job batch/batch-1 failed to complete. Removing failed job after investigation should clear this alert
+          on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: batch
+        job_name: batch-1
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job batch/batch-1 failed to complete. Removing failed job after investigation should clear this alert
+          on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: original exporter labels are preserved on unrecovered failure
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true",container="kube-state-metrics",endpoint="http",instance="10.0.0.1:8080",pod="ksm-1",service="ksm",cluster="lab-a"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",container="kube-state-metrics",endpoint="http",instance="10.0.0.1:8080",pod="ksm-1",service="ksm",cluster="lab-a"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",container="kube-state-metrics",endpoint="http",instance="10.0.0.1:8080",pod="ksm-1",service="ksm",cluster="lab-a",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",container="kube-state-metrics",endpoint="http",instance="10.0.0.1:8080",pod="ksm-1",service="ksm",cluster="lab-a",cronjob="real-life-rpg-scheduler"}
+    values: 50+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        container: kube-state-metrics
+        endpoint: http
+        instance: 10.0.0.1:8080
+        pod: ksm-1
+        service: ksm
+        cluster: lab-a
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster lab-a.
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        container: kube-state-metrics
+        endpoint: http
+        instance: 10.0.0.1:8080
+        pod: ksm-1
+        service: ksm
+        cluster: lab-a
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster lab-a.
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: different scrape job is outside upstream selector
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="not-kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts: []
+- name: zero failed condition is not alerting
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="false"}
+    values: 0+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts: []
+- name: duplicate exporter replicas do not create many-to-many joins
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",instance="ksm-a"}
+    values: 100+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",instance="ksm-b"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true",instance="ksm-a"}
+    values: 1+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true",instance="ksm-b"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler",instance="ksm-a"}
+    values: 200+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler",instance="ksm-b"}
+    values: 200+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts: []
+- name: cluster joins never borrow another clusters success
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true",cluster="a"}
+    values: 1+0x800
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true",cluster="b"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",cluster="a"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",cluster="a",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cluster="a",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",cluster="b"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",cluster="b",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        cluster: b
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster b.
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 30m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        cluster: b
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster b.
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: success metadata disappears after recovery then failure alerts again
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 200+0x19 stale
+  alert_rule_test:
+  - eval_time: 19m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 20m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 34m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 35m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+- name: lifecycle pending firing recovery new failure firing second recovery
+  interval: 1m
+  input_series:
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",condition="true"}
+    values: 1+0x800
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510"}
+    values: 100+0x800
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928510",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: 1+0x800
+  - series: kube_cronjob_status_last_successful_time{job="kube-state-metrics",namespace="real-life-rpg",cronjob="real-life-rpg-scheduler"}
+    values: 50+0x19 200+0x25 400+0x754
+  - series: kube_job_failed{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928525",condition="true"}
+    values: _x25 1+0x775
+  - series: kube_job_status_start_time{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928525"}
+    values: _x25 300+0x775
+  - series: kube_job_owner{job="kube-state-metrics",namespace="real-life-rpg",job_name="real-life-rpg-scheduler-29928525",owner_kind="CronJob",owner_name="real-life-rpg-scheduler",owner_is_controller="true"}
+    values: _x25 1+0x775
+  alert_rule_test:
+  - eval_time: 0m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 14m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 19m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928510
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928510 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 20m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 24m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 25m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 39m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 40m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928525
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928525 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 45m
+    alertname: KubeJobFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: real-life-rpg
+        job_name: real-life-rpg-scheduler-29928525
+        condition: 'true'
+        severity: warning
+      exp_annotations:
+        summary: Job failed to complete.
+        description: Job real-life-rpg/real-life-rpg-scheduler-29928525 failed to complete. Removing failed job after investigation
+          should clear this alert on cluster .
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+  - eval_time: 46m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 60m
+    alertname: KubeJobFailed
+    exp_alerts: []
+  - eval_time: 720m
+    alertname: KubeJobFailed
+    exp_alerts: []

@@ -113,8 +113,10 @@ GOLDENS = {
             "3a513c8cf0ad1ccf56ca2596bf8270260c3f704ecb85c6c84ff73abf96e0e4d5",
             "ae17b0bc4b061b6329556965499d2ebd5b787843cc234dc64fb69755e1f14764",
             "d17e5da20c035dfcc13295337b7876f4d5146f881e2aa9a8919ece19439f943f"),
-    True: (130, "67d325c9f125c502f06911a82626e898acaf74d22623dfb7f36343043cfeb0b2",
-           "af4fb7d9b7f54288635373cf2fd2c96935b3af57d473887c517e728657e2fb0d",
+    # Job-failure rule relocation only, verified against fc09262 in
+    # test_kube_job_failed_rules.py. Deployment/Pod and default oracles stay fixed.
+    True: (131, "c01e8ec6d0d1b51fb40d409f1fe357f35364d74bd961ca71078c4721bae69bd5",
+           "516614df37b89f3b407570718f7a44dbf212f2262bb0a05cb86e114e75046e8f",
            "ef15c97feb93c63a8496da3cf883a3daa3d48ba08a51231b8d9f6976f19ea74b",
            "103bcdaae13906fec828674f5023a94a5d0a6cd466442632906e401fc5d85b11"),
 }
