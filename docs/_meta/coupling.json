@@ -134,7 +134,6 @@
     "charts/arc-controller/kkamji_local_values.yaml",
     "charts/arc-light/kkamji_local_values.yaml",
     "charts/arc-light/terraform_lab_values.yaml",
-    "charts/arc-bql-light/kkamji_local_values.yaml",
     "charts/arc-runtime/templates/runtime.yaml",
     "tests/test_homelab_resource_optimization.py"
   ],

@@ -17,7 +17,7 @@ listenerTemplate:
       arc.kkamji.net/role: control
   spec:
     nodeSelector:
-      kubernetes.io/hostname: k8s-w2
+      kubernetes.io/hostname: k8s-w1
     priorityClassName: arc-ci-nonpreempting
     preemptionPolicy: Never
     securityContext:

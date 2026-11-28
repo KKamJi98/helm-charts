@@ -77,11 +77,12 @@ class ArcAuthenticationRenderTests(unittest.TestCase):
         ]:
             self.assertNotIn(forbidden, result.stdout)
 
-    def test_two_light_consumers_use_the_canonical_secret(self):
-        for chart in ["arc-light", "arc-bql-light"]:
-            with self.subTest(chart=chart):
-                text = (ROOT / f"charts/{chart}/kkamji_local_values.yaml").read_text()
+    def test_light_consumers_use_the_canonical_secret(self):
+        for values_file in ["kkamji_local_values.yaml", "terraform_lab_values.yaml"]:
+            with self.subTest(values_file=values_file):
+                text = (ROOT / f"charts/arc-light/{values_file}").read_text()
                 self.assertIn("githubConfigSecret: arc-github-app-auth", text)
+        self.assertFalse((ROOT / "charts/arc-bql-light").exists())
 
     def test_owner_confirmed_local_values_render_one_auth_resource(self):
         result = self.render(local=True)

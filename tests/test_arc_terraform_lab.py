@@ -12,9 +12,19 @@ HELM = os.environ.get("HELM_BINARY") or shutil.which("helm")
 def render(chart, values, namespace):
     assert HELM, "Use the existing Helm; no network/dependency installation"
     r = subprocess.run(
-        [HELM, "template", chart, str(ROOT / "charts" / chart), "-n", namespace,
-         "-f", str(ROOT / "charts" / chart / values)],
-        capture_output=True, text=True, check=False,
+        [
+            HELM,
+            "template",
+            chart,
+            str(ROOT / "charts" / chart),
+            "-n",
+            namespace,
+            "-f",
+            str(ROOT / "charts" / chart / values),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert r.returncode == 0, r.stderr
     return r.stdout
@@ -23,7 +33,9 @@ def render(chart, values, namespace):
 class TerraformLabRunnerTests(unittest.TestCase):
     def test_scale_set_is_terraform_lab_only_without_docker_or_api_token(self):
         out = render("arc-light", "terraform_lab_values.yaml", "ci-pr")
-        runner_set = next(d for d in out.split("---") if "kind: AutoscalingRunnerSet" in d)
+        runner_set = next(
+            d for d in out.split("---") if "kind: AutoscalingRunnerSet" in d
+        )
         for line in [
             "githubConfigUrl: https://github.com/KKamJi98/terraform-lab",
             "name: terraform-lab-light",
@@ -35,13 +47,32 @@ class TerraformLabRunnerTests(unittest.TestCase):
         ]:
             self.assertIn(line, runner_set)
         self.assertRegex(runner_set, r"automountServiceAccountToken:\s+false")
-        self.assertNotIn("docker.sock\n", runner_set.replace("test ! -S /run/user/1001/docker.sock\n", ""))
+        self.assertNotIn(
+            "docker.sock\n",
+            runner_set.replace("test ! -S /run/user/1001/docker.sock\n", ""),
+        )
         self.assertNotIn("privileged: true", runner_set)
 
-    def test_light_pools_do_not_get_the_terraform_egress_label(self):
-        for chart in ("arc-light", "arc-bql-light"):
-            out = render(chart, "kkamji_local_values.yaml", "ci-pr")
-            self.assertNotIn("arc.kkamji.net/egress", out, chart)
+    def test_platform_light_pool_does_not_get_the_terraform_egress_label(self):
+        out = render("arc-light", "kkamji_local_values.yaml", "ci-pr")
+        self.assertNotIn("arc.kkamji.net/egress", out)
+        # Light job Pod prefers k8s-w1 across both workers so it does not block k8s-w2 full slots.
+        self.assertNotIn("nodeSelector:\n        kubernetes.io/hostname: k8s-w2", out)
+        self.assertIn("preferredDuringSchedulingIgnoredDuringExecution", out)
+        # Light listeners and controller are pinned to k8s-w1.
+        for chart, values in [
+            ("arc-controller", "kkamji_local_values.yaml"),
+            ("arc-light", "kkamji_local_values.yaml"),
+            ("arc-light", "terraform_lab_values.yaml"),
+        ]:
+            ns = "arc-system" if chart == "arc-controller" else "ci-pr"
+            rendered = render(chart, values, ns)
+            self.assertIn("kubernetes.io/hostname: k8s-w1", rendered, (chart, values))
+            self.assertNotIn(
+                "nodeSelector:\n        kubernetes.io/hostname: k8s-w2",
+                rendered,
+                (chart, values),
+            )
 
     def test_foundation_opens_aws_and_hashicorp_only_to_terraform_pods(self):
         out = render("arc-foundation", "kkamji_local_values.yaml", "arc-system")
@@ -76,23 +107,33 @@ class TerraformLabRunnerTests(unittest.TestCase):
         ]:
             self.assertIn(line, quota)
 
-    def test_control_budget_keeps_a_controller_surge_with_three_listeners(self):
+    def test_control_budget_keeps_a_controller_surge_with_two_listeners(self):
         out = render("arc-foundation", "kkamji_local_values.yaml", "arc-system")
         quota = next(d for d in out.split("---") if "name: arc-control-budget" in d)
         for line in [
-            "requests.cpu: 350m",
-            "requests.memory: 448Mi",
-            "limits.cpu: 1750m",
-            "limits.memory: 896Mi",
-            "requests.ephemeral-storage: 320Mi",
-            "limits.ephemeral-storage: 640Mi",
-            "pods: '5'",
+            "requests.cpu: 300m",
+            "requests.memory: 384Mi",
+            "limits.cpu: 1500m",
+            "limits.memory: 768Mi",
+            "requests.ephemeral-storage: 256Mi",
+            "limits.ephemeral-storage: 512Mi",
+            "pods: '4'",
         ]:
             self.assertIn(line, quota)
 
+    def test_bql_light_application_is_retired(self):
+        values = (
+            ROOT / "charts/argo-applications/automation_local_values.yaml"
+        ).read_text()
+        self.assertNotIn("path: charts/arc-bql-light", values)
+
     def test_argo_application_points_at_the_terraform_values(self):
-        values = (ROOT / "charts/argo-applications/automation_local_values.yaml").read_text()
-        block = values.split("  arc-terraform-lab-light:\n", 1)[1].split("\n  arc-", 1)[0]
+        values = (
+            ROOT / "charts/argo-applications/automation_local_values.yaml"
+        ).read_text()
+        block = values.split("  arc-terraform-lab-light:\n", 1)[1].split("\n  arc-", 1)[
+            0
+        ]
         self.assertIn("path: charts/arc-light", block)
         self.assertIn("- terraform_lab_values.yaml", block)
         self.assertIn("namespace: ci-pr", block)

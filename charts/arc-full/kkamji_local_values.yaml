@@ -3,7 +3,5 @@ githubAuth:
   existingSourceReuseApproved: true
 platform:
   maxRunners: 2
-bql:
-  maxRunners: 2
 imagePullSecret:
   enabled: true

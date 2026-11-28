@@ -1,4 +1,4 @@
-# One shared non-terminal job Pod across BOTH repository scale sets.
+# Repository-scoped light runner namespaces and quotas (Platform + terraform-lab).
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -28,16 +28,16 @@ metadata:
   name: arc-control-budget
   namespace: arc-system
 spec:
-  # Controller plus three light listeners (Platform, BQL, terraform-lab) plus
+  # Controller plus two light listeners (Platform, terraform-lab) plus
   # one controller rollout surge (100m/500m, 128Mi/256Mi, 64Mi/128Mi).
   hard:
-    requests.cpu: 350m
-    requests.memory: 448Mi
-    limits.cpu: 1750m
-    limits.memory: 896Mi
-    requests.ephemeral-storage: 320Mi
-    limits.ephemeral-storage: 640Mi
-    pods: '5'
+    requests.cpu: 300m
+    requests.memory: 384Mi
+    limits.cpu: 1500m
+    limits.memory: 768Mi
+    requests.ephemeral-storage: 256Mi
+    limits.ephemeral-storage: 512Mi
+    pods: '4'
 ---
 apiVersion: v1
 kind: ResourceQuota
@@ -46,9 +46,9 @@ metadata:
   namespace: ci-pr
 spec:
   hard:
-    # One shared light job Pod (Platform or BQL: 1Gi/1536Mi each) plus the
-    # terraform-lab Pod (512Mi/2Gi). Two light Pods never fit the memory
-    # request budget together, so the light pools still run one at a time.
+    # One Platform light job Pod (1Gi/1536Mi) plus the terraform-lab Pod
+    # (512Mi/2Gi). Two Platform light Pods never fit the memory request budget
+    # together.
     requests.cpu: 750m
     requests.memory: 1536Mi
     limits.cpu: '3'

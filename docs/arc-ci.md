@@ -1,6 +1,6 @@
 ---
 title: Repository-scoped ARC rollout and evidence
-updated: 2026-10-20T00:10:00+09:00
+updated: 2026-11-29T00:55:00+09:00
 type: runbook
 status: current
 ---
@@ -924,3 +924,35 @@ that Pod on port 5000 only. Docker Hub pulls go through the mirror and fall
 back to Docker Hub when it fails. Design, boundaries and fail-open timings are
 in [CI cache registry](ci-cache.md). Revert the flags and the egress rule
 together: flags without the rule blackhole for minutes per pull.
+
+## Retirement of binance-quant-lab ARC, Platform 12Gi Docker data and worker balance (2026-11-29)
+
+`KKamJi98/binance-quant-lab` ARC CI runners are retired:
+
+- `charts/argo-applications/automation_local_values.yaml` removes the `arc-bql-light`
+  Application and deletes the duplicate `charts/arc-bql-light/` chart. Argo CD's
+  `resources-finalizer.argocd.argoproj.io` deletes `AutoscalingRunnerSet/binance-quant-lab-light`
+  while `arc-controller` stays running to deregister the scale set from GitHub.
+- `charts/arc-full` removes the `bql` subchart dependency (`Chart.yaml`/`Chart.lock`),
+  `bql:` values, BQL validator branches, `/tmp/arc-bql-scratch` setup in `trusted-runtime.py`,
+  and BQL `34Gi`/`7168MiB` entries in `sdk-entry.py` (retaining `11Gi` in `sdk-entry.py`
+  for rolling compatibility during rollout).
+- Platform `docker-data` grows from `7Gi` (`ARC_JOB_EPHEMERAL_GIB: 11`) to `12Gi`
+  (`ARC_JOB_EPHEMERAL_GIB: 16`) to leave headroom for LAN zot BuildKit cache layers and
+  pre-warmed Rust dev-builder images (start guard: `16Gi + max(5Gi, 15% + 1Gi) = 40.3GiB`
+  against 111+ GiB free on `k8s-w1`/`k8s-w2`).
+- `ci-full/full-budget` shrinks to two Platform runners (`3584Mi`/`16Gi` each) plus
+  controller, one listener and surge (`pods: 5`, CPU `1400m/10`, memory `7680Mi/8Gi`,
+  ephemeral `5Gi/34Gi`, `arc-tun: 2`). `arc-system/arc-control-budget` shrinks to
+  controller + two listeners (`kkamji-platform-light`, `terraform-lab-light`) + surge
+  (`pods: 4`, CPU `300m/1500m`, memory `384Mi/768Mi`, ephemeral `256Mi/512Mi`).
+- Worker balance on 10GB/4vCPU nodes: `arc-controller` (`64Mi`) and the two light
+  listeners (`32Mi` each) move from `k8s-w2` to `k8s-w1`, and `kkamji-platform-light`
+  job Pods switch from `nodeSelector: k8s-w2` to `nodeAffinity` (`In [k8s-w1, k8s-w2]`,
+  preferred `k8s-w1`) so transient 1Gi light jobs do not starve `k8s-w2`'s `3584Mi`
+  full-runner slot.
+- Post-sync manual step: remove `KKamJi98/binance-quant-lab` from the ARC GitHub App
+  installation only after both `binance-quant-lab-*` `AutoscalingRunnerSet` objects
+  finish finalizer deregistration and disappear.
+- Rollback: revert the GitOps commit on `main`. `arc-github-app-auth` and namespaces
+  remain intact.

@@ -1,6 +1,6 @@
 ---
 title: Docs index
-updated: 2026-11-27
+updated: 2026-11-29
 type: architecture
 status: current
 ---
@@ -45,7 +45,7 @@ status: current
 - [ArgoCD notifications improvement](specs/2026-06-08-argocd-notifications-improvement.md) - 알림 개선 설계.
 - [Alerting quality improvements](specs/2026-06-12-alerting-quality-improvements.md) - 알림 품질 개선 설계.
 
-- [ARC rollout](arc-ci.md) - Qualified full SDK/JIT and BQL private scratch/ELF candidate within unchanged shared5Gi and20Gi Pod accounting.
+- [ARC rollout](arc-ci.md) - Platform-only full ARC (`3584Mi`/`12Gi` Docker data), light pools (`kkamji-platform`, `terraform-lab`), BQL retirement and `k8s-w1`/`k8s-w2` worker balance.
 - [ARC GitHub App](arc-github-app.md) - Approved App installation, shared authority, separately approved secure input, rotation and recovery.
 - [CI cache registry](ci-cache.md) - zot for ci-full jobs: Docker Hub mirror, network boundary, sizing, fail-open timings and rollback.
 - [ARC runner images](arc-runner-images.md) - Recipe, content check, private GHCR publishing and rollback for the runner and rootless Docker images.

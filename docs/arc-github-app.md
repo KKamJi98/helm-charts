@@ -1,6 +1,6 @@
 ---
 title: ARC GitHub App authentication security review
-updated: 2026-10-16T01:39:48+09:00
+updated: 2026-11-29T00:55:00+09:00
 type: runbook
 status: current
 ---
@@ -26,8 +26,11 @@ copy into reports, or hash private-key/PAT/SSM/Secret values.
 - Owner: the personal account KKamJi98. The dedicated private ARC App was created
   only after the exact separate approval and a duplicate-name check. Real App and
   installation identifiers are kept out of this public runbook.
-- Installation restricted to exactly KKamJi98/kkamji-platform and
-  KKamJi98/binance-quant-lab, never all repositories or an organization-wide pool.
+- Installation initially restricted to `KKamJi98/kkamji-platform` and
+  `KKamJi98/binance-quant-lab` (later extended to `KKamJi98/terraform-lab`;
+  `binance-quant-lab` ARC scale sets retired 2026-11-29; remove that repository
+  from the App installation only after ARC finalizer deregistration finishes),
+  never all repositories or an organization-wide pool.
 - Repository Administration read/write, required by repository runner registration,
   plus Metadata read. No Contents write, Actions write, Packages write or
   organization Self-hosted runners permission is proposed for registration.
