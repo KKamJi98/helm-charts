@@ -40,4 +40,4 @@ resources:
     memory: 192Mi
     ephemeral-storage: 128Mi
 nodeSelector:
-  kubernetes.io/hostname: k8s-w2
+  kubernetes.io/hostname: k8s-w1

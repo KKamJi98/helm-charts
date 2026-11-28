@@ -1,6 +1,6 @@
 ---
 title: Homelab Kubernetes resource and non-HA optimization
-updated: 2026-11-27T11:55:00+09:00
+updated: 2026-11-29T00:55:00+09:00
 type: runbook
 status: current
 ---
@@ -137,3 +137,4 @@ GitOps rollback is reverting the merge commit on `main` (or reverting individual
 - **Istio Sidecar -> Ambient Full Cutover (2026-11-23 20:54 KST)**: See [Istio 1.31.4 Ambient Mode mesh architecture and operations](08_istio-ambient-mesh.md). Removed legacy sidecar `global.proxy` and Prometheus `envoy-stats` scrape job, added `istio-cni` `excludeNamespaces` and `neverInjectSelector` guards, and declaratively enrolled `real-life-rpg` and `kkamji-platform` via `istio.io/dataplane-mode: ambient` in `charts/argo-applications/personal_local_values.yaml`.
 - **Istio CNI Reboot Hardening (2026-11-25 15:40 KST)**: Enabled `istioOwnedCNIConfig: true` (`02-istio-cni.conflist` chained from `cniConfFileName: 05-cilium.conflist`) in `charts/istio-cni/kkamji_local_values.yaml` to prevent Cilium startup conflist overwrite from dropping `istio-cni` out of the chain on worker node reboots (`istio/istio#60882`), keeping existing `istio-cni` resource requests/limits (`10m/32Mi`, lim `128Mi`) unchanged.
 - **Cilium Default-Deny Alignment (2026-11-27 11:55 KST)**: Updated `arc-runtime/runtime-no-network` (and `ci-full/full-default-deny`) from `ingress: []` / `egress: []` to Cilium 1.19 valid `ingress: [{}]` / `egress: [{}]` so `Valid: True` default-deny enforcement is active without changing `arc-runtime` DaemonSet resources or probes.
+- **BQL ARC Retirement and ARC Control Rebalance (2026-11-29)**: Retired `arc-bql-light` (deleted duplicate `charts/arc-bql-light`) and the `bql` subchart in `charts/arc-full`; moved `arc-controller` and both remaining light listeners (`kkamji-platform-light`, `terraform-lab-light`) from `k8s-w2` to `k8s-w1` and replaced `kkamji-platform-light`'s `k8s-w2` `nodeSelector` with `k8s-w1`-preferred `nodeAffinity` across both workers so 10GB `k8s-w2` retains headroom for a `3584Mi` `kkamji-platform-full` runner (`-160Mi` steady + `-1Gi` transient off `k8s-w2`). See [ARC rollout](arc-ci.md).

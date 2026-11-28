@@ -3,10 +3,12 @@ import os
 from pathlib import Path
 
 
-def disk_required_bytes(total, job_budget_gib=11):
-    # Platform 7Gi Docker data plus SDK 4Gi; BQL 30Gi plus 4Gi (values.yaml).
-    if job_budget_gib not in (11, 34):
-        raise ValueError("job disk budget must match a qualified pool:11Gi or34Gi")
+def disk_required_bytes(total, job_budget_gib=16):
+    # Platform 12Gi Docker data plus SDK 4Gi (11Gi kept for rolling rollout compatibility).
+    if job_budget_gib not in (11, 16):
+        raise ValueError(
+            "job disk budget must match a qualified Platform pool:11Gi or16Gi"
+        )
     gib = 1024**3
     imagefs_margin = (total * 15 + 99) // 100 + gib
     return job_budget_gib * gib + max(5 * gib, imagefs_margin)
@@ -14,8 +16,10 @@ def disk_required_bytes(total, job_budget_gib=11):
 
 def memory_required_bytes(pod_mib=5120):
     # The node must still hold this Pod's whole budget plus 1Gi when it starts.
-    if pod_mib not in (3584, 5120, 7168):
-        raise ValueError("Pod memory budget must match a qualified slot:3584, 5120 or 7168MiB")
+    if pod_mib not in (3584, 5120):
+        raise ValueError(
+            "Pod memory budget must match a qualified Platform slot:3584 or 5120MiB"
+        )
     return (pod_mib + 1024) * 1024**2
 
 

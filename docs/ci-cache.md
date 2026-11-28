@@ -1,6 +1,6 @@
 ---
 title: CI cache registry (zot)
-updated: 2026-11-27T11:55:00+09:00
+updated: 2026-11-29T00:55:00+09:00
 type: architecture
 status: current
 ---
@@ -41,8 +41,8 @@ and nothing is recorded. Anonymous `create` leaves storage abuse (bounded by the
   its token service and blob CDNs only. `production.cloudfront.docker.com` was
   the observed redirect on 2026-10-19.
 - No credentials. A GitHub Environment would be the only way to give main
-  jobs a secret that PR jobs cannot read, and the BQL and Platform repositories
-  have none. The boundary is the network policy plus `read`-only access.
+  jobs a secret that PR jobs cannot read, and the Platform repository
+  has none. The boundary is the network policy plus `read`-only access.
 - Transport is plain HTTP inside the cluster. Docker verifies every layer and
   manifest by digest.
 

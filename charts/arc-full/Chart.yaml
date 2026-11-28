@@ -13,7 +13,3 @@ dependencies:
   alias: platform
   version: 0.15.0
   repository: file://../arc-light
-- name: gha-runner-scale-set
-  alias: bql
-  version: 0.15.0
-  repository: file://../arc-light

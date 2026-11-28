@@ -96,9 +96,8 @@ platform:
       activeDeadlineSeconds: 22500
       terminationGracePeriodSeconds: 45
       priorityClassName: arc-ci-nonpreempting
-      # Any worker with the runtime DaemonSet (seccomp profile and two
-      # kkamji.net/arc-tun slots). At most one runner of each pool per node, so
-      # every worker holds one Platform and one BQL slot (docs/arc-ci.md).
+      # Any worker with the runtime DaemonSet (seccomp profile and kkamji.net/arc-tun
+      # slots). At most one Platform runner per worker across k8s-w1/k8s-w2 (docs/arc-ci.md).
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -153,7 +152,7 @@ platform:
           sizeLimit: 256Mi
       - name: docker-data
         emptyDir:
-          sizeLimit: 7Gi
+          sizeLimit: 12Gi
       - name: sdk-tmp
         emptyDir:
           sizeLimit: 512Mi
@@ -229,7 +228,7 @@ platform:
             ephemeral-storage: 1Gi
             kkamji.net/arc-tun: '1'
           limits:
-            ephemeral-storage: 7Gi
+            ephemeral-storage: 12Gi
             kkamji.net/arc-tun: '1'
         startupProbe:
           exec:
@@ -303,7 +302,7 @@ platform:
         - name: DISABLE_RUNNER_UPDATE
           value: 'true'
         - name: ARC_JOB_EPHEMERAL_GIB
-          value: '11'
+          value: '16'
         - name: ARC_POD_MEMORY_MIB
           value: '3584'
         resources:
@@ -326,128 +325,6 @@ platform:
         - name: sdk-tmp
           mountPath: /tmp
         workingDir: /home/runner/_work
-bql:
-  githubConfigUrl: https://github.com/KKamJi98/binance-quant-lab
-  githubConfigSecret: arc-github-app-auth
-  runnerScaleSetName: binance-quant-lab-full
-  minRunners: 0
-  maxRunners: 0
-  controllerServiceAccount:
-    namespace: ci-full
-    name: arc-full-controller
-  listenerTemplate:
-    metadata:
-      labels:
-        arc.kkamji.net/role: control
-    spec:
-      nodeSelector:
-        kubernetes.io/hostname: k8s-w1
-      containers:
-      - name: listener
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          runAsNonRoot: true
-          runAsUser: 1001
-          seccompProfile:
-            type: RuntimeDefault
-        resources:
-          requests:
-            cpu: 50m
-            memory: 64Mi
-            ephemeral-storage: 64Mi
-          limits:
-            cpu: 250m
-            memory: 128Mi
-            ephemeral-storage: 256Mi
-  template:
-    <<: *fullRunnerTemplate
-    spec:
-      <<: *fullRunnerSpec
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                - k8s-w1
-                - k8s-w2
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - topologyKey: kubernetes.io/hostname
-            labelSelector:
-              matchLabels:
-                app.kubernetes.io/component: runner
-                actions.github.com/scale-set-name: binance-quant-lab-full
-      resources:
-        requests:
-          cpu: 500m
-          memory: 7Gi
-        limits:
-          cpu: '4'
-          memory: 7Gi
-      volumes:
-      - name: runtime-config
-        configMap:
-          name: arc-full-runtime
-          defaultMode: 292
-      - name: sdk-home
-        emptyDir:
-          sizeLimit: 4Gi
-      - name: work
-        emptyDir:
-          sizeLimit: 6Gi
-      - name: socket
-        emptyDir:
-          sizeLimit: 16Mi
-      - name: runtime
-        emptyDir:
-          sizeLimit: 64Mi
-      - name: private-home
-        emptyDir:
-          sizeLimit: 256Mi
-      - name: docker-data
-        emptyDir:
-          sizeLimit: 30Gi
-      - name: sdk-tmp
-        emptyDir:
-          sizeLimit: 512Mi
-      - name: daemon-tmp
-        emptyDir:
-          sizeLimit: 3Gi
-      initContainers:
-      - *fullRunnerSeed
-      - <<: *fullRunnerDaemon
-        resources:
-          <<: *fullRunnerDaemonResources
-          limits:
-            ephemeral-storage: 30Gi
-            kkamji.net/arc-tun: '1'
-      containers:
-      - <<: *fullRunnerSDK
-        env:
-        - name: DOCKER_HOST
-          value: unix:///run/arc-api/docker.sock
-        - name: DOCKER_CONFIG
-          value: /home/runner/.docker
-        - name: RUNNER_TOOL_CACHE
-          value: /home/runner/_work/_tool
-        - name: HOME
-          value: /home/runner
-        - name: NPM_CONFIG_CACHE
-          value: /home/runner/.npm
-        - name: NPM_CONFIG_OFFLINE
-          value: 'false'
-        - name: DISABLE_RUNNER_UPDATE
-          value: 'true'
-        - name: ARC_JOB_EPHEMERAL_GIB
-          value: '34'
-        - name: ARC_POD_MEMORY_MIB
-          value: '7168'
 githubAuth:
   enabled: false
   existingSourceReuseApproved: false
