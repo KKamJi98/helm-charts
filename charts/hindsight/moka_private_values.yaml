@@ -1,11 +1,19 @@
 mokaRecallOAuth:
   canaryEnabled: true
   publicEnabled: true
-  image: ghcr.io/kkamji98/hindsight-dot@sha256:a1ed13ace22e517e6228c094c703a7b31ddeed79cdf2cebfc07e1cac19ba4c08
+  image: ghcr.io/kkamji98/hindsight-dot@sha256:ce124212e5fa0b81ee80c37aa6b582f6630452e21833bf6d884d9d60c764505d
   service:
     enabled: true
+    retainEnabled: true
     # ghcr.io/openai/tunnel-client:v0.0.21 OCI index.
     tunnelImage: ghcr.io/openai/tunnel-client@sha256:983df88cd56d49ae3863ae52b751d106c95aba8a03783c87ac2304b4e0cd154a
     tunnelId: tunnel_6b00256f55b08191a59f890cd6dbe01d
     # Envoy Gateway `kkamji` LoadBalancer address; tunnel-client reads OAuth metadata through it.
     gatewayAddress: 10.0.1.100
+
+grokMemory:
+  enabled: true
+  publicEnabled: true
+  retainEnabled: true
+  authMode: bearer
+  image: ghcr.io/kkamji98/hindsight-dot@sha256:ce124212e5fa0b81ee80c37aa6b582f6630452e21833bf6d884d9d60c764505d
