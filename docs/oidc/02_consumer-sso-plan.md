@@ -1,6 +1,6 @@
 ---
 title: Staged Keycloak consumer SSO
-updated: 2026-11-27
+updated: 2026-11-29
 type: architecture
 status: current
 ---
@@ -16,6 +16,10 @@ counts and hashes are rebased after exact full-render comparison against
 `fc09262727ab1cd6e6bd9f7247166a70f8b601e2`; Grafana Deployment/Pod hashes,
 storage/crypto/sidecar guards, default profile and immutable `main9a.json` stay
 unchanged. This does not reopen storage, SSO or runtime acceptance.
+
+2026-11-29 coupling note: Hindsight opt-in bidirectional `retain_summary` and isolated
+`grokMemory` templates (`charts/hindsight/`) leave Keycloak consumer SSO routes,
+OIDC clients, and default `kkamji_local_values.yaml` renders unchanged.
 
 ## Scope and current state
 

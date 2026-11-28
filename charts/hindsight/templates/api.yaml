@@ -1,5 +1,7 @@
 {{- $name := required "name is required" .Values.name -}}
 {{- $image := include "kkamji-hindsight.approvedImage" . -}}
+{{- $extEnabled := or .Values.mokaRecallOAuth.service.enabled .Values.grokMemory.enabled -}}
+{{- $retainEnabled := or (and .Values.mokaRecallOAuth.service.enabled .Values.mokaRecallOAuth.service.retainEnabled) (and .Values.grokMemory.enabled .Values.grokMemory.retainEnabled) -}}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -25,7 +27,7 @@ spec:
       app.kubernetes.io/component: api
   template:
     metadata:
-      {{- if .Values.mokaRecallOAuth.service.enabled }}
+      {{- if $extEnabled }}
       annotations:
         checksum/moka-recall-ext: {{ .Files.Get "files/hindsight_moka_recall_ext.py" | sha256sum }}
       {{- end }}
@@ -114,8 +116,8 @@ spec:
               value: "true"
             - name: HINDSIGHT_API_ENABLE_DOCUMENT_EXPORT_API
               value: "true"
-            {{- if .Values.mokaRecallOAuth.service.enabled }}
-            # Recall-only Moka endpoint under /ext; the tenant key check is unchanged.
+            {{- if $extEnabled }}
+            # Scoped cloud-agent endpoint under /ext; the tenant key check is unchanged.
             - name: HINDSIGHT_API_HTTP_EXTENSION
               value: hindsight_moka_recall_ext:MokaRecallHttpExtension
             - name: HINDSIGHT_API_HTTP_MOKA_RECALL_KEY
@@ -123,6 +125,13 @@ spec:
                 secretKeyRef:
                   name: hindsight-moka-recall-oauth-api-key
                   key: recall_api_key
+            {{- if $retainEnabled }}
+            - name: HINDSIGHT_API_HTTP_MOKA_RETAIN_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hindsight-moka-recall-oauth-api-key
+                  key: retain_api_key
+            {{- end }}
             - name: PYTHONPATH
               value: /opt/hindsight-ext
             {{- end }}
@@ -240,7 +249,7 @@ spec:
               mountPath: /tmp
             - name: cache
               mountPath: /home/hindsight/.cache
-            {{- if .Values.mokaRecallOAuth.service.enabled }}
+            {{- if $extEnabled }}
             - name: moka-recall-ext
               mountPath: /opt/hindsight-ext
               readOnly: true
@@ -271,7 +280,7 @@ spec:
         - name: cache
           emptyDir:
             sizeLimit: 512Mi
-        {{- if .Values.mokaRecallOAuth.service.enabled }}
+        {{- if $extEnabled }}
         - name: moka-recall-ext
           configMap:
             name: {{ $name }}-moka-recall-ext

@@ -46,6 +46,16 @@ spec:
             - port: "8888"
               protocol: TCP
     {{- end }}
+    {{- if $root.Values.grokMemory.enabled }}
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: {{ $root.Release.Namespace }}
+            app.kubernetes.io/name: hindsight-grok-memory
+      toPorts:
+        - ports:
+            - port: "8888"
+              protocol: TCP
+    {{- end }}
     {{- end }}
   {{- else }}
   ingress: []
