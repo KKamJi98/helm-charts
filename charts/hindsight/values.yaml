@@ -62,13 +62,27 @@ mokaRecallOAuth:
   publicEnabled: false
   deadlineUnix: ""
   image: ""
-  # Durable owner connection: grants on a PVC, recall-only Hindsight extension,
+  # Durable owner connection: grants on a PVC, scoped Hindsight extension,
   # MCP reachable only through the OpenAI Secure MCP Tunnel sidecar.
   service:
     enabled: false
+    # Opt-in scanner-gated retain_summary on fixed bank personal_shared.
+    retainEnabled: false
     tunnelImage: ""
     tunnelId: ""
     gatewayAddress: ""
+
+# Isolated public HTTPS MCP endpoint for Grok Bot (grok.com/connectors) on
+# fixed bank personal_shared. Supports Google OAuth 2.1 DCR (default) or a
+# dedicated per-client Bearer token; never shares native Hindsight keys.
+grokMemory:
+  enabled: false
+  publicEnabled: false
+  retainEnabled: false
+  authMode: oauth
+  image: ""
+  allowedRedirectUris:
+    - https://grok.com/connectors-oauth-exchange-code/
 
 server:
   fullnameOverride: hindsight

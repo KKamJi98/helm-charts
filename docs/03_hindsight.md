@@ -1,6 +1,6 @@
 ---
 title: Private Hindsight deployment and operations
-updated: 2026-11-23T02:05:00+09:00
+updated: 2026-11-29T00:21:00+09:00
 type: runbook
 status: current
 ---
@@ -42,6 +42,16 @@ status: current
   - 남은 범위: 다른 Google 계정의 거절은 테스트로만 검증했고, live로는 시험하지 않았습니다. refresh token에 의한 1시간 이후 유지도 아직 관찰하지 않았습니다.
 
 롤백: `moka_private_values.yaml`에서 `service.enabled`와 `publicEnabled`를 `false`로 되돌리면 비공개 metadata 모드로 돌아가고 API 확장 env/ConfigMap이 빠집니다(API Pod 1회 재시작). grant PVC와 SSM 값은 보존되므로 다시 켜면 기존 연결을 재사용합니다. 이전 합성 canary(10분 attended window, 메모리 전용, `connection_check`)는 `service.enabled=false`에서 그대로 동작합니다. 전용 이미지의 빌드 입력은 `images/hindsight-moka-oauth/`이며 배포는 검증한 OCI digest로 고정합니다.
+
+### 양방향 `retain_summary` 및 Grok Bot (`grokMemory`) 확장 (2026-11-29, opt-in)
+
+GPT Dots(모카)와 Grok Bot이 `personal_shared`를 읽기(`recall`)와 쓰기(`retain_summary`) 양방향으로 공유할 수 있도록 opt-in 확장을 추가했습니다. 기본값(`mokaRecallOAuth.service.retainEnabled: false`, `grokMemory.enabled: false`)에서는 기존 배포와 동작이 완전히 동일합니다.
+
+- **API HTTP 확장 (`POST /ext/moka-recall/retain`):** [hindsight_moka_recall_ext.py](../charts/hindsight/files/hindsight_moka_recall_ext.py)에 별도 키(`HINDSIGHT_API_HTTP_MOKA_RETAIN_KEY`, `recall_api_key`와 독립)가 설정될 때만 열립니다. `bank_id`는 `personal_shared`로 코드 고정이며 `source`는 `chatgpt_dot` 또는 `grok_bot`만 허용합니다. 회사 표식/시크릿 정규식 검사(422)와 멱등 `document_id`/`operation_id`를 적용해 `MemoryEngine.submit_async_retain`으로 비동기 제출(`202 accepted_not_extracted`)합니다.
+- **프록시 스캐너 (`moka_oauth_scanner.py`):** `retain_summary` 호출은 백엔드 전송 전 프록시에서 회사 표식/시크릿 정규식 + Gitleaks(`v8.30.1`, fail-closed) 검사를 모두 통과해야 합니다. `images/hindsight-moka-oauth/Dockerfile`에 `gitleaks:v8.30.1` 바이너리를 포함해 `linux/amd64` 빌드/오프라인 non-root read-only 검증 후 `ghcr.io/kkamji98/hindsight-dot@sha256:ce124212e5fa0b81ee80c37aa6b582f6630452e21833bf6d884d9d60c764505d`로 푸시했습니다.
+- **격리된 Grok Bot MCP (`hindsight-grok-memory`):** 기존 모카의 `/moka-recall/mcp` 404 보장을 유지하기 위해 별도 Deployment/Service/HTTPRoute(`/grok-memory`)/BackendTrafficPolicy(`64Ki`, `60/min`)/CiliumNetworkPolicy(`hindsight-api:8888`과 Google OAuth만 egress 허용, OpenAI egress 없음)로 분리했습니다. `grokMemory.authMode`는 `oauth`(Google OAuth 2.1 DCR, 기본 redirect allowlist `https://grok.com/connectors-oauth-exchange-code/`)와 `bearer`(전용 per-client Bearer 토큰) 두 모드를 지원합니다.
+- **활성화 전 필수 준비 (live 미적용):** (1) `moka_private_values.yaml`에서 새 이미지 digest(`sha256:ce124212e5fa0b81ee80c37aa6b582f6630452e21833bf6d884d9d60c764505d`) 핀 및 `retainEnabled: true`/`grokMemory` 활성화, (2) SSM `/kkamji/automation/hindsight/recall-tunnel/runtime`에 `retain_api_key` 추가, (3) Grok Bot용 SSM `/kkamji/automation/hindsight/grok-memory/runtime`(`jwt_signing_key` + `storage_encryption_key` 또는 `mcp_bearer_token`) 생성, (4) `grok.com/connectors` 실제 UI에서 확인한 redirect URI 또는 authMode 반영.
+- **롤백:** `mokaRecallOAuth.service.retainEnabled: false` 및 `grokMemory.enabled: false`로 되돌리면 즉시 읽기 전용 모카 상태로 복귀하며 기존 PVC와 `personal_shared` 데이터는 보존됩니다.
 
 2026-10-27에 승인된 `kkamji-lab` 배포, 도메인, 전용 UI/API/MCP 인증과 합성 인수를 완료했습니다. 구독 retain/recall, OAuth 갱신의 PVC 저장, seed 삭제 후 Pod 재생성과 추가 구독 호출을 실제 확인했습니다. 실제 대화 자동 수집, 프로젝트 hook, 전역 Hermes/Claude Code 통합은 켜지 않았습니다. 아래 잔여 High 취약점과 관리자/키 신뢰 경계는 기능 인수 성공과 별개로 유지됩니다.
 

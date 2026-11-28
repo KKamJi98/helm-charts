@@ -71,6 +71,12 @@ spec:
         key: {{ $runtimeKey }}
         property: {{ $k }}
     {{- end }}
+    {{- if $svc.retainEnabled }}
+    - secretKey: retain_api_key
+      remoteRef:
+        key: {{ $runtimeKey }}
+        property: retain_api_key
+    {{- end }}
     {{- end }}
 {{- if $svc.enabled }}
 ---
@@ -94,6 +100,12 @@ spec:
       remoteRef:
         key: {{ $runtimeKey }}
         property: recall_api_key
+    {{- if or $svc.retainEnabled (and .Values.grokMemory.enabled .Values.grokMemory.retainEnabled) }}
+    - secretKey: retain_api_key
+      remoteRef:
+        key: {{ $runtimeKey }}
+        property: retain_api_key
+    {{- end }}
 ---
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
@@ -255,6 +267,10 @@ spec:
               value: {{ ternary "service" (ternary "attended-window" "private-metadata" $cfg.publicEnabled) $svc.enabled | quote }}
             - name: MOKA_CANARY_DEADLINE_UNIX
               value: {{ $cfg.deadlineUnix | quote }}
+            {{- if and $svc.enabled $svc.retainEnabled }}
+            - name: MOKA_RETAIN_ENABLED
+              value: "true"
+            {{- end }}
             - {name: HOME, value: /tmp}
             - {name: TMPDIR, value: /tmp}
           ports: [{name: oauth, containerPort: 8000, protocol: TCP}]
